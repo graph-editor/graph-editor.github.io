@@ -7,6 +7,7 @@ export interface CanvasHandle {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+  cancelAction: () => void;
 }
 
 interface CanvasProps {
@@ -132,13 +133,45 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     });
   }, [data.nodes]);
 
-  // Expose imperative handle to BottomStatusBar
+  // Cancel any in-progress canvas interaction
+  const cancelAction = useCallback(() => {
+    setConnectSourceId(null);
+    if (draggingNodeId) {
+      onFinishDragNode(draggingNodeId);
+      setDraggingNodeId(null);
+    }
+    setIsPanning(false);
+    setHoveredNodeId(null);
+    setHoveredEdgeId(null);
+    setToastMessage(null);
+  }, [draggingNodeId, onFinishDragNode]);
+
+  // Expose imperative handle to BottomStatusBar and App
   useImperativeHandle(ref, () => ({
     fitView: handleFitView,
     zoomIn: () => setViewTransform(v => ({ ...v, scale: Math.min(3.5, v.scale * 1.2) })),
     zoomOut: () => setViewTransform(v => ({ ...v, scale: Math.max(0.2, v.scale * 0.8) })),
     resetZoom: () => setViewTransform(v => ({ ...v, scale: 1 })),
-  }));
+    cancelAction,
+  }), [handleFitView, cancelAction]);
+
+  // Cancel connecting edge if active tool changes away from 'edge'
+  useEffect(() => {
+    if (activeTool !== 'edge') {
+      setConnectSourceId(null);
+    }
+  }, [activeTool]);
+
+  // Escape key listener on Canvas to cancel all in-progress canvas actions
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc' || e.key.toLowerCase() === 'escape') {
+        cancelAction();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cancelAction]);
 
   // Continuous Force Physics loop
   useEffect(() => {

@@ -208,44 +208,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           {/* Auto-detected Nodes & Edges Text Fields */}
           <div className="grid grid-cols-2 gap-2 mb-2.5">
             {/* Nodes Text Field */}
-            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1 focus-within:border-blue-500/60 transition-colors">
+            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1">
                   <Hash size={12} className="text-blue-400" />
                   <span>Nodes (N)</span>
                 </label>
-                {settings.nodeCountPreserved !== undefined && settings.nodeCountPreserved !== null ? (
-                  <button
-                    onClick={() => onSetCustomNodeCount?.(null)}
-                    className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
-                    title="Click to reset to auto-detected count from edges"
-                  >
-                    Custom ✕
-                  </button>
-                ) : (
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-950/70 text-blue-300 border border-blue-900/40">
-                    Auto
-                  </span>
-                )}
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-950/70 text-blue-300 border border-blue-900/40">
+                  Auto
+                </span>
               </div>
               <input
-                type="number"
-                min={1}
-                value={settings.nodeCountPreserved ?? data.nodes.length}
-                onChange={e => {
-                  const val = e.target.value.trim();
-                  if (val === '') {
-                    onSetCustomNodeCount?.(null);
-                  } else {
-                    const num = parseInt(val, 10);
-                    if (!isNaN(num) && num > 0) {
-                      onSetCustomNodeCount?.(num);
-                    }
-                  }
-                }}
-                className="bg-transparent text-sm font-mono font-bold text-slate-100 focus:outline-none w-full"
-                placeholder={String(data.nodes.length)}
-                title="Total nodes (auto-detected from edges, or type here to set custom isolated nodes)"
+                type="text"
+                readOnly
+                value={data.nodes.length}
+                className="bg-transparent text-sm font-mono font-bold text-blue-400 focus:outline-none w-full cursor-default"
+                title="Total nodes (auto-detected from edges)"
               />
             </div>
 
@@ -307,21 +285,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               spellCheck={false}
               className="flex-1 w-full p-3 bg-transparent text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"
             />
-          </div>
-
-          {/* Format Reference Card */}
-          <div className="mt-2.5 p-2.5 bg-slate-950/80 rounded-lg border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-            <div className="flex items-center justify-between font-semibold text-slate-300 text-[10.5px]">
-              <span>Auto-Detection Mode:</span>
-              <span className="text-[10px] text-emerald-400 font-mono">Active</span>
-            </div>
-            <p className="text-[10.5px] text-slate-400 leading-snug">
-              No need to type node or edge counts! Just enter edges between two nodes (one per line). Nodes and edges are auto-detected above.
-            </p>
-            <ul className="space-y-0.5 text-[10px] font-mono text-slate-400 pt-0.5">
-              <li><span className="text-blue-400">u v</span> &mdash; Unweighted edge (e.g. 1 2)</li>
-              <li><span className="text-emerald-400">u v w</span> &mdash; Weighted edge (e.g. 1 2 5)</li>
-            </ul>
           </div>
         </div>
       )}

@@ -108,7 +108,7 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
           <button
             onClick={onClose}
             className="p-1 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
-            title="Close Tracer"
+            title="Close Tracer (Esc)"
           >
             <X size={16} />
           </button>
