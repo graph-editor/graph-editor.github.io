@@ -6,10 +6,16 @@ interface DownloadModalProps {
   onClose: () => void;
 }
 
+const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
+const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor.Setup.1.0.0.exe';
+const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-win.zip';
+const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.dmg';
+const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-mac.zip';
+const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.AppImage';
+const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/cp-graph-editor_1.0.0_amd64.deb';
+
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
-
-  const RELEASE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
 
   return (
     <div 
@@ -63,13 +69,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             </div>
             <div className="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
               <a 
-                href={`${RELEASE_URL}`}
-                target="_blank"
-                rel="noreferrer"
+                href={WIN_EXE_URL}
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Installer (.exe)</span>
+              </a>
+              <a 
+                href={WIN_ZIP_URL}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
+              >
+                <span>Portable (.zip)</span>
               </a>
             </div>
           </div>
@@ -95,13 +105,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             </div>
             <div className="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
               <a 
-                href={`${RELEASE_URL}`}
-                target="_blank"
-                rel="noreferrer"
+                href={MAC_DMG_URL}
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Disk Image (.dmg)</span>
+              </a>
+              <a 
+                href={MAC_ZIP_URL}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
+              >
+                <span>Portable (.zip)</span>
               </a>
             </div>
           </div>
@@ -127,13 +141,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             </div>
             <div className="mt-4 pt-3 border-t border-gray-800/80 space-y-2">
               <a 
-                href={`${RELEASE_URL}`}
-                target="_blank"
-                rel="noreferrer"
+                href={LINUX_APPIMAGE_URL}
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>AppImage / .deb</span>
+                <span>Universal (.AppImage)</span>
+              </a>
+              <a 
+                href={LINUX_DEB_URL}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
+              >
+                <span>Debian Package (.deb)</span>
               </a>
             </div>
           </div>
@@ -160,7 +178,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         <div className="mt-5 flex items-center justify-between text-xs text-gray-400">
           <span>Version 1.0.0 • Free & Open Source</span>
           <a 
-            href={RELEASE_URL}
+            href={RELEASES_URL}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-blue-400 hover:underline"

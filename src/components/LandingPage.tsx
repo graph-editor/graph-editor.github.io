@@ -45,6 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
   const GITHUB_REPO = 'https://github.com/mostafa-cse/Graph-visualization';
   const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
+  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor.Setup.1.0.0.exe';
+  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-win.zip';
+  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.dmg';
+  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-mac.zip';
+  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.AppImage';
+  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/cp-graph-editor_1.0.0_amd64.deb';
 
   const faqs = [
     {
@@ -596,15 +602,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   </li>
                 </ul>
               </div>
-              <a
-                href={RELEASES_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download for Windows</span>
-              </a>
+              <div className="space-y-2">
+                <a
+                  href={WIN_EXE_URL}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Installer (.exe)</span>
+                </a>
+                <a
+                  href={WIN_ZIP_URL}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                >
+                  <span>Download Portable (.zip)</span>
+                </a>
+              </div>
             </div>
 
             {/* macOS Card */}
@@ -630,15 +642,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   </li>
                 </ul>
               </div>
-              <a
-                href={RELEASES_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download for macOS</span>
-              </a>
+              <div className="space-y-2">
+                <a
+                  href={MAC_DMG_URL}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Disk Image (.dmg)</span>
+                </a>
+                <a
+                  href={MAC_ZIP_URL}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                >
+                  <span>Download Portable (.zip)</span>
+                </a>
+              </div>
             </div>
 
             {/* Linux Card */}
@@ -664,15 +682,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   </li>
                 </ul>
               </div>
-              <a
-                href={RELEASES_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download for Linux</span>
-              </a>
+              <div className="space-y-2">
+                <a
+                  href={LINUX_APPIMAGE_URL}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download AppImage</span>
+                </a>
+                <a
+                  href={LINUX_DEB_URL}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                >
+                  <span>Debian Package (.deb)</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
