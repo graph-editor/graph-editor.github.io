@@ -74,7 +74,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
   ];
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-gray-200 selection:bg-blue-600 selection:text-white font-sans">
+    <div className="min-h-screen w-full bg-[#070b14] text-gray-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden">
       {/* Navigation Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-gray-800/80 bg-[#070b14]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
