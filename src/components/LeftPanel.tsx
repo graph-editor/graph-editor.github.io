@@ -35,6 +35,7 @@ interface LeftPanelProps {
   onLoadPreset: (newData: GraphData, newSettings: Partial<GraphSettings>) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onSetCustomNodeCount?: (count: number | null) => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -46,6 +47,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onLoadPreset,
   isCollapsed,
   onToggleCollapse,
+  onSetCustomNodeCount,
 }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
   const [selectedAlgo, setSelectedAlgo] = useState<AlgorithmType>('bfs');
@@ -71,15 +73,15 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   };
 
   // Quick template inserters
-  const insertTemplate = (type: 'edge_list' | 'weighted' | 'tree' | 'matrix') => {
+  const insertTemplate = (type: 'edge_list' | 'weighted' | 'tree' | 'clear') => {
     if (type === 'edge_list') {
-      onRawTextChange(`5 4\n1 2\n1 3\n2 4\n2 5`);
+      onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`);
     } else if (type === 'weighted') {
-      onRawTextChange(`5 5\n1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3`);
+      onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3`);
     } else if (type === 'tree') {
-      onRawTextChange(`6\n1 1 2 2 3`);
-    } else if (type === 'matrix') {
-      onRawTextChange(`0 1 1 0\n1 0 0 1\n1 0 0 1\n0 1 1 0`);
+      onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6`);
+    } else if (type === 'clear') {
+      onRawTextChange(``);
     }
   };
 
@@ -189,13 +191,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           {/* Quick Format & Action Row */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Testcase Input
+              Graph Input & Counts
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCopyInput}
                 className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
-                title="Copy Raw Text"
+                title="Copy Raw Edges"
               >
                 {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
@@ -203,40 +205,105 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
           </div>
 
-          {/* Template Quick Buttons */}
-          <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-0.5">
-            <button
-              onClick={() => insertTemplate('edge_list')}
-              className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-            >
-              Edges
-            </button>
-            <button
-              onClick={() => insertTemplate('weighted')}
-              className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-            >
-              Weighted
-            </button>
-            <button
-              onClick={() => insertTemplate('tree')}
-              className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-            >
-              Tree Parent
-            </button>
-            <button
-              onClick={() => insertTemplate('matrix')}
-              className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
-            >
-              Matrix
-            </button>
+          {/* Auto-detected Nodes & Edges Text Fields */}
+          <div className="grid grid-cols-2 gap-2 mb-2.5">
+            {/* Nodes Text Field */}
+            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1 focus-within:border-blue-500/60 transition-colors">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <Hash size={12} className="text-blue-400" />
+                  <span>Nodes (N)</span>
+                </label>
+                {settings.nodeCountPreserved !== undefined && settings.nodeCountPreserved !== null ? (
+                  <button
+                    onClick={() => onSetCustomNodeCount?.(null)}
+                    className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                    title="Click to reset to auto-detected count from edges"
+                  >
+                    Custom ✕
+                  </button>
+                ) : (
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-950/70 text-blue-300 border border-blue-900/40">
+                    Auto
+                  </span>
+                )}
+              </div>
+              <input
+                type="number"
+                min={1}
+                value={settings.nodeCountPreserved ?? data.nodes.length}
+                onChange={e => {
+                  const val = e.target.value.trim();
+                  if (val === '') {
+                    onSetCustomNodeCount?.(null);
+                  } else {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num) && num > 0) {
+                      onSetCustomNodeCount?.(num);
+                    }
+                  }
+                }}
+                className="bg-transparent text-sm font-mono font-bold text-slate-100 focus:outline-none w-full"
+                placeholder={String(data.nodes.length)}
+                title="Total nodes (auto-detected from edges, or type here to set custom isolated nodes)"
+              />
+            </div>
+
+            {/* Edges Text Field */}
+            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <Share2 size={12} className="text-emerald-400" />
+                  <span>Edges (M)</span>
+                </label>
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-900/40">
+                  Auto
+                </span>
+              </div>
+              <input
+                type="text"
+                readOnly
+                value={data.edges.length}
+                className="bg-transparent text-sm font-mono font-bold text-emerald-400 focus:outline-none w-full cursor-default"
+                title="Total edges (auto-detected from edge list)"
+              />
+            </div>
           </div>
 
-          {/* Monospace Code Editor Area */}
+          {/* Edges Header & Quick Templates */}
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10.5px] font-medium text-slate-300 flex items-center gap-1">
+              <span>Edges</span>
+              <span className="text-[10px] text-slate-500 font-mono">(u v [w])</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => insertTemplate('edge_list')}
+                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+              >
+                Sample
+              </button>
+              <button
+                onClick={() => insertTemplate('weighted')}
+                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+              >
+                Weighted
+              </button>
+              <button
+                onClick={() => insertTemplate('clear')}
+                className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950 border border-slate-800/80 hover:border-red-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          {/* Monospace Code Editor Area for Pure Edges */}
           <div className="flex-1 relative flex flex-col bg-[#070a10] border border-slate-800 rounded-lg overflow-hidden focus-within:border-blue-500/50">
             <textarea
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
-              placeholder={`5 4\n1 2\n1 3\n2 4\n2 5`}
+              placeholder={`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`}
               spellCheck={false}
               className="flex-1 w-full p-3 bg-transparent text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"
             />
@@ -245,14 +312,15 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           {/* Format Reference Card */}
           <div className="mt-2.5 p-2.5 bg-slate-950/80 rounded-lg border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
             <div className="flex items-center justify-between font-semibold text-slate-300 text-[10.5px]">
-              <span>Supported Formats:</span>
-              <span className="text-[10px] text-blue-400 font-mono">Auto-detect</span>
+              <span>Auto-Detection Mode:</span>
+              <span className="text-[10px] text-emerald-400 font-mono">Active</span>
             </div>
-            <ul className="space-y-0.5 text-[10.5px] font-mono text-slate-400">
-              <li><span className="text-blue-400">N M</span> then <span className="text-slate-300">u v [w]</span> (with header)</li>
-              <li><span className="text-slate-300">u v [w]</span> (headerless edge list)</li>
-              <li><span className="text-blue-400">N</span> then <span className="text-slate-300">p2 p3 ... pn</span> (tree parent)</li>
-              <li><span className="text-slate-300">N x N</span> matrix of weights or 0/1</li>
+            <p className="text-[10.5px] text-slate-400 leading-snug">
+              No need to type node or edge counts! Just enter edges between two nodes (one per line). Nodes and edges are auto-detected above.
+            </p>
+            <ul className="space-y-0.5 text-[10px] font-mono text-slate-400 pt-0.5">
+              <li><span className="text-blue-400">u v</span> &mdash; Unweighted edge (e.g. 1 2)</li>
+              <li><span className="text-emerald-400">u v w</span> &mdash; Weighted edge (e.g. 1 2 5)</li>
             </ul>
           </div>
         </div>
