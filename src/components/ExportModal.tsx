@@ -17,11 +17,12 @@ interface ExportModalProps {
 
 export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClose }) => {
   const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'image'>('cpp');
+  const [includeHeader, setIncludeHeader] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const cppCode = generateCppAdjacencyList(data, settings);
   const pythonCode = generatePythonAdjacencyList(data, settings);
-  const cpText = serializeGraphToCPInput(data, settings);
+  const cpText = serializeGraphToCPInput(data, settings, includeHeader);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -141,14 +142,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
           )}
 
           {activeTab === 'text' && (
-            <div className="relative">
-              <button
-                onClick={() => handleCopy(cpText)}
-                className="absolute top-3 right-3 flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-xs border border-slate-700 transition-colors"
-              >
-                {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                <span>{copied ? 'Copied!' : 'Copy Text'}</span>
-              </button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeHeader}
+                    onChange={e => setIncludeHeader(e.target.checked)}
+                    className="rounded bg-slate-950 border-slate-700 text-blue-600 focus:ring-0 focus:outline-none"
+                  />
+                  <span>Include <span className="font-mono text-blue-400 font-semibold">N M</span> header line ({data.nodes.length} {data.edges.length})</span>
+                </label>
+                <button
+                  onClick={() => handleCopy(cpText)}
+                  className="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-xs border border-slate-700 transition-colors"
+                >
+                  {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                  <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+                </button>
+              </div>
               <pre className="p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-blue-300 overflow-x-auto leading-relaxed max-h-80">
                 {cpText}
               </pre>

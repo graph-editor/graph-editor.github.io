@@ -12,9 +12,8 @@ import { BottomStatusBar } from './components/BottomStatusBar';
 import { ExportModal } from './components/ExportModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 
-// Initial CP Graph (Tree sample from Codeforces contest)
-const INITIAL_CP_TEXT = `7 6
-1 2
+// Initial CP Graph (Tree edges without manual N M header)
+const INITIAL_CP_TEXT = `1 2
 1 3
 2 4
 2 5
@@ -64,13 +63,12 @@ export function App() {
 
   // Update text when graph is edited visually (and not running algorithm)
   const syncGraphToText = useCallback((newData: GraphData, newSettings: GraphSettings) => {
-    const text = serializeGraphToCPInput(newData, newSettings);
+    const text = serializeGraphToCPInput(newData, newSettings, false);
     setRawText(text);
   }, []);
 
   // Handle changes in the text editor
   const handleRawTextChange = (text: string) => {
-    setRawText(text);
     const existingNodeMap = new Map<string, GraphNode>();
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
@@ -83,9 +81,37 @@ export function App() {
     }
 
     setData(finalData);
-    if (parsed.settings) {
-      setSettings(prev => ({ ...prev, ...parsed.settings }));
+
+    // If an N M header was pasted, automatically strip it and put clean edges into rawText
+    if (parsed.detectedHeader) {
+      setRawText(parsed.detectedHeader.strippedEdgesText);
+      setSettings(prev => ({
+        ...prev,
+        ...parsed.settings,
+        nodeCountPreserved: parsed.detectedHeader?.n,
+      }));
+    } else {
+      setRawText(text);
+      if (parsed.settings) {
+        setSettings(prev => ({ ...prev, ...parsed.settings }));
+      }
     }
+  };
+
+  // Allow setting custom isolated node count from the Nodes field, or reset to auto (null)
+  const handleSetCustomNodeCount = (count: number | null) => {
+    const newSettings = { ...settings, nodeCountPreserved: count ?? undefined };
+    setSettings(newSettings);
+
+    const existingNodeMap = new Map<string, GraphNode>();
+    data.nodes.forEach(n => existingNodeMap.set(n.id, n));
+
+    const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
+    let finalData = parsed.data;
+    if (parsed.data.nodes.some(n => !existingNodeMap.has(n.id))) {
+      finalData = applyLayout(parsed.data, settings.layout);
+    }
+    setData(finalData);
   };
 
   // Compute live graph stats
@@ -420,6 +446,7 @@ export function App() {
           onLoadPreset={handleLoadPreset}
           isCollapsed={isLeftPanelCollapsed}
           onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+          onSetCustomNodeCount={handleSetCustomNodeCount}
         />
 
         {/* Center Workspace (Canvas + Floating Algorithm Controls at BOTTOM CENTER) */}

@@ -34,6 +34,7 @@ export interface ParseResult {
   settings: Partial<GraphSettings>;
   error?: string;
   detected0Indexed?: boolean;
+  detectedHeader?: { n: number; m: number; strippedEdgesText: string };
 }
 
 /**
@@ -99,18 +100,41 @@ function parseEdgeList(
   let edgeStartIndex = 0;
 
   const firstTokens = lines[0].split(/\s+/);
-  if (firstTokens.length >= 2 && !isNaN(Number(firstTokens[0])) && !isNaN(Number(firstTokens[1]))) {
-    // Check if line 1 is `n m`
-    // If lines.length - 1 matches M, or if there's no weight on line 1 but line 2 has weights
+  // Check if first line is explicitly a CP header `N M`
+  // We only treat line 0 as a header if:
+  // 1. lines.length > 1
+  // 2. Exactly 2 integers in line 0: n >= 1, m >= 0
+  // 3. Exactly m following lines: lines.length - 1 === m
+  // 4. All vertex numbers in subsequent lines are within 1..n (or 0..n-1)
+  // 5. At least one subsequent vertex is > 1 (preventing single-node edge chains from being misidentified)
+  if (lines.length > 1 && firstTokens.length === 2) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
-
-    // If there are exactly m following lines or first line has only 2 tokens while subsequent lines might have 2 or 3
-    if (lines.length - 1 === m || firstTokens.length === 2 && lines.length > 1) {
-      hasHeader = true;
-      declaredN = n;
-      declaredM = m;
-      edgeStartIndex = 1;
+    if (!isNaN(n) && !isNaN(m) && n >= 2 && m > 0 && lines.length - 1 === m) {
+      let allValid = true;
+      let hasVertexAboveOne = false;
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(/\s+/);
+        if (parts.length >= 2) {
+          const u = parseInt(parts[0], 10);
+          const v = parseInt(parts[1], 10);
+          if (!isNaN(u) && !isNaN(v)) {
+            if (u > n || v > n) {
+              allValid = false;
+              break;
+            }
+            if (u > 1 || v > 1) {
+              hasVertexAboveOne = true;
+            }
+          }
+        }
+      }
+      if (allValid && hasVertexAboveOne) {
+        hasHeader = true;
+        declaredN = n;
+        declaredM = m;
+        edgeStartIndex = 1;
+      }
     }
   }
 
@@ -146,11 +170,12 @@ function parseEdgeList(
     }
   }
 
-  // If declaredN was given, ensure nodes 1..N (or 0..N-1) exist
+  // If declaredN was given or settings.nodeCountPreserved is set, ensure nodes exist
+  const effectiveN = declaredN ?? settings.nodeCountPreserved;
   const isZeroIndexed = foundZero || settings.isZeroIndexed;
-  if (declaredN !== null && declaredN > 0) {
+  if (effectiveN !== undefined && effectiveN !== null && effectiveN > 0) {
     const start = isZeroIndexed ? 0 : 1;
-    const end = isZeroIndexed ? declaredN - 1 : declaredN;
+    const end = isZeroIndexed ? effectiveN - 1 : effectiveN;
     for (let k = start; k <= end; k++) {
       nodeIds.add(String(k));
     }
@@ -233,9 +258,12 @@ function parseEdgeList(
       ...settings,
       isWeighted: hasWeights || settings.isWeighted,
       isZeroIndexed,
-      nodeCountPreserved: declaredN ?? undefined,
+      nodeCountPreserved: effectiveN ?? undefined,
     },
     detected0Indexed: foundZero,
+    detectedHeader: hasHeader && declaredN !== null && declaredM !== null
+      ? { n: declaredN, m: declaredM, strippedEdgesText: lines.slice(1).join('\n') }
+      : undefined,
   };
 }
 
@@ -407,12 +435,15 @@ function parseAdjacencyList(
 
 /**
  * Serializes GraphData back to standard CP input format
+ * By default, outputs pure edges without N M header so users only edit edges between nodes
  */
-export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings): string {
-  const n = settings.nodeCountPreserved ? Math.max(settings.nodeCountPreserved, data.nodes.length) : data.nodes.length;
-  const m = data.edges.length;
-
-  let out = `${n} ${m}\n`;
+export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings, includeHeader = false): string {
+  let out = '';
+  if (includeHeader) {
+    const n = settings.nodeCountPreserved ? Math.max(settings.nodeCountPreserved, data.nodes.length) : data.nodes.length;
+    const m = data.edges.length;
+    out += `${n} ${m}\n`;
+  }
   for (const edge of data.edges) {
     if (settings.isWeighted && edge.weight !== undefined) {
       out += `${edge.source} ${edge.target} ${edge.weight}\n`;
