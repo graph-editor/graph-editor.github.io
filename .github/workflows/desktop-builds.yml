@@ -37,15 +37,15 @@ jobs:
 
       - name: Build Desktop Package (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: pnpm exec electron-builder --linux AppImage deb
+        run: pnpm exec electron-builder --linux AppImage deb --publish never
 
       - name: Build Desktop Package (Windows)
         if: matrix.os == 'windows-latest'
-        run: pnpm exec electron-builder --win nsis zip
+        run: pnpm exec electron-builder --win nsis zip --publish never
 
       - name: Build Desktop Package (macOS)
         if: matrix.os == 'macos-latest'
-        run: pnpm exec electron-builder --mac dmg zip
+        run: pnpm exec electron-builder --mac dmg zip --publish never
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
