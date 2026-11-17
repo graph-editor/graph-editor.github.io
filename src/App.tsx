@@ -357,9 +357,47 @@ export function App() {
     }
   };
 
+  // Cancel / remove all active actions across the whole application
+  const handleCancelAllActions = useCallback(() => {
+    // 1. Unfocus / blur any active input, textarea or button
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    // 2. Clear selections (both node and edge)
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+
+    // 3. Reset active tool to default select/move mode
+    setActiveTool('select');
+
+    // 4. Close properties inspector
+    setIsInspectorOpen(false);
+
+    // 5. Close all modals
+    setIsExportModalOpen(false);
+    setIsShortcutsModalOpen(false);
+
+    // 6. Stop and remove algorithm playback/visualization
+    setAlgorithmSteps(null);
+    setCurrentStepIndex(0);
+
+    // 7. Reset all canvas interactions (connecting edges, dragging nodes, panning)
+    canvasRef.current?.cancelAction();
+  }, []);
+
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isEsc = e.key === 'Escape' || e.key === 'Esc' || e.key.toLowerCase() === 'escape';
+
+      // Pressing Esc removes all actions everywhere, even if focused in an input/textarea
+      if (isEsc) {
+        e.preventDefault();
+        handleCancelAllActions();
+        return;
+      }
+
       if (['TEXTAREA', 'INPUT'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
@@ -397,18 +435,12 @@ export function App() {
         } else if (selectedEdgeId) {
           handleDeleteEdge(selectedEdgeId);
         }
-      } else if (key === 'escape') {
-        setSelectedNodeId(null);
-        setSelectedEdgeId(null);
-        setActiveTool('select');
-        setIsExportModalOpen(false);
-        setIsShortcutsModalOpen(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, selectedEdgeId, data, settings]);
+  }, [handleCancelAllActions, selectedNodeId, selectedEdgeId, data, settings]);
 
   const selectedNode = useMemo(() => data.nodes.find(n => n.id === selectedNodeId) || null, [data.nodes, selectedNodeId]);
   const selectedEdge = useMemo(() => data.edges.find(e => e.id === selectedEdgeId) || null, [data.edges, selectedEdgeId]);

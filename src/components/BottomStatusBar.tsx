@@ -106,7 +106,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
             <CircleDot size={12} className="text-blue-400" />
             <span>Add Node Mode</span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10.5px]">Click canvas to drop node</span>
+            <span className="text-slate-400 text-[10.5px]">Click canvas to drop node • Press Esc to cancel</span>
           </span>
         )}
         {activeTool === 'edge' && (
@@ -114,7 +114,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
             <Share2 size={12} className="text-blue-400" />
             <span>Connect Mode</span>
             <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10.5px]">Click source node, then click target node</span>
+            <span className="text-slate-400 text-[10.5px]">Click source node, then click target node • Press Esc to cancel</span>
           </span>
         )}
       </div>

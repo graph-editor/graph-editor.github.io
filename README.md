@@ -86,7 +86,7 @@ Step-by-step playback with forward, backward, auto-play, speed control, and CP t
 | **Fit to View** | `F` key |
 | **Toggle Directed** | `D` key |
 | **Toggle Weighted** | `W` key |
-| **Cancel / Deselect** | `Esc` key |
+| **Cancel All Actions** | `Esc` key (cancels active tool, connect line, node/edge selection, inspector, algorithm playback, and modals) |
 
 ---
 
@@ -98,10 +98,12 @@ CP Graph Editor is fully packaged as native desktop applications for **Ubuntu / 
 
 | Platform | Format / Package | File Path | Running Instructions |
 | :--- | :--- | :--- | :--- |
-| **Ubuntu / Linux** | **AppImage** (standalone) | [`release/CP Graph Editor-1.0.0.AppImage`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0.AppImage) | `chmod +x release/*.AppImage && ./release/*.AppImage` |
-| **Ubuntu / Debian** | **DEB package** | [`release/cp-graph-editor_1.0.0_amd64.deb`](file:///home/m0stafa/Documents/Graph%20Editor/release/cp-graph-editor_1.0.0_amd64.deb) | `sudo dpkg -i release/cp-graph-editor_1.0.0_amd64.deb` |
-| **Windows** | **Portable ZIP / EXE** | [`release/CP Graph Editor-1.0.0-win.zip`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0-win.zip) | Extract zip and double-click `CP Graph Editor.exe` (or run from [`release/win-unpacked/`](file:///home/m0stafa/Documents/Graph%20Editor/release/win-unpacked/)) |
-| **macOS** | **Mac App ZIP / Bundle** | [`release/CP Graph Editor-1.0.0-mac.zip`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0-mac.zip) | Unzip to get [`CP Graph Editor.app`](file:///home/m0stafa/Documents/Graph%20Editor/release/mac/CP%20Graph%20Editor.app) and drag into `/Applications` |
+| **macOS** | **Apple Disk Image (DMG)** | [`release/CP Graph Editor-1.0.0.dmg`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0.dmg) (124 MB) | Double-click to mount and drag `CP Graph Editor.app` to `/Applications` |
+| **macOS** | **Mac App ZIP / Bundle** | [`release/CP Graph Editor-1.0.0-mac.zip`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0-mac.zip) (120 MB) | Unzip to get [`CP Graph Editor.app`](file:///home/m0stafa/Documents/Graph%20Editor/release/mac/CP%20Graph%20Editor.app) and launch |
+| **Windows** | **Installer Setup (NSIS)** | [`release/CP Graph Editor Setup 1.0.0.exe`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor%20Setup%201.0.0.exe) (119 MB) | Double-click to run setup wizard (custom path, desktop & start menu shortcuts) |
+| **Windows** | **Portable ZIP / EXE** | [`release/CP Graph Editor-1.0.0-win.zip`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0-win.zip) (150 MB) | Extract zip and double-click `CP Graph Editor.exe` (or run from [`release/win-unpacked/`](file:///home/m0stafa/Documents/Graph%20Editor/release/win-unpacked/)) |
+| **Ubuntu / Linux** | **AppImage** (standalone) | [`release/CP Graph Editor-1.0.0.AppImage`](file:///home/m0stafa/Documents/Graph%20Editor/release/CP%20Graph%20Editor-1.0.0.AppImage) (124 MB) | `chmod +x release/*.AppImage && ./release/*.AppImage` |
+| **Ubuntu / Debian** | **DEB package** | [`release/cp-graph-editor_1.0.0_amd64.deb`](file:///home/m0stafa/Documents/Graph%20Editor/release/cp-graph-editor_1.0.0_amd64.deb) (99 MB) | `sudo dpkg -i release/cp-graph-editor_1.0.0_amd64.deb` |
 
 ---
 
@@ -117,11 +119,14 @@ pnpm electron:dev
 # 3. Build Ubuntu / Linux standalone AppImage and .deb installer
 pnpm package:linux
 
-# 4. Build Windows portable distribution (CP Graph Editor.exe & zip)
+# 4. Build Windows installer (.exe via NSIS) and portable ZIP
 pnpm package:win
 
-# 5. Build macOS distribution (.app & zip)
+# 5. Build macOS DMG disk image (.dmg) and application ZIP (.app)
 pnpm package:mac
+
+# 6. Build all platforms simultaneously
+pnpm package:all
 ```
 
 ### Automated Multi-Platform CI / CD

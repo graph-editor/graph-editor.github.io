@@ -19,12 +19,43 @@
     "description": "Ultra-clean, professional Graph Visualizer & Editor tailored for Competitive Programming."
   },
   "win": {
-    "target": ["zip"],
-    "icon": "build/icon.png"
+    "target": ["nsis", "zip"],
+    "icon": "build/icon.ico"
+  },
+  "toolsets": {
+    "wine": "1.0.1"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "packElevateHelper": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "CP Graph Editor"
   },
   "mac": {
-    "target": ["zip"],
-    "icon": "build/icon.png",
+    "target": ["dmg", "zip"],
+    "icon": "build/icon.icns",
     "category": "public.app-category.developer-tools"
+  },
+  "dmg": {
+    "backgroundColor": "#090d16",
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    }
   }
 }

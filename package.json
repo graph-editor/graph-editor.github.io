@@ -17,8 +17,8 @@
     "electron:pack": "pnpm build && electron-builder --dir",
     "package:linux": "pnpm build && electron-builder --linux",
     "package:win": "pnpm build && electron-builder --win",
-    "package:mac": "pnpm build && electron-builder --mac",
-    "package:all": "pnpm build && electron-builder -mwl"
+    "package:mac": "pnpm build && cross-env CUSTOM_DMGBUILD_PATH=\"./scripts/dmgbuild-linux.py\" electron-builder --mac",
+    "package:all": "pnpm build && electron-builder --linux && electron-builder --win && cross-env CUSTOM_DMGBUILD_PATH=\"./scripts/dmgbuild-linux.py\" electron-builder --mac"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
