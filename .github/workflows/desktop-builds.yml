@@ -7,12 +7,17 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -37,18 +42,25 @@ jobs:
 
       - name: Build Desktop Package (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: pnpm exec electron-builder --linux AppImage deb
+        run: pnpm exec electron-builder --linux AppImage deb --publish never
 
       - name: Build Desktop Package (Windows)
         if: matrix.os == 'windows-latest'
-        run: pnpm exec electron-builder --win nsis zip
+        run: pnpm exec electron-builder --win nsis zip --publish never
 
       - name: Build Desktop Package (macOS)
         if: matrix.os == 'macos-latest'
-        run: pnpm exec electron-builder --mac dmg zip
+        run: pnpm exec electron-builder --mac dmg zip --publish never
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Release Assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: cp-graph-editor-${{ matrix.os }}
-          path: release/*
+          tag_name: v1.0.0
+          files: |
+            release/*.exe
+            release/*.zip
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
