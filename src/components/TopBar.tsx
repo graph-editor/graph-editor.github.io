@@ -27,6 +27,8 @@ interface TopBarProps {
   onOpenShortcutsModal: () => void;
   isInspectorOpen: boolean;
   onToggleInspector: () => void;
+  onGoHome?: () => void;
+  onOpenDownloadModal?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -41,15 +43,21 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenShortcutsModal,
   isInspectorOpen,
   onToggleInspector,
+  onGoHome,
+  onOpenDownloadModal,
 }) => {
   return (
     <header className="h-13 border-b border-slate-800 bg-slate-950 px-4 flex items-center justify-between z-20 select-none shrink-0">
       {/* Left: Brand / Logo + Main Editing Tools Group */}
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Brand */}
-        <div className="flex items-center gap-2">
+        <div 
+          onClick={onGoHome}
+          className={`flex items-center gap-2 ${onGoHome ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
+          title={onGoHome ? 'Return to Home & Landing Page' : 'CP Graph Editor'}
+        >
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-            <GitBranch size={16} />
+            <Share2 size={16} />
           </div>
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-sm tracking-tight text-white font-sans">CP Graph</span>
@@ -168,6 +176,17 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="w-[1px] h-4 bg-slate-800 my-auto" />
 
         {/* Export & Actions */}
+        {onOpenDownloadModal && (
+          <button
+            onClick={onOpenDownloadModal}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/20 text-xs font-medium rounded-lg transition-all"
+            title="Download Desktop App (Win, Mac, Linux)"
+          >
+            <Download size={13} />
+            <span>Desktop</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenExportModal}
           className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all"

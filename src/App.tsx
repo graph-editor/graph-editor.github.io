@@ -11,6 +11,8 @@ import { AlgorithmControls } from './components/AlgorithmControls';
 import { BottomStatusBar } from './components/BottomStatusBar';
 import { ExportModal } from './components/ExportModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { LandingPage } from './components/LandingPage';
+import { DownloadModal } from './components/DownloadModal';
 
 // Initial CP Graph (Tree edges without manual N M header)
 const INITIAL_CP_TEXT = `1 2
@@ -22,6 +24,27 @@ const INITIAL_CP_TEXT = `1 2
 
 export function App() {
   const canvasRef = useRef<CanvasHandle>(null);
+
+  const isElectron = typeof window !== 'undefined' && window.navigator?.userAgent?.toLowerCase().includes('electron');
+  const [currentView, setCurrentView] = useState<'landing' | 'editor'>(() => {
+    if (isElectron) return 'editor';
+    if (typeof window !== 'undefined' && window.location.hash === '#editor') return 'editor';
+    return 'landing';
+  });
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isElectron) return;
+    const handleHashChange = () => {
+      if (window.location.hash === '#editor') {
+        setCurrentView('editor');
+      } else if (window.location.hash === '' || window.location.hash === '#') {
+        setCurrentView('landing');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isElectron]);
 
   const [settings, setSettings] = useState<GraphSettings>({
     isDirected: false,
@@ -445,6 +468,24 @@ export function App() {
   const selectedNode = useMemo(() => data.nodes.find(n => n.id === selectedNodeId) || null, [data.nodes, selectedNodeId]);
   const selectedEdge = useMemo(() => data.edges.find(e => e.id === selectedEdgeId) || null, [data.edges, selectedEdgeId]);
 
+  if (currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onOpenEditor={() => {
+            setCurrentView('editor');
+            if (typeof window !== 'undefined') window.location.hash = '#editor';
+          }}
+          onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
+        />
+        <DownloadModal
+          isOpen={isDownloadModalOpen}
+          onClose={() => setIsDownloadModalOpen(false)}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
       {/* Top Navigation Bar */}
@@ -464,6 +505,11 @@ export function App() {
         onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
         isInspectorOpen={isInspectorOpen}
         onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
+        onGoHome={isElectron ? undefined : () => {
+          setCurrentView('landing');
+          if (typeof window !== 'undefined') window.location.hash = '';
+        }}
+        onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
       />
 
       {/* Main Workspace: Left Panel, Center Canvas Area, Right Docked Inspector */}
@@ -569,6 +615,14 @@ export function App() {
       {/* Keyboard & Mouse Shortcuts Dialog */}
       {isShortcutsModalOpen && (
         <ShortcutsModal onClose={() => setIsShortcutsModalOpen(false)} />
+      )}
+
+      {/* Desktop App Download Dialog */}
+      {isDownloadModalOpen && (
+        <DownloadModal
+          isOpen={isDownloadModalOpen}
+          onClose={() => setIsDownloadModalOpen(false)}
+        />
       )}
     </div>
   );
