@@ -1,0 +1,54 @@
+name: Build Cross-Platform Desktop Apps
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Build Web Bundle
+        run: pnpm build
+
+      - name: Build Desktop Package (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm exec electron-builder --linux AppImage deb
+
+      - name: Build Desktop Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pnpm exec electron-builder --win nsis zip
+
+      - name: Build Desktop Package (macOS)
+        if: matrix.os == 'macos-latest'
+        run: pnpm exec electron-builder --mac dmg zip
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cp-graph-editor-${{ matrix.os }}
+          path: release/*
