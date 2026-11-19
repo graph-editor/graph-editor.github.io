@@ -85,7 +85,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (type === 'edge_list') {
       onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`);
     } else if (type === 'weighted') {
-      onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3`);
+      onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3\n1 [10]\n2 [25]\n3 [15]\n4 [50]\n5 [30]`);
     } else if (type === 'tree') {
       onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6`);
     } else if (type === 'clear') {
@@ -268,7 +268,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   setSingleNodeInput('');
                 }
               }}
-              placeholder="Add node (e.g. A, true, 42, city)"
+              placeholder="Add node (e.g. A, A: 10, 42, city)"
               className="flex-1 bg-transparent text-xs font-mono text-slate-200 px-2 py-0.5 focus:outline-none placeholder:text-slate-600 min-w-0"
             />
             <button
@@ -277,7 +277,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 setSingleNodeInput('');
               }}
               className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm"
-              title="Add Single Node"
+              title="Add Single Node (Supports weights e.g. A: 10, A [10])"
             >
               <Plus size={12} />
               <span>+ Node</span>
@@ -286,44 +286,53 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
           {/* Edges Header & Quick Templates */}
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10.5px] font-medium text-slate-300 flex items-center gap-1">
+            <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
               <span>Input</span>
-              <span className="text-[10px] text-slate-500 font-mono">(u v [w] or u)</span>
+              <span className="text-[10px] text-slate-500 font-mono">(u v [w] or u [w])</span>
             </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => insertTemplate('single')}
-                className="text-[10px] text-emerald-400 hover:text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 hover:border-emerald-500/40 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
-                title="Single node"
-              >
-                Single
-              </button>
-              <button
-                onClick={() => insertTemplate('mixed')}
-                className="text-[10px] text-purple-400 hover:text-purple-300 bg-purple-950/30 border border-purple-800/40 hover:border-purple-500/40 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
-                title="Mixed types (Char, String, Bool, Int)"
-              >
-                Mixed
-              </button>
-              <button
-                onClick={() => insertTemplate('edge_list')}
-                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
-              >
-                Sample
-              </button>
-              <button
-                onClick={() => insertTemplate('weighted')}
-                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
-              >
-                Weighted
-              </button>
-              <button
-                onClick={() => insertTemplate('clear')}
-                className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950 border border-slate-800/80 hover:border-red-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
-              >
-                Clear
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => insertTemplate('clear')}
+              className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950/80 hover:bg-red-950/30 border border-slate-800/80 hover:border-red-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+              title="Clear input"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1 mb-2">
+            <button
+              type="button"
+              onClick={() => insertTemplate('single')}
+              className="py-1 px-1 rounded text-[10px] font-medium bg-emerald-950/30 border border-emerald-800/40 hover:border-emerald-500/40 text-emerald-300 text-center transition-colors truncate"
+              title="Single node (e.g. A)"
+            >
+              Single
+            </button>
+            <button
+              type="button"
+              onClick={() => insertTemplate('mixed')}
+              className="py-1 px-1 rounded text-[10px] font-medium bg-purple-950/30 border border-purple-800/40 hover:border-purple-500/40 text-purple-300 text-center transition-colors truncate"
+              title="Mixed types (Char, String, Bool, Int)"
+            >
+              Mixed
+            </button>
+            <button
+              type="button"
+              onClick={() => insertTemplate('edge_list')}
+              className="py-1 px-1 rounded text-[10px] font-medium bg-slate-950 border border-slate-800 hover:border-blue-500/40 text-slate-300 text-center transition-colors truncate"
+              title="Sample tree / edge list"
+            >
+              Sample
+            </button>
+            <button
+              type="button"
+              onClick={() => insertTemplate('weighted')}
+              className="py-1 px-1 rounded text-[10px] font-medium bg-slate-950 border border-slate-800 hover:border-blue-500/40 text-slate-300 text-center transition-colors truncate"
+              title="Weighted graph & nodes"
+            >
+              Weighted
+            </button>
           </div>
 
           {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
@@ -331,13 +340,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <textarea
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
-              placeholder={`# Single node:\nA\n# Mixed types:\nA true 5\ntrue 42\nAlice B\nSingleNode`}
+              placeholder={`# Edges (u v [w]):\n1 2\n2 3 5\n\n# Weighted nodes (u [w] or u: w):\n1 [10]\n2: 'A'\n3: "goal"\n\n# Isolated node:\nSingleNode`}
               spellCheck={false}
               className="flex-1 w-full p-3 bg-transparent text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"
             />
           </div>
           <div className="pt-1.5 px-0.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-            <span>Supports Char, String, Bool, Int & Single nodes</span>
+            <span>Supports Weighted Nodes, Chars, Strings & CP inputs</span>
           </div>
         </div>
       )}

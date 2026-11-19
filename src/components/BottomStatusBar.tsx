@@ -42,7 +42,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
   onUnpinAll,
 }) => {
   return (
-    <footer className="h-8 border-t border-slate-800/80 bg-slate-950 px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0">
+    <footer className="h-8 border-t border-slate-800/80 bg-slate-950 px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0 overflow-x-auto scrollbar-none gap-2">
       {/* Left: Live Graph Statistics */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">

@@ -53,9 +53,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenDownloadModal,
 }) => {
   return (
-    <header className="h-13 border-b border-slate-800 bg-slate-950 px-4 flex items-center justify-between z-20 select-none shrink-0">
+    <header className="h-13 border-b border-slate-800 bg-slate-950 px-2 sm:px-4 flex items-center justify-between z-20 select-none shrink-0 overflow-x-auto scrollbar-none gap-2">
       {/* Left: Brand / Logo + Main Editing Tools Group */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Brand */}
         <div 
           onClick={onGoHome}
@@ -66,20 +66,20 @@ export const TopBar: React.FC<TopBarProps> = ({
             <Share2 size={16} />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-sm tracking-tight text-white font-sans">CP Graph</span>
+            <span className="font-bold text-sm tracking-tight text-white font-sans hidden xs:inline">CP Graph</span>
             <span className="text-[9.5px] bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-medium px-1.5 py-0.5 rounded">
               PRO
             </span>
           </div>
         </div>
 
-        <div className="w-[1px] h-5 bg-slate-800/80" />
+        <div className="w-[1px] h-5 bg-slate-800/80 hidden sm:block" />
 
         {/* Main Editing Tools (Move, Add Node, Connect) on the LEFT SIDE */}
         <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => onSelectTool('select')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
               activeTool === 'select'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -87,12 +87,12 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Move & Drag Nodes (V)"
           >
             <MousePointer size={13} />
-            <span>Move</span>
+            <span className="hidden md:inline">Move</span>
           </button>
 
           <button
             onClick={() => onSelectTool('node')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
               activeTool === 'node'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -100,12 +100,12 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Add Node (N)"
           >
             <CircleDot size={13} />
-            <span>Add Node</span>
+            <span className="hidden md:inline">Add Node</span>
           </button>
 
           <button
             onClick={() => onSelectTool('edge')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
               activeTool === 'edge'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -113,17 +113,17 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Connect Edges (E)"
           >
             <Share2 size={13} />
-            <span>Connect</span>
+            <span className="hidden md:inline">Connect</span>
           </button>
         </div>
       </div>
 
       {/* Right: CP Configuration Toggles & Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* 1-indexed vs 0-indexed toggle */}
         <button
           onClick={onToggleIndexMode}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors border ${
             settings.isZeroIndexed
               ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
               : 'bg-indigo-950/40 border-indigo-500/40 text-indigo-300'
@@ -131,13 +131,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle 0-indexed / 1-indexed"
         >
           <Hash size={12} />
-          <span>{settings.isZeroIndexed ? '0-based' : '1-based'}</span>
+          <span className="hidden sm:inline">{settings.isZeroIndexed ? '0-based' : '1-based'}</span>
+          <span className="sm:hidden">{settings.isZeroIndexed ? '0b' : '1b'}</span>
         </button>
 
         {/* Directed vs Undirected toggle */}
         <button
           onClick={() => onUpdateSettings({ isDirected: !settings.isDirected })}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
             settings.isDirected
               ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
               : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
@@ -145,13 +146,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle Directed / Undirected (D)"
         >
           {settings.isDirected ? <ArrowRight size={12} /> : <Minus size={12} />}
-          <span>{settings.isDirected ? 'Directed' : 'Undirected'}</span>
+          <span className="hidden lg:inline">{settings.isDirected ? 'Directed' : 'Undirected'}</span>
+          <span className="lg:hidden">{settings.isDirected ? 'Dir' : 'Undir'}</span>
         </button>
 
         {/* Weighted vs Unweighted toggle */}
         <button
           onClick={() => onUpdateSettings({ isWeighted: !settings.isWeighted })}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
             settings.isWeighted
               ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
               : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
@@ -159,16 +161,17 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle Edge Weights (W)"
         >
           <span className="font-mono text-xs font-bold">W</span>
-          <span>{settings.isWeighted ? 'Weighted' : 'Unweighted'}</span>
+          <span className="hidden lg:inline">{settings.isWeighted ? 'Weighted' : 'Unweighted'}</span>
+          <span className="lg:hidden">{settings.isWeighted ? 'W' : 'Unw'}</span>
         </button>
 
         {/* Layout dropdown */}
-        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 px-2 py-0.5">
-          <LayoutGrid size={12} className="text-slate-400 mr-1.5" />
+        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 px-1.5 sm:px-2 py-0.5">
+          <LayoutGrid size={12} className="text-slate-400 mr-1 sm:mr-1.5" />
           <select
             value={settings.layout}
             onChange={e => onApplyLayout(e.target.value as LayoutMode)}
-            className="bg-transparent text-xs text-slate-300 focus:outline-none cursor-pointer py-0.5"
+            className="bg-transparent text-xs text-slate-300 focus:outline-none cursor-pointer py-0.5 max-w-[90px] sm:max-w-none"
           >
             <option value="force" className="bg-slate-900 text-white">Organic Force</option>
             <option value="tree" className="bg-slate-900 text-white">Hierarchical Tree</option>
@@ -179,13 +182,13 @@ export const TopBar: React.FC<TopBarProps> = ({
           </select>
         </div>
 
-        <div className="w-[1px] h-4 bg-slate-800 my-auto" />
+        <div className="w-[1px] h-4 bg-slate-800 my-auto hidden sm:block" />
 
         {/* Export & Actions */}
         {onOpenDownloadModal && (
           <button
             onClick={onOpenDownloadModal}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/20 text-xs font-medium rounded-lg transition-all"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/20 text-xs font-medium rounded-lg transition-all"
             title="Download Desktop App (Win, Mac, Linux)"
           >
             <Download size={13} />
@@ -195,11 +198,11 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           onClick={onOpenExportModal}
-          className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all"
           title="Export C++, Python, Text, Image"
         >
           <Download size={13} />
-          <span>Export</span>
+          <span className="hidden sm:inline">Export</span>
         </button>
 
         <button

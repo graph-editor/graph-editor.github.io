@@ -94,6 +94,17 @@
 @keyframes slideUp {
   from {
     opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUpCentered {
+  from {
+    opacity: 0;
     transform: translate(-50%, 20px);
   }
   to {
@@ -124,6 +135,10 @@
 
 .animate-slide-up {
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up-centered {
+  animation: slideUpCentered 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-left {
