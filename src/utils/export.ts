@@ -1,34 +1,75 @@
 import { GraphData, GraphSettings } from '../types/graph';
 
 export function generateCppAdjacencyList(data: GraphData, settings: GraphSettings): string {
-  const n = data.nodes.length;
   const isZero = settings.isZeroIndexed;
   const isWeighted = settings.isWeighted;
   const isDirected = settings.isDirected;
 
-  let code = `// C++ Adjacency List (${isZero ? '0' : '1'}-indexed, ${isDirected ? 'Directed' : 'Undirected'}${isWeighted ? ', Weighted' : ''})\n`;
+  // Check if all nodes are non-negative pure integers
+  const allNumeric = data.nodes.length > 0 && data.nodes.every(node => /^\d+$/.test(node.id.trim()));
+
+  if (allNumeric) {
+    let code = `// C++ Adjacency List (${isZero ? '0' : '1'}-indexed, ${isDirected ? 'Directed' : 'Undirected'}${isWeighted ? ', Weighted' : ''})\n`;
+    code += `#include <bits/stdc++.h>\nusing namespace std;\n\n`;
+
+    const maxId = Math.max(0, ...data.nodes.map(node => parseInt(node.id, 10)));
+    const sizeN = Math.max(1, maxId + 2);
+
+    if (isWeighted) {
+      code += `const int N = ${sizeN};\n`;
+      code += `vector<pair<int, int>> adj[N]; // {neighbor, weight}\n\n`;
+      code += `void build_graph() {\n`;
+      for (const e of data.edges) {
+        const w = e.weight ?? 1;
+        code += `    adj[${e.source}].push_back({${e.target}, ${w}});\n`;
+        if (!isDirected) {
+          code += `    adj[${e.target}].push_back({${e.source}, ${w}});\n`;
+        }
+      }
+      code += `}\n`;
+    } else {
+      code += `const int N = ${sizeN};\n`;
+      code += `vector<int> adj[N];\n\n`;
+      code += `void build_graph() {\n`;
+      for (const e of data.edges) {
+        code += `    adj[${e.source}].push_back(${e.target});\n`;
+        if (!isDirected) {
+          code += `    adj[${e.target}].push_back(${e.source});\n`;
+        }
+      }
+      code += `}\n`;
+    }
+    return code;
+  }
+
+  // Mixed or string/char/bool node IDs: use unordered_map<string, ...>
+  let code = `// C++ Adjacency List (Supports Mixed Types: Char, String, Bool, Int)\n`;
   code += `#include <bits/stdc++.h>\nusing namespace std;\n\n`;
 
   if (isWeighted) {
-    code += `const int N = ${Math.max(1, n + (isZero ? 1 : 2))};\n`;
-    code += `vector<pair<int, int>> adj[N]; // {neighbor, weight}\n\n`;
+    code += `unordered_map<string, vector<pair<string, int>>> adj; // {neighbor, weight}\n\n`;
     code += `void build_graph() {\n`;
+    for (const node of data.nodes) {
+      code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
+    }
     for (const e of data.edges) {
       const w = e.weight ?? 1;
-      code += `    adj[${e.source}].push_back({${e.target}, ${w}});\n`;
+      code += `    adj[${JSON.stringify(e.source)}].push_back({${JSON.stringify(e.target)}, ${w}});\n`;
       if (!isDirected) {
-        code += `    adj[${e.target}].push_back({${e.source}, ${w}});\n`;
+        code += `    adj[${JSON.stringify(e.target)}].push_back({${JSON.stringify(e.source)}, ${w}});\n`;
       }
     }
     code += `}\n`;
   } else {
-    code += `const int N = ${Math.max(1, n + (isZero ? 1 : 2))};\n`;
-    code += `vector<int> adj[N];\n\n`;
+    code += `unordered_map<string, vector<string>> adj;\n\n`;
     code += `void build_graph() {\n`;
+    for (const node of data.nodes) {
+      code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
+    }
     for (const e of data.edges) {
-      code += `    adj[${e.source}].push_back(${e.target});\n`;
+      code += `    adj[${JSON.stringify(e.source)}].push_back(${JSON.stringify(e.target)});\n`;
       if (!isDirected) {
-        code += `    adj[${e.target}].push_back(${e.source});\n`;
+        code += `    adj[${JSON.stringify(e.target)}].push_back(${JSON.stringify(e.source)});\n`;
       }
     }
     code += `}\n`;
@@ -41,26 +82,31 @@ export function generatePythonAdjacencyList(data: GraphData, settings: GraphSett
   const isWeighted = settings.isWeighted;
   const isDirected = settings.isDirected;
 
-  let code = `# Python Adjacency List (${settings.isZeroIndexed ? '0' : '1'}-indexed)\n`;
+  let code = `# Python Adjacency List (Supports Mixed Types: Char, String, Bool, Int)\n`;
   code += `from collections import defaultdict\n\n`;
   code += `adj = defaultdict(list)\n\n`;
   code += `def build_graph():\n`;
 
-  if (data.edges.length === 0) {
+  if (data.nodes.length === 0) {
     code += `    pass\n`;
+    return code;
+  }
+
+  for (const node of data.nodes) {
+    code += `    adj[${JSON.stringify(node.id)}] = []\n`;
   }
 
   for (const e of data.edges) {
     const w = e.weight ?? 1;
     if (isWeighted) {
-      code += `    adj[${e.source}].append((${e.target}, ${w}))\n`;
+      code += `    adj[${JSON.stringify(e.source)}].append((${JSON.stringify(e.target)}, ${w}))\n`;
       if (!isDirected) {
-        code += `    adj[${e.target}].append((${e.source}, ${w}))\n`;
+        code += `    adj[${JSON.stringify(e.target)}].append((${JSON.stringify(e.source)}, ${w}))\n`;
       }
     } else {
-      code += `    adj[${e.source}].append(${e.target})\n`;
+      code += `    adj[${JSON.stringify(e.source)}].append(${JSON.stringify(e.target)})\n`;
       if (!isDirected) {
-        code += `    adj[${e.target}].append(${e.source})\n`;
+        code += `    adj[${JSON.stringify(e.target)}].append(${JSON.stringify(e.source)})\n`;
       }
     }
   }

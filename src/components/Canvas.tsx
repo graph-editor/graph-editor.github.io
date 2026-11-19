@@ -81,6 +81,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
   const NODE_RADIUS = 20;
 
+  const getNodeRadius = useCallback((node?: GraphNode): number => {
+    if (!node) return NODE_RADIUS;
+    const len = String(node.label ?? node.id).length;
+    if (len <= 2) return 20;
+    if (len <= 4) return 23;
+    if (len <= 6) return 26;
+    return Math.min(45, 22 + len * 2.5);
+  }, []);
+
+  const getNodeFontSize = useCallback((node?: GraphNode): number => {
+    if (!node) return 13;
+    const len = String(node.label ?? node.id).length;
+    if (len <= 2) return 13;
+    if (len <= 4) return 11;
+    if (len <= 6) return 10;
+    return Math.max(9, Math.floor(12 - len * 0.35));
+  }, []);
+
   // Notify parent of zoom changes
   useEffect(() => {
     onZoomChange?.(viewTransform.scale);
@@ -107,6 +125,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const rect = svgRef.current.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
+
+    if (data.nodes.length === 1) {
+      const node = data.nodes[0];
+      setViewTransform({
+        x: width / 2 - node.x,
+        y: height / 2 - node.y,
+        scale: 1,
+      });
+      return;
+    }
 
     let minX = Infinity,
       maxX = -Infinity,
@@ -365,9 +393,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Self loop
     if (edge.source === edge.target) {
+      const sourceRadius = getNodeRadius(sourceNode);
       const x = sourceNode.x;
-      const y = sourceNode.y - NODE_RADIUS;
-      const loopRadius = 24;
+      const y = sourceNode.y - sourceRadius;
+      const loopRadius = Math.max(22, sourceRadius + 4);
       const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${y}`;
 
       return (
@@ -428,11 +457,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       curvature = 24;
     }
 
+    const sourceRadius = getNodeRadius(sourceNode);
+    const targetRadius = getNodeRadius(targetNode);
+
     // Node boundary intersection points
-    const startX = sourceNode.x + ux * NODE_RADIUS;
-    const startY = sourceNode.y + uy * NODE_RADIUS;
-    const endX = targetNode.x - ux * (NODE_RADIUS + (settings.isDirected ? 6 : 0));
-    const endY = targetNode.y - uy * (NODE_RADIUS + (settings.isDirected ? 6 : 0));
+    const startX = sourceNode.x + ux * sourceRadius;
+    const startY = sourceNode.y + uy * sourceRadius;
+    const endX = targetNode.x - ux * (targetRadius + (settings.isDirected ? 6 : 0));
+    const endY = targetNode.y - uy * (targetRadius + (settings.isDirected ? 6 : 0));
 
     let pathD = '';
     let labelX = (startX + endX) / 2;
@@ -520,6 +552,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const annotation = currentStep?.nodeAnnotations[node.id] || node.annotation;
 
     const baseColor = algoNodeColor || node.color;
+    const r = getNodeRadius(node);
+    const fontSize = getNodeFontSize(node);
 
     // Cursor styling: Pinned nodes indicate fixed status; free nodes show grab
     const cursorClass = isPinned
@@ -541,7 +575,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Pinned / Fixed visual anchor ring */}
         {isPinned && (
           <circle
-            r={NODE_RADIUS + 4}
+            r={r + 4}
             fill="none"
             stroke="#f59e0b"
             strokeWidth="2"
@@ -553,7 +587,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Outer Halo on Selection or Algorithm Focus */}
         {(isSelected || isActiveAlgo || isConnectSource) && (
           <circle
-            r={NODE_RADIUS + 7}
+            r={r + 7}
             fill="none"
             stroke={isActiveAlgo ? '#f59e0b' : '#38bdf8'}
             strokeWidth="2.5"
@@ -564,12 +598,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         {/* Frontier (Queue/Stack) Ring */}
         {isFrontierAlgo && !isActiveAlgo && (
-          <circle r={NODE_RADIUS + 5} fill="none" stroke="#f59e0b" strokeWidth="2" opacity="0.8" />
+          <circle r={r + 5} fill="none" stroke="#f59e0b" strokeWidth="2" opacity="0.8" />
         )}
 
         {/* Main Node Circle */}
         <circle
-          r={NODE_RADIUS}
+          r={r}
           fill={baseColor}
           stroke={isSelected ? '#ffffff' : isPinned ? '#f59e0b' : '#0a0e17'}
           strokeWidth={isPinned ? '2.5' : '2'}
@@ -579,9 +613,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Node Index / Label */}
         <text
           textAnchor="middle"
-          dy="5"
+          dy={fontSize * 0.35}
           fill="#ffffff"
-          fontSize="13"
+          fontSize={fontSize}
           fontFamily="Fira Code, monospace"
           fontWeight="700"
           pointerEvents="none"
@@ -591,7 +625,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         {/* Pinned / Fixed Badge Icon (TOP RIGHT) */}
         {isPinned && (
-          <g transform={`translate(${NODE_RADIUS - 4}, ${-NODE_RADIUS + 4})`} className="pointer-events-none">
+          <g transform={`translate(${r - 4}, ${-r + 4})`} className="pointer-events-none">
             <circle r="7.5" fill="#f59e0b" stroke="#0a0e17" strokeWidth="1.5" />
             <path
               d="M -3 3 L 3 -3 M 0 -3 L 3 0 M -2 2 L -4 4"
@@ -604,7 +638,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         {/* Badge (e.g. Root, Hub, Cut) */}
         {node.badge && (
-          <g transform={`translate(0, ${-NODE_RADIUS - 8})`}>
+          <g transform={`translate(0, ${-r - 8})`}>
             <rect x="-18" y="-7" width="36" height="14" rx="4" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
             <text textAnchor="middle" dy="3.5" fill="#ef4444" fontSize="9" fontWeight="700">
               {node.badge}
@@ -614,7 +648,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         {/* Annotation (e.g. dist: 4, low: 1, SCC #1) */}
         {annotation && (
-          <g transform={`translate(0, ${NODE_RADIUS + 14})`}>
+          <g transform={`translate(0, ${r + 14})`}>
             <rect
               x={-Math.max(22, annotation.length * 4)}
               y="-8"

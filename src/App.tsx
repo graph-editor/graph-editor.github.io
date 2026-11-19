@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode } from './types/graph';
-import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing } from './utils/parser';
+import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing, detectNodeType } from './utils/parser';
 import { computeGraphStats, runBFS, runDFS, runDijkstra, runTopologicalSort, runTarjanSCC, runBridgesAndCutVertices, runKruskalMST, runBipartiteCheck } from './utils/algorithms';
 import { applyLayout } from './utils/layout';
 import { TopBar } from './components/TopBar';
@@ -145,18 +145,71 @@ export function App() {
 
   // Visual Node Addition
   const handleAddNode = (x: number, y: number) => {
-    const existingNums = data.nodes.map(n => Number(n.id)).filter(n => !isNaN(n));
+    const existingNums = data.nodes
+      .filter(n => /^-?\d+$/.test(n.id))
+      .map(n => Number(n.id))
+      .filter(n => !isNaN(n));
     let nextNum = settings.isZeroIndexed ? 0 : 1;
     if (existingNums.length > 0) {
       nextNum = Math.max(...existingNums) + 1;
+    }
+    const existingIds = new Set(data.nodes.map(n => n.id));
+    while (existingIds.has(String(nextNum))) {
+      nextNum++;
     }
 
     const newNode: GraphNode = {
       id: String(nextNum),
       label: String(nextNum),
+      nodeType: 'int',
       index: nextNum,
       x,
       y,
+      color: '#3b82f6',
+    };
+
+    const nextData = {
+      ...data,
+      nodes: [...data.nodes, newNode],
+    };
+    setData(nextData);
+    syncGraphToText(nextData, settings);
+    setSelectedNodeId(newNode.id);
+  };
+
+  // Add single node by custom label/identifier (e.g. from LeftPanel)
+  const handleAddSingleNode = (name?: string) => {
+    let raw = name?.trim();
+    if (!raw) {
+      const existingNums = data.nodes
+        .filter(n => /^-?\d+$/.test(n.id))
+        .map(n => Number(n.id))
+        .filter(n => !isNaN(n));
+      let nextNum = settings.isZeroIndexed ? 0 : 1;
+      if (existingNums.length > 0) {
+        nextNum = Math.max(...existingNums) + 1;
+      }
+      const existingIds = new Set(data.nodes.map(n => n.id));
+      while (existingIds.has(String(nextNum))) {
+        nextNum++;
+      }
+      raw = String(nextNum);
+    }
+
+    // Ensure uniqueness if collision occurs
+    let finalId = raw;
+    let counter = 1;
+    while (data.nodes.some(n => n.id === finalId)) {
+      finalId = `${raw}_${counter++}`;
+    }
+
+    const newNode: GraphNode = {
+      id: finalId,
+      label: finalId,
+      nodeType: detectNodeType(finalId),
+      index: data.nodes.length + (settings.isZeroIndexed ? 0 : 1),
+      x: data.nodes.length === 0 ? 400 : 360 + (Math.random() - 0.5) * 160,
+      y: data.nodes.length === 0 ? 300 : 260 + (Math.random() - 0.5) * 160,
       color: '#3b82f6',
     };
 
@@ -269,10 +322,45 @@ export function App() {
 
   // Node property update
   const handleUpdateNode = (nodeId: string, updates: Partial<GraphNode>) => {
-    const nextNodes = data.nodes.map(n => (n.id === nodeId ? { ...n, ...updates } : n));
-    const nextData = { ...data, nodes: nextNodes };
+    const trimmedLabel = updates.label !== undefined ? updates.label.trim() : undefined;
+    const isRenaming = trimmedLabel !== undefined && trimmedLabel !== '' && trimmedLabel !== nodeId;
+
+    let targetId = nodeId;
+    if (isRenaming) {
+      const collision = data.nodes.some(n => n.id === trimmedLabel && n.id !== nodeId);
+      if (!collision) {
+        targetId = trimmedLabel;
+      }
+    }
+
+    const nextNodes = data.nodes.map(n => {
+      if (n.id === nodeId) {
+        return {
+          ...n,
+          ...updates,
+          id: targetId,
+          label: updates.label !== undefined ? updates.label : n.label,
+          nodeType: detectNodeType(targetId),
+        };
+      }
+      return n;
+    });
+
+    const nextEdges = isRenaming && targetId !== nodeId
+      ? data.edges.map(e => ({
+          ...e,
+          source: e.source === nodeId ? targetId : e.source,
+          target: e.target === nodeId ? targetId : e.target,
+        }))
+      : data.edges;
+
+    const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
+
+    if (selectedNodeId === nodeId && targetId !== nodeId) {
+      setSelectedNodeId(targetId);
+    }
   };
 
   // Delete Node
@@ -525,6 +613,7 @@ export function App() {
           isCollapsed={isLeftPanelCollapsed}
           onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
           onSetCustomNodeCount={handleSetCustomNodeCount}
+          onAddSingleNode={handleAddSingleNode}
         />
 
         {/* Center Workspace (Canvas + Floating Algorithm Controls at BOTTOM CENTER) */}

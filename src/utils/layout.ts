@@ -15,6 +15,13 @@ export function applyLayout(
   const centerX = width / 2;
   const centerY = height / 2;
 
+  if (data.nodes.length === 1) {
+    return {
+      ...data,
+      nodes: [{ ...data.nodes[0], x: centerX, y: centerY, vx: 0, vy: 0 }],
+    };
+  }
+
   switch (mode) {
     case 'tree':
       return applyTreeLayout(data, options?.rootId, width, height);
@@ -331,6 +338,13 @@ export function applyForceLayoutStep(
   const centerGravity = 0.02;
   const centerX = width / 2;
   const centerY = height / 2;
+
+  if (data.nodes.length === 1) {
+    return {
+      ...data,
+      nodes: [{ ...data.nodes[0], x: centerX, y: centerY, vx: 0, vy: 0 }],
+    };
+  }
   const damping = 0.85;
 
   for (let it = 0; it < iterations; it++) {

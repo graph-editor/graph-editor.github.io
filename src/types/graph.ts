@@ -1,6 +1,9 @@
+export type NodeType = 'int' | 'char' | 'bool' | 'string';
+
 export interface GraphNode {
   id: string;
   label: string;
+  nodeType?: NodeType;
   index: number; // 0-based or 1-based index integer
   x: number;
   y: number;
