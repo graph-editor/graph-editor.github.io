@@ -58,6 +58,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       a: 'CP Graph Editor is an ultra-clean, high-performance graph visualizer and drawing tool built specifically for competitive programmers (Codeforces, CSES, LeetCode, AtCoder) and computer science students. It allows you to paste raw edge lists or test cases and visually inspect, drag, and simulate graph algorithms.'
     },
     {
+      q: 'Can nodes have weights, values, or non-numeric identifiers (like strings or characters)?',
+      a: 'Yes! CP Graph Editor v2.0 introduces full support for weighted nodes and mixed data types. You can assign values (integers, floats, single characters like \'A\', strings like "goal", or booleans) using bracket syntax (e.g. 1 [10]) or assignment (e.g. A: 42). Weights are rendered cleanly on the canvas with a dedicated badge and exported directly into C++ and Python templates.'
+    },
+    {
       q: 'How does it auto-detect edges and nodes?',
       a: 'Unlike other graph editors that require manually typing node count N and edge count M, CP Graph Editor automatically scans your edge list (e.g., "1 2", "2 3 5"), detects all unique vertices, counts edges, and creates isolated nodes when declared in N M headers.'
     },
@@ -90,7 +94,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             </div>
             <div>
               <span className="font-extrabold text-lg text-white tracking-tight">CP Graph</span>
-              <span className="text-xs px-2 py-0.5 ml-2 font-mono rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v1.0</span>
+              <span className="text-xs px-2 py-0.5 ml-2 font-mono rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v2.0</span>
             </div>
           </div>
 
@@ -338,12 +342,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
             {/* Feature 4 */}
             <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Compass className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Codeforces Rating Colors</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Weighted Nodes & Mixed Types</h3>
               <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Categorize nodes using authentic Codeforces rating tier colors: Newbie Gray, Pupil Green, Specialist Cyan, Expert Blue, Master Orange, and Legendary Grandmaster Maroon.
+                Assign weights or arbitrary values (numbers, chars like <code>'A'</code>, strings like <code>"goal"</code>, booleans) to vertices. Supports bracket syntax <code>u [w]</code> and assignment <code>u: w</code> with real-time badges and C++/Python exports.
               </p>
             </article>
 
@@ -450,7 +454,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-mono text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 font-mono text-xs">
             <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
               <span className="text-cyan-400 font-bold block mb-2 font-sans text-sm">Edge List (Unweighted)</span>
               <p className="text-gray-400 text-[11px] font-sans mb-3">Standard Codeforces / CSES edge pairs.</p>
@@ -470,6 +474,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 2 3 10<br />
                 3 4 2<br />
                 4 1 7
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
+              <span className="text-purple-400 font-bold block mb-2 font-sans text-sm">Weighted Nodes</span>
+              <p className="text-gray-400 text-[11px] font-sans mb-3">Assign weights (int, char, string).</p>
+              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-purple-300">
+                1 [10]<br />
+                2: 'A'<br />
+                3: "goal"<br />
+                SingleNode
               </div>
             </div>
 
@@ -523,6 +538,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   <td className="p-4 text-gray-400">Requires manual lines</td>
                   <td className="p-4 text-gray-500">✗ No</td>
                   <td className="p-4 text-gray-500">✗ Strict DOT syntax</td>
+                </tr>
+                <tr>
+                  <td className="p-4 font-medium">Weighted Nodes & Mixed Types (Char, String, Bool, Int)</td>
+                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Live badges & values)</td>
+                  <td className="p-4 text-gray-500">✗ Numbers only</td>
+                  <td className="p-4 text-gray-500">✗ Fixed values</td>
+                  <td className="p-4 text-amber-400">Manual label formatting</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium">Preserve Isolated Vertices (Degree 0)</td>

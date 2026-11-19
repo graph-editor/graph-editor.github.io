@@ -18,17 +18,6 @@ export const CP_PALETTE = [
   { name: 'Pure White', color: '#f8fafc' },
 ];
 
-export const CODEFORCES_TIER_COLORS = [
-  { name: 'Newbie (Gray)', color: '#cccccc' },
-  { name: 'Pupil (Green)', color: '#77ff77' },
-  { name: 'Specialist (Cyan)', color: '#77ddbb' },
-  { name: 'Expert (Blue)', color: '#aaaaec' },
-  { name: 'Candidate Master (Violet)', color: '#ff88ff' },
-  { name: 'Master (Orange)', color: '#ffcc88' },
-  { name: 'Grandmaster (Red)', color: '#ff7777' },
-  { name: 'Legendary GM (Maroon)', color: '#aa0000' },
-];
-
 export interface ParseResult {
   data: GraphData;
   settings: Partial<GraphSettings>;
@@ -200,11 +189,38 @@ function parseEdgeList(
 
   const rawEdges: { u: string; v: string; w?: number }[] = [];
   const nodeIds = new Set<string>();
+  const nodeWeights = new Map<string, string | number>();
   let hasWeights = false;
   let foundZero = false;
 
   for (let i = edgeStartIndex; i < lines.length; i++) {
-    const parts = splitLineTokens(lines[i]);
+    const line = lines[i];
+
+    // Check if line defines a weighted node:
+    // Format 1: `node [weight]` e.g. "A [10]", "1 ['X']", "node ["val"]"
+    // Format 2: `node: weight` or `node = weight` e.g. "A: 10", "1: 'heavy'", "node = 42"
+    const bracketMatch = line.match(/^([^\s[\]]+)\s*\[([^\]]+)\]$/);
+    const assignMatch = line.match(/^([^\s:=[\]]+)\s*[:=]\s*(.+)$/);
+
+    if (bracketMatch || assignMatch) {
+      const uStr = (bracketMatch ? bracketMatch[1] : assignMatch![1]).trim();
+      let rawW = (bracketMatch ? bracketMatch[2] : assignMatch![2]).trim();
+      if ((rawW.startsWith("'") && rawW.endsWith("'")) || (rawW.startsWith('"') && rawW.endsWith('"'))) {
+        rawW = rawW.slice(1, -1);
+      }
+      const numW = Number(rawW);
+      const wVal = !isNaN(numW) && rawW !== '' ? numW : rawW;
+      if (uStr.length > 0) {
+        nodeIds.add(uStr);
+        nodeWeights.set(uStr, wVal);
+        if (uStr === '0') {
+          foundZero = true;
+        }
+        continue;
+      }
+    }
+
+    const parts = splitLineTokens(line);
     if (parts.length === 1) {
       // Single isolated node! E.g. 'A', 'true', '42', 'Alice'
       const uStr = parts[0];
@@ -262,6 +278,9 @@ function parseEdgeList(
     const isNum = !isNaN(num) && /^-?\d+$/.test(id);
     const index = isNum ? num : idx + (isZeroIndexed ? 0 : 1);
 
+    const explicitWeight = nodeWeights.get(id);
+    const weight = explicitWeight !== undefined ? explicitWeight : (existing?.weight ?? existing?.value);
+
     if (existing) {
       return {
         ...existing,
@@ -269,6 +288,8 @@ function parseEdgeList(
         label: existing.label || id,
         nodeType: detectNodeType(id),
         index,
+        weight,
+        value: weight,
       };
     }
 
@@ -285,6 +306,8 @@ function parseEdgeList(
       x: count === 1 ? cx : cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
       y: count === 1 ? cy : cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
       color: DEFAULT_NODE_COLOR,
+      weight,
+      value: weight,
     };
   });
 
@@ -552,10 +575,26 @@ export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings
     }
   }
 
-  // Any node not connected to any edge is output as a single isolated node line
+  // Emit any node weights for connected nodes
+  const connectedWeightedNodes = data.nodes.filter(
+    n => connectedNodes.has(n.id) && n.weight !== undefined && n.weight !== null && String(n.weight).trim() !== ''
+  );
+  if (connectedWeightedNodes.length > 0) {
+    let weightPrefix = '';
+    for (const node of connectedWeightedNodes) {
+      weightPrefix += `${node.id} [${node.weight}]\n`;
+    }
+    out = weightPrefix + out;
+  }
+
+  // Any node not connected to any edge is output as a single isolated node line (with weight if present)
   for (const node of data.nodes) {
     if (!connectedNodes.has(node.id)) {
-      out += `${node.id}\n`;
+      if (node.weight !== undefined && node.weight !== null && String(node.weight).trim() !== '') {
+        out += `${node.id} [${node.weight}]\n`;
+      } else {
+        out += `${node.id}\n`;
+      }
     }
   }
 

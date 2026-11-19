@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { GraphNode, GraphEdge, GraphSettings, GraphData, AlgorithmType } from '../types/graph';
-import { CP_PALETTE, CODEFORCES_TIER_COLORS, detectNodeType } from '../utils/parser';
+import { CP_PALETTE, detectNodeType } from '../utils/parser';
 import {
   Trash2,
   ArrowLeftRight,
@@ -175,6 +175,20 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
   }[nodeType] || 'bg-slate-800 border-slate-700 text-slate-300';
 
+  // Weighted node type and badge styling
+  const rawWeight = selectedNode?.weight ?? selectedNode?.value;
+  const hasWeight = rawWeight !== undefined && rawWeight !== null && String(rawWeight).trim() !== '';
+  const weightType = hasWeight ? detectNodeType(String(rawWeight)) : null;
+
+  const weightBadgeStyles = weightType
+    ? {
+        int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
+        char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
+        bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
+        string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
+      }[weightType] || 'bg-slate-800 border-slate-700 text-slate-300'
+    : '';
+
   // Common Header Content
   const renderHeader = () => (
     <div
@@ -333,8 +347,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         style={isBottom ? { height: `${bottomHeight}px` } : undefined}
         className={`${
           isBottom
-            ? 'w-full border-t border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl'
-            : 'w-80 border-l border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl'
+            ? 'w-full border-t border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up'
+            : 'w-80 border-l border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left'
         }`}
       >
         {isBottom && (
@@ -380,13 +394,13 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
         {renderHeader()}
 
-        {/* Horizontal Body Content */}
-        <div className="flex-1 p-3.5 px-4 overflow-x-auto overflow-y-auto flex flex-row gap-5 items-start divide-x divide-slate-800/60 min-w-max">
-          {/* NODE VIEW - Horizontal columns */}
+        {/* Horizontal Body Content (Responsive wrapping on medium screens) */}
+        <div className="flex-1 p-3.5 px-4 overflow-x-auto overflow-y-auto flex flex-wrap xl:flex-nowrap gap-5 items-start divide-y xl:divide-y-0 xl:divide-x divide-slate-800/60">
+          {/* NODE VIEW - Responsive columns */}
           {selectedNode && (
             <>
               {/* Column 1: Node Identifier & Type Presets */}
-              <div className="w-52 shrink-0 space-y-2">
+              <div className="w-56 shrink-0 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-slate-400">Node Identifier</label>
                   <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
@@ -433,8 +447,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 </div>
               </div>
 
-              {/* Column 2: Pin State & Vertex Value & Tree Root */}
-              <div className="w-52 shrink-0 pl-5 space-y-2">
+              {/* Column 2: Pin State & Weighted Node Value & Tree Root */}
+              <div className="w-64 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
                 <button
                   type="button"
                   onClick={() => onTogglePinNode(selectedNode.id)}
@@ -448,19 +462,65 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   <span>{selectedNode.isPinned ? 'Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
                 </button>
 
+                {/* Weighted Node Input: Number, Char, or String */}
                 <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">Vertex Value / Weight</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-medium text-slate-400">Node Weight / Value</label>
+                    {weightType && (
+                      <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}>
+                        {weightType}
+                      </span>
+                    )}
+                  </div>
                   <input
-                    type="number"
-                    value={selectedNode.value ?? ''}
-                    placeholder="e.g. 10"
-                    onChange={e =>
+                    type="text"
+                    value={selectedNode.weight ?? selectedNode.value ?? ''}
+                    placeholder="e.g. 10, A, val, true"
+                    onChange={e => {
+                      const val = e.target.value;
+                      const trimmed = val.trim();
+                      const num = Number(trimmed);
+                      const resolved = trimmed === '' ? undefined : !isNaN(num) ? num : trimmed;
                       onUpdateNode(selectedNode.id, {
-                        value: e.target.value === '' ? undefined : Number(e.target.value),
-                      })
-                    }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                        weight: resolved,
+                        value: resolved,
+                      });
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1"
                   />
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    >
+                      Int (10)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                    >
+                      Char ('A')
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                    >
+                      String
+                    </button>
+                    {(selectedNode.weight !== undefined || selectedNode.value !== undefined) && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <button
@@ -473,7 +533,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Column 3: Color Selection */}
-              <div className="w-64 shrink-0 pl-5 space-y-1.5">
+              <div className="w-56 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
                 <label className="text-[11px] font-medium text-slate-400 block">Node Color</label>
                 <div className="grid grid-cols-5 gap-1.5">
                   {CP_PALETTE.map(p => (
@@ -491,26 +551,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     />
                   ))}
                 </div>
-
-                <div className="text-[10px] text-slate-500 pt-1">Codeforces Tiers:</div>
-                <div className="grid grid-cols-2 gap-1">
-                  {CODEFORCES_TIER_COLORS.slice(0, 4).map(cf => (
-                    <button
-                      type="button"
-                      key={cf.color}
-                      onClick={() => onUpdateNode(selectedNode.id, { color: cf.color })}
-                      className="px-1.5 py-0.5 text-[9.5px] rounded border border-slate-800 truncate text-slate-200 hover:border-slate-600 text-left"
-                      style={{ borderLeftColor: cf.color, borderLeftWidth: 3 }}
-                      title={cf.name}
-                    >
-                      {cf.name.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Column 4: Node Tracer Details (Neighbors & Quick Trace) */}
-              <div className="w-72 shrink-0 pl-5 space-y-2">
+              <div className="w-72 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-300">
                     <Network size={13} className="text-blue-400" />
@@ -581,7 +625,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Column 5: Delete Node Action */}
-              <div className="w-28 shrink-0 pl-5 flex flex-col justify-start">
+              <div className="w-28 shrink-0 xl:pl-5 flex flex-col justify-start pt-3 xl:pt-0">
                 <button
                   type="button"
                   onClick={() => onDeleteNode(selectedNode.id)}
@@ -764,22 +808,69 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </p>
             </div>
 
-            {/* Node Value / Weight */}
+            {/* Node Weight (Int, Char, or String) */}
             <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                Vertex Value / Weight
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-medium text-slate-400">
+                  Node Weight / Value
+                </label>
+                {weightType && (
+                  <span
+                    className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}
+                  >
+                    {weightType}
+                  </span>
+                )}
+              </div>
               <input
-                type="number"
-                value={selectedNode.value ?? ''}
-                placeholder="e.g. 10"
-                onChange={e =>
+                type="text"
+                value={selectedNode.weight ?? selectedNode.value ?? ''}
+                placeholder="e.g. 10, A, val, true"
+                onChange={e => {
+                  const val = e.target.value;
+                  const trimmed = val.trim();
+                  const num = Number(trimmed);
+                  const resolved = trimmed === '' ? undefined : !isNaN(num) ? num : trimmed;
                   onUpdateNode(selectedNode.id, {
-                    value: e.target.value === '' ? undefined : Number(e.target.value),
-                  })
-                }
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                    weight: resolved,
+                    value: resolved,
+                  });
+                }}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1.5"
               />
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
+                <button
+                  type="button"
+                  onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
+                  className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                >
+                  Int (10)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
+                  className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                >
+                  Char ('A')
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
+                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                >
+                  String
+                </button>
+                {(selectedNode.weight !== undefined || selectedNode.value !== undefined) && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Node Connections & Tracing */}
@@ -876,22 +967,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 ))}
               </div>
 
-              {/* Codeforces rating colors */}
-              <div className="text-[10px] text-slate-500 mb-1">Codeforces Tiers:</div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {CODEFORCES_TIER_COLORS.map(cf => (
-                  <button
-                    type="button"
-                    key={cf.color}
-                    onClick={() => onUpdateNode(selectedNode.id, { color: cf.color })}
-                    className="px-2 py-1 text-[10px] rounded border border-slate-800 truncate text-slate-200 hover:border-slate-600 text-left"
-                    style={{ borderLeftColor: cf.color, borderLeftWidth: 3 }}
-                    title={cf.name}
-                  >
-                    {cf.name.split(' ')[0]}
-                  </button>
-                ))}
-              </div>
+              {/* Predefined palette */}
             </div>
 
             {/* Actions */}

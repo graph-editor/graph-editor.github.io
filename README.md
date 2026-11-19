@@ -26,9 +26,15 @@ A classic, ultra-clean, and high-performance Graph Visualizer and Editor built s
 * **Double-Click Canvas**: Instantly adds a new node at the cursor position.
 * **Drag Canvas Background**: Smooth infinite panning with zero friction (middle-click or click-drag).
 * **Connect Edges**: Dedicated Connect tool (`E`) for clicking or dragging between nodes.
-* **Color Nodes & Edges**:
-  * 10 curated high-contrast colors.
-  * Codeforces rating tier colors (Newbie Gray, Pupil Green, Specialist Cyan, Expert Blue, Candidate Master Violet, Master Orange, Grandmaster Red, Legendary GM Maroon).
+* **Color Nodes & Edges**: 10 curated high-contrast CP palette colors.
+* **Weighted Nodes & Multi-Type Values**:
+  * Nodes can hold arbitrary weights or values: numbers (integers, floats), characters (`'A'`), strings (`"city"`), and booleans (`true`).
+  * Supports bracket syntax (`u [w]`) and assignment syntax (`u: w` or `u = w`).
+  * Live visual weight badge (`w:<weight>`) rendered beneath nodes on canvas without overlapping trace labels.
+  * Live type detection (`int`, `char`, `bool`, `string`) in the Properties Inspector with presets and C++/Python code export.
+* **Fully Responsive & Touch-Ready**:
+  * Fluid desktop resizing, touch dragging, and pinch-to-zoom on tablets / mobile devices.
+  * Collapsible sidebar, scrollable toolbars, and adaptive multi-row controls.
 * **Curved Parallel Multi-Edges & Self-Loops**: Multi-edges curve gracefully with distinct offsets; self-loops are rendered with circular arcs so parallel edges and weights never collide.
 * **Clear Arrowheads**: Directed edges stop right at node boundaries so arrowheads are never obscured.
 * **Infinite Pan & Zoom**: Smooth mouse wheel zoom, pan, and **Fit to View** (`F`).

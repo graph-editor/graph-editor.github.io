@@ -13,7 +13,8 @@ export interface GraphNode {
   fy?: number | null;
   isPinned?: boolean; // When true, node is fixed in place and won't move with physics or layouts
   color: string;
-  value?: number;
+  weight?: string | number; // Node weight (value, char, or string)
+  value?: string | number; // Backward-compatible alias for weight
   annotation?: string;
   badge?: string; // e.g. "Root", "Cut", "LCA"
 }

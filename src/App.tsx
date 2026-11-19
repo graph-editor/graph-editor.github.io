@@ -62,7 +62,9 @@ export function App() {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   // Panels & Modals
-  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(false);
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
@@ -207,8 +209,24 @@ export function App() {
   };
 
   // Add single node by custom label/identifier (e.g. from LeftPanel)
-  const handleAddSingleNode = (name?: string) => {
+  const handleAddSingleNode = (name?: string, explicitWeight?: string | number) => {
     let raw = name?.trim();
+    let weight: string | number | undefined = explicitWeight;
+
+    if (raw) {
+      const bracketMatch = raw.match(/^([^\s[\]]+)\s*\[([^\]]+)\]$/);
+      const assignMatch = raw.match(/^([^\s:=[\]]+)\s*[:=]\s*(.+)$/);
+      if (bracketMatch || assignMatch) {
+        raw = (bracketMatch ? bracketMatch[1] : assignMatch![1]).trim();
+        let rawW = (bracketMatch ? bracketMatch[2] : assignMatch![2]).trim();
+        if ((rawW.startsWith("'") && rawW.endsWith("'")) || (rawW.startsWith('"') && rawW.endsWith('"'))) {
+          rawW = rawW.slice(1, -1);
+        }
+        const numW = Number(rawW);
+        weight = !isNaN(numW) && rawW !== '' ? numW : rawW;
+      }
+    }
+
     if (!raw) {
       const existingNums = data.nodes
         .filter(n => /^-?\d+$/.test(n.id))
@@ -236,6 +254,8 @@ export function App() {
       id: finalId,
       label: finalId,
       nodeType: detectNodeType(finalId),
+      weight,
+      value: weight,
       index: data.nodes.length + (settings.isZeroIndexed ? 0 : 1),
       x: data.nodes.length === 0 ? 400 : 360 + (Math.random() - 0.5) * 160,
       y: data.nodes.length === 0 ? 300 : 260 + (Math.random() - 0.5) * 160,

@@ -15,10 +15,35 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
     const maxId = Math.max(0, ...data.nodes.map(node => parseInt(node.id, 10)));
     const sizeN = Math.max(1, maxId + 2);
 
+    const weightedNodes = data.nodes.filter(
+      n => n.weight !== undefined && n.weight !== null && String(n.weight).trim() !== ''
+    );
+
+    code += `const int N = ${sizeN};\n`;
     if (isWeighted) {
-      code += `const int N = ${sizeN};\n`;
-      code += `vector<pair<int, int>> adj[N]; // {neighbor, weight}\n\n`;
-      code += `void build_graph() {\n`;
+      code += `vector<pair<int, int>> adj[N]; // {neighbor, weight}\n`;
+    } else {
+      code += `vector<int> adj[N];\n`;
+    }
+
+    if (weightedNodes.length > 0) {
+      const allWeightsInt = weightedNodes.every(n => typeof n.weight === 'number' || /^-?\d+$/.test(String(n.weight)));
+      if (allWeightsInt) {
+        code += `long long node_val[N]; // Node weights / values\n`;
+      } else {
+        code += `string node_val[N]; // Node weights / values\n`;
+      }
+    }
+    code += `\nvoid build_graph() {\n`;
+
+    if (weightedNodes.length > 0) {
+      for (const n of weightedNodes) {
+        const val = typeof n.weight === 'number' ? n.weight : JSON.stringify(String(n.weight));
+        code += `    node_val[${n.id}] = ${val};\n`;
+      }
+    }
+
+    if (isWeighted) {
       for (const e of data.edges) {
         const w = e.weight ?? 1;
         code += `    adj[${e.source}].push_back({${e.target}, ${w}});\n`;
@@ -26,19 +51,15 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
           code += `    adj[${e.target}].push_back({${e.source}, ${w}});\n`;
         }
       }
-      code += `}\n`;
     } else {
-      code += `const int N = ${sizeN};\n`;
-      code += `vector<int> adj[N];\n\n`;
-      code += `void build_graph() {\n`;
       for (const e of data.edges) {
         code += `    adj[${e.source}].push_back(${e.target});\n`;
         if (!isDirected) {
           code += `    adj[${e.target}].push_back(${e.source});\n`;
         }
       }
-      code += `}\n`;
     }
+    code += `}\n`;
     return code;
   }
 
@@ -46,34 +67,45 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
   let code = `// C++ Adjacency List (Supports Mixed Types: Char, String, Bool, Int)\n`;
   code += `#include <bits/stdc++.h>\nusing namespace std;\n\n`;
 
+  const weightedNodes = data.nodes.filter(
+    n => n.weight !== undefined && n.weight !== null && String(n.weight).trim() !== ''
+  );
+
   if (isWeighted) {
-    code += `unordered_map<string, vector<pair<string, int>>> adj; // {neighbor, weight}\n\n`;
-    code += `void build_graph() {\n`;
-    for (const node of data.nodes) {
-      code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
+    code += `unordered_map<string, vector<pair<string, int>>> adj; // {neighbor, weight}\n`;
+  } else {
+    code += `unordered_map<string, vector<string>> adj;\n`;
+  }
+
+  if (weightedNodes.length > 0) {
+    code += `unordered_map<string, string> node_val; // Node weights / values\n`;
+  }
+  code += `\nvoid build_graph() {\n`;
+
+  if (weightedNodes.length > 0) {
+    for (const n of weightedNodes) {
+      code += `    node_val[${JSON.stringify(n.id)}] = ${JSON.stringify(String(n.weight))};\n`;
     }
-    for (const e of data.edges) {
-      const w = e.weight ?? 1;
+  }
+
+  for (const node of data.nodes) {
+    code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
+  }
+  for (const e of data.edges) {
+    const w = e.weight ?? 1;
+    if (isWeighted) {
       code += `    adj[${JSON.stringify(e.source)}].push_back({${JSON.stringify(e.target)}, ${w}});\n`;
       if (!isDirected) {
         code += `    adj[${JSON.stringify(e.target)}].push_back({${JSON.stringify(e.source)}, ${w}});\n`;
       }
-    }
-    code += `}\n`;
-  } else {
-    code += `unordered_map<string, vector<string>> adj;\n\n`;
-    code += `void build_graph() {\n`;
-    for (const node of data.nodes) {
-      code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
-    }
-    for (const e of data.edges) {
+    } else {
       code += `    adj[${JSON.stringify(e.source)}].push_back(${JSON.stringify(e.target)});\n`;
       if (!isDirected) {
         code += `    adj[${JSON.stringify(e.target)}].push_back(${JSON.stringify(e.source)});\n`;
       }
     }
-    code += `}\n`;
   }
+  code += `}\n`;
 
   return code;
 }
@@ -82,14 +114,27 @@ export function generatePythonAdjacencyList(data: GraphData, settings: GraphSett
   const isWeighted = settings.isWeighted;
   const isDirected = settings.isDirected;
 
+  const weightedNodes = data.nodes.filter(
+    n => n.weight !== undefined && n.weight !== null && String(n.weight).trim() !== ''
+  );
+
   let code = `# Python Adjacency List (Supports Mixed Types: Char, String, Bool, Int)\n`;
   code += `from collections import defaultdict\n\n`;
-  code += `adj = defaultdict(list)\n\n`;
-  code += `def build_graph():\n`;
+  code += `adj = defaultdict(list)\n`;
+  if (weightedNodes.length > 0) {
+    code += `node_val = {}  # Node weights / values\n`;
+  }
+  code += `\ndef build_graph():\n`;
 
   if (data.nodes.length === 0) {
     code += `    pass\n`;
     return code;
+  }
+
+  if (weightedNodes.length > 0) {
+    for (const node of weightedNodes) {
+      code += `    node_val[${JSON.stringify(node.id)}] = ${JSON.stringify(node.weight)}\n`;
+    }
   }
 
   for (const node of data.nodes) {

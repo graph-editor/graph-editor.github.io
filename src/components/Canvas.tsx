@@ -54,6 +54,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
+  const lastPinchDistRef = useRef<number | null>(null);
 
   // Dragging Node state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -285,6 +286,41 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setDraggingNodeId(node.id);
   };
 
+  // Node Touch Start: Handles selection and initiates touch dragging
+  const handleNodeTouchStart = (e: React.TouchEvent, node: GraphNode) => {
+    e.stopPropagation();
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    if (activeTool === 'edge') {
+      if (!connectSourceId) {
+        setConnectSourceId(node.id);
+      } else {
+        if (connectSourceId !== node.id || settings.isDirected) {
+          onAddEdge(connectSourceId, node.id);
+          showToast(`Connected node ${connectSourceId} → ${node.id}`);
+        }
+        setConnectSourceId(null);
+      }
+      return;
+    }
+
+    onSelectNode(node.id);
+    onSelectEdge(null);
+
+    if (node.isPinned) {
+      showToast(`📌 Node ${node.label} is fixed. Double-click or use Inspector to unpin.`);
+      return;
+    }
+
+    const world = screenToWorld(touch.clientX, touch.clientY);
+    dragOffsetRef.current = {
+      x: node.x - world.x,
+      y: node.y - world.y,
+    };
+    setDraggingNodeId(node.id);
+  };
+
   // Node Double Click: TOGGLE FIXED / PINNED STATE
   const handleNodeDoubleClick = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
@@ -303,7 +339,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     showToast('Added new node');
   };
 
-  // Global Pointer/Mouse Move & Up listeners for 100% reliable dragging and panning
+  // Global Pointer/Mouse and Touch Move & Up listeners for 100% reliable dragging and panning
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       const world = screenToWorld(e.clientX, e.clientY);
@@ -335,12 +371,78 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }
     };
 
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && lastPinchDistRef.current !== null) {
+        e.preventDefault();
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const zoomDelta = dist / lastPinchDistRef.current;
+        lastPinchDistRef.current = dist;
+
+        if (svgRef.current) {
+          const rect = svgRef.current.getBoundingClientRect();
+          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+          setViewTransform(prev => {
+            const nextScale = Math.min(3.5, Math.max(0.2, prev.scale * zoomDelta));
+            const nextX = midX - (midX - prev.x) * (nextScale / prev.scale);
+            const nextY = midY - (midY - prev.y) * (nextScale / prev.scale);
+            return { x: nextX, y: nextY, scale: nextScale };
+          });
+        }
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const world = screenToWorld(touch.clientX, touch.clientY);
+        setMousePos(world);
+
+        if (isPanning) {
+          e.preventDefault();
+          setViewTransform(prev => ({
+            ...prev,
+            x: touch.clientX - panStartRef.current.x,
+            y: touch.clientY - panStartRef.current.y,
+          }));
+          return;
+        }
+
+        if (draggingNodeId) {
+          e.preventDefault();
+          const newX = world.x + dragOffsetRef.current.x;
+          const newY = world.y + dragOffsetRef.current.y;
+          onUpdateNodePosition(draggingNodeId, newX, newY, false);
+        }
+      }
+    };
+
+    const handleGlobalTouchEnd = () => {
+      lastPinchDistRef.current = null;
+      if (isPanning) {
+        setIsPanning(false);
+      }
+      if (draggingNodeId) {
+        onFinishDragNode(draggingNodeId);
+        setDraggingNodeId(null);
+      }
+    };
+
     window.addEventListener('mousemove', handleGlobalMouseMove);
     window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    window.addEventListener('touchend', handleGlobalTouchEnd);
+    window.addEventListener('touchcancel', handleGlobalTouchEnd);
 
     return () => {
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
+      window.removeEventListener('touchend', handleGlobalTouchEnd);
+      window.removeEventListener('touchcancel', handleGlobalTouchEnd);
     };
   }, [isPanning, draggingNodeId, screenToWorld, onUpdateNodePosition, onFinishDragNode]);
 
@@ -568,6 +670,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         transform={`translate(${node.x}, ${node.y})`}
         className={`node-group ${cursorClass} select-none`}
         onMouseDown={e => handleNodeMouseDown(e, node)}
+        onTouchStart={e => handleNodeTouchStart(e, node)}
         onDoubleClick={e => handleNodeDoubleClick(e, node)}
         onMouseEnter={() => setHoveredNodeId(node.id)}
         onMouseLeave={() => setHoveredNodeId(null)}
@@ -646,31 +749,71 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           </g>
         )}
 
+        {/* Node Weight Badge (supports number, char, or string) */}
+        {(() => {
+          const rawW = node.weight ?? node.value;
+          if (rawW === undefined || rawW === null || String(rawW).trim() === '') return null;
+          const wStr = String(rawW);
+          const badgeWidth = Math.max(30, wStr.length * 7 + 18);
+          const yOffset = r + 13;
+          return (
+            <g transform={`translate(0, ${yOffset})`} className="pointer-events-none">
+              <rect
+                x={-badgeWidth / 2}
+                y="-8"
+                width={badgeWidth}
+                height="16"
+                rx="8"
+                fill="#0b101b"
+                stroke={isSelected ? '#38bdf8' : '#818cf8'}
+                strokeWidth="1.2"
+                className="filter drop-shadow-md"
+              />
+              <text
+                textAnchor="middle"
+                dy="3.5"
+                fill="#c7d2fe"
+                fontSize="9.5"
+                fontFamily="Fira Code, monospace"
+                fontWeight="700"
+              >
+                {`w:${wStr}`}
+              </text>
+            </g>
+          );
+        })()}
+
         {/* Annotation (e.g. dist: 4, low: 1, SCC #1) */}
-        {annotation && (
-          <g transform={`translate(0, ${r + 14})`}>
-            <rect
-              x={-Math.max(22, annotation.length * 4)}
-              y="-8"
-              width={Math.max(44, annotation.length * 8)}
-              height="16"
-              rx="4"
-              fill="#0f172a"
-              stroke="#334155"
-              strokeWidth="1"
-            />
-            <text
-              textAnchor="middle"
-              dy="3.5"
-              fill="#38bdf8"
-              fontSize="10"
-              fontFamily="Fira Code, monospace"
-              fontWeight="600"
-            >
-              {annotation}
-            </text>
-          </g>
-        )}
+        {annotation && (() => {
+          const hasNodeWeight =
+            (node.weight !== undefined && node.weight !== null && String(node.weight).trim() !== '') ||
+            (node.value !== undefined && node.value !== null && String(node.value).trim() !== '');
+          const annotY = hasNodeWeight ? r + 33 : r + 14;
+          return (
+            <g transform={`translate(0, ${annotY})`}>
+              <rect
+                x={-Math.max(22, annotation.length * 4)}
+                y="-8"
+                width={Math.max(44, annotation.length * 8)}
+                height="16"
+                rx="4"
+                fill="#0f172a"
+                stroke="#334155"
+                strokeWidth="1"
+              />
+              <text
+                textAnchor="middle"
+                dy="3.5"
+                fill="#38bdf8"
+                fontSize="10"
+                fontFamily="Fira Code, monospace"
+                fontWeight="600"
+              >
+                {annotation}
+              </text>
+            </g>
+          );
+        })()}
       </g>
     );
   };
@@ -691,12 +834,30 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden bg-[#090d16] select-none flex-1 ${
+      className={`relative w-full h-full overflow-hidden bg-[#090d16] select-none flex-1 touch-none ${
         isPanning ? 'cursor-grabbing' : 'cursor-default'
       }`}
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
       onDoubleClick={handleCanvasDoubleClick}
+      onTouchStart={e => {
+        if (e.touches.length === 2) {
+          lastPinchDistRef.current = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          setIsPanning(false);
+          return;
+        }
+        if (e.touches.length === 1 && activeTool === 'select') {
+          const touch = e.touches[0];
+          setIsPanning(true);
+          panStartRef.current = { x: touch.clientX - viewTransform.x, y: touch.clientY - viewTransform.y };
+          onSelectNode(null);
+          onSelectEdge(null);
+          setConnectSourceId(null);
+        }
+      }}
     >
       <svg ref={svgRef} className="w-full h-full">
         <defs>
