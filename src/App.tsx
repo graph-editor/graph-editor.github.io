@@ -67,6 +67,35 @@ export function App() {
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
 
+  // Tracer Dock Position (Right Side vs Bottom)
+  const [tracerPosition, setTracerPosition] = useState<'right' | 'bottom'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cp_graph_tracer_dock_position');
+      if (saved === 'bottom' || saved === 'right') return saved;
+    }
+    return 'right';
+  });
+
+  const handleSetTracerPosition = useCallback((pos: 'right' | 'bottom') => {
+    setTracerPosition(pos);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('cp_graph_tracer_dock_position', pos);
+      } catch {}
+    }
+  }, []);
+
+  const handleToggleTracerPosition = useCallback(() => {
+    handleSetTracerPosition(tracerPosition === 'bottom' ? 'right' : 'bottom');
+  }, [tracerPosition, handleSetTracerPosition]);
+
+  const handleSelectNode = useCallback((nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+    if (nodeId) {
+      setIsInspectorOpen(true);
+    }
+  }, []);
+
   // Zoom scale reported by Canvas
   const [zoomScale, setZoomScale] = useState<number>(1);
 
@@ -174,7 +203,7 @@ export function App() {
     };
     setData(nextData);
     syncGraphToText(nextData, settings);
-    setSelectedNodeId(newNode.id);
+    handleSelectNode(newNode.id);
   };
 
   // Add single node by custom label/identifier (e.g. from LeftPanel)
@@ -219,7 +248,7 @@ export function App() {
     };
     setData(nextData);
     syncGraphToText(nextData, settings);
-    setSelectedNodeId(newNode.id);
+    handleSelectNode(newNode.id);
   };
 
   // Visual Edge Addition
@@ -591,8 +620,10 @@ export function App() {
         onToggleIndexMode={handleToggleIndexMode}
         onOpenExportModal={() => setIsExportModalOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
-        isInspectorOpen={isInspectorOpen}
+        isInspectorOpen={isInspectorOpen || !!selectedNode || !!selectedEdge}
         onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
+        tracerPosition={tracerPosition}
+        onToggleTracerPosition={handleToggleTracerPosition}
         onGoHome={isElectron ? undefined : () => {
           setCurrentView('landing');
           if (typeof window !== 'undefined') window.location.hash = '';
@@ -600,7 +631,7 @@ export function App() {
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
       />
 
-      {/* Main Workspace: Left Panel, Center Canvas Area, Right Docked Inspector */}
+      {/* Main Workspace: Left Panel, Center Canvas Area, Bottom/Right Docked Inspector */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Docked Left Panel (Collapsible) */}
         <LeftPanel
@@ -616,7 +647,7 @@ export function App() {
           onAddSingleNode={handleAddSingleNode}
         />
 
-        {/* Center Workspace (Canvas + Floating Algorithm Controls at BOTTOM CENTER) */}
+        {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}
         <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
           {/* Unobstructed Canvas with Solid Dark Background */}
           <div className="flex-1 relative overflow-hidden bg-[#090d16]">
@@ -627,7 +658,7 @@ export function App() {
               activeTool={activeTool}
               selectedNodeId={selectedNodeId}
               selectedEdgeId={selectedEdgeId}
-              onSelectNode={setSelectedNodeId}
+              onSelectNode={handleSelectNode}
               onSelectEdge={setSelectedEdgeId}
               onAddNode={handleAddNode}
               onAddEdge={handleAddEdge}
@@ -654,11 +685,39 @@ export function App() {
               </div>
             )}
           </div>
+
+          {/* Bottom Docked Node Tracer / Properties Inspector */}
+          {tracerPosition === 'bottom' && (isInspectorOpen || selectedNode || selectedEdge) && (
+            <PropertiesInspector
+              position="bottom"
+              onPositionChange={handleSetTracerPosition}
+              data={data}
+              selectedNode={selectedNode}
+              selectedEdge={selectedEdge}
+              settings={settings}
+              onUpdateNode={handleUpdateNode}
+              onDeleteNode={handleDeleteNode}
+              onUpdateEdge={handleUpdateEdge}
+              onDeleteEdge={handleDeleteEdge}
+              onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
+              onTogglePinNode={handleTogglePinNode}
+              onRunAlgorithm={handleRunAlgorithm}
+              onSelectNode={handleSelectNode}
+              onClose={() => {
+                setSelectedNodeId(null);
+                setSelectedEdgeId(null);
+                setIsInspectorOpen(false);
+              }}
+            />
+          )}
         </div>
 
         {/* Docked Right Properties Inspector: Slides in beside canvas, zero overlap */}
-        {(isInspectorOpen || selectedNode || selectedEdge) && (
+        {tracerPosition === 'right' && (isInspectorOpen || selectedNode || selectedEdge) && (
           <PropertiesInspector
+            position="right"
+            onPositionChange={handleSetTracerPosition}
+            data={data}
             selectedNode={selectedNode}
             selectedEdge={selectedEdge}
             settings={settings}
@@ -668,6 +727,8 @@ export function App() {
             onDeleteEdge={handleDeleteEdge}
             onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
             onTogglePinNode={handleTogglePinNode}
+            onRunAlgorithm={handleRunAlgorithm}
+            onSelectNode={handleSelectNode}
             onClose={() => {
               setSelectedNodeId(null);
               setSelectedEdgeId(null);
