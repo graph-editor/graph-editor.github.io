@@ -12,6 +12,8 @@ import {
   LayoutGrid,
   Download,
   Sliders,
+  PanelBottom,
+  PanelRight,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -27,6 +29,8 @@ interface TopBarProps {
   onOpenShortcutsModal: () => void;
   isInspectorOpen: boolean;
   onToggleInspector: () => void;
+  tracerPosition?: 'right' | 'bottom';
+  onToggleTracerPosition?: () => void;
   onGoHome?: () => void;
   onOpenDownloadModal?: () => void;
 }
@@ -43,6 +47,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenShortcutsModal,
   isInspectorOpen,
   onToggleInspector,
+  tracerPosition = 'right',
+  onToggleTracerPosition,
   onGoHome,
   onOpenDownloadModal,
 }) => {
@@ -204,15 +210,32 @@ export const TopBar: React.FC<TopBarProps> = ({
           <Trash2 size={15} />
         </button>
 
-        <button
-          onClick={onToggleInspector}
-          className={`p-1.5 rounded-lg transition-colors ${
-            isInspectorOpen ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-          }`}
-          title="Toggle Properties Inspector"
-        >
-          <Sliders size={15} />
-        </button>
+        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 p-0.5">
+          <button
+            onClick={onToggleInspector}
+            className={`p-1.5 rounded-md transition-colors ${
+              isInspectorOpen
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            }`}
+            title={`Toggle Node Tracer (${tracerPosition === 'bottom' ? 'Bottom Dock' : 'Side Dock'})`}
+          >
+            <Sliders size={15} />
+          </button>
+          {onToggleTracerPosition && (
+            <button
+              onClick={onToggleTracerPosition}
+              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition-colors"
+              title={`Switch Tracer to ${tracerPosition === 'bottom' ? 'Side Dock' : 'Bottom Dock'}`}
+            >
+              {tracerPosition === 'bottom' ? (
+                <PanelBottom size={14} className="text-blue-400" />
+              ) : (
+                <PanelRight size={14} className="text-blue-400" />
+              )}
+            </button>
+          )}
+        </div>
 
         <button
           onClick={onOpenShortcutsModal}

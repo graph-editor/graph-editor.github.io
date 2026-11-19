@@ -6,3 +6,4 @@ release/
 *.log
 build/bin/
 scripts/upload_all_assets.py
+scripts/release_v2.py
