@@ -7,12 +7,12 @@ interface DownloadModalProps {
 }
 
 const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor.Setup.1.0.0.exe';
-const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-win.zip';
-const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-arm64.dmg';
-const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-arm64-mac.zip';
-const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.AppImage';
-const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/cp-graph-editor_1.0.0_amd64.deb';
+const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor.Setup.2.0.0.exe';
+const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-win.zip';
+const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.dmg';
+const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-mac.zip';
+const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.AppImage';
+const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/cp-graph-editor_2.0.0_amd64.deb';
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -176,7 +176,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
         {/* Footer */}
         <div className="mt-5 flex items-center justify-between text-xs text-gray-400">
-          <span>Version 1.0.0 • Free & Open Source</span>
+          <span>Version 2.0.0 • Free & Open Source</span>
           <a 
             href={RELEASES_URL}
             target="_blank"

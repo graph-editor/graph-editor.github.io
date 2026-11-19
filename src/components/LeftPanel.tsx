@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Sliders,
   Flame,
+  Plus,
 } from 'lucide-react';
 import { GraphData, GraphSettings, AlgorithmType } from '../types/graph';
 import {
@@ -36,6 +37,7 @@ interface LeftPanelProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onSetCustomNodeCount?: (count: number | null) => void;
+  onAddSingleNode?: (name?: string) => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -48,11 +50,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   isCollapsed,
   onToggleCollapse,
   onSetCustomNodeCount,
+  onAddSingleNode,
 }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
   const [selectedAlgo, setSelectedAlgo] = useState<AlgorithmType>('bfs');
   const [startNodeId, setStartNodeId] = useState<string>(data.nodes[0]?.id || (settings.isZeroIndexed ? '0' : '1'));
   const [copied, setCopied] = useState(false);
+  const [singleNodeInput, setSingleNodeInput] = useState('');
 
   // Generator parameters
   const [presetN, setPresetN] = useState<number>(7);
@@ -73,8 +77,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   };
 
   // Quick template inserters
-  const insertTemplate = (type: 'edge_list' | 'weighted' | 'tree' | 'clear') => {
-    if (type === 'edge_list') {
+  const insertTemplate = (type: 'edge_list' | 'weighted' | 'tree' | 'clear' | 'single' | 'mixed') => {
+    if (type === 'single') {
+      onRawTextChange(`A`);
+    } else if (type === 'mixed') {
+      onRawTextChange(`A true 5\ntrue 42 3\n42 Alice 8\nAlice false 2\nSingleChar`);
+    } else if (type === 'edge_list') {
       onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`);
     } else if (type === 'weighted') {
       onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3`);
@@ -248,43 +256,88 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
           </div>
 
+          {/* Quick Add Single Node Input */}
+          <div className="flex items-center gap-1.5 mb-2 bg-[#070a10] p-1.5 rounded-lg border border-slate-800">
+            <input
+              type="text"
+              value={singleNodeInput}
+              onChange={e => setSingleNodeInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  onAddSingleNode?.(singleNodeInput);
+                  setSingleNodeInput('');
+                }
+              }}
+              placeholder="Add node (e.g. A, true, 42, city)"
+              className="flex-1 bg-transparent text-xs font-mono text-slate-200 px-2 py-0.5 focus:outline-none placeholder:text-slate-600 min-w-0"
+            />
+            <button
+              onClick={() => {
+                onAddSingleNode?.(singleNodeInput);
+                setSingleNodeInput('');
+              }}
+              className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm"
+              title="Add Single Node"
+            >
+              <Plus size={12} />
+              <span>+ Node</span>
+            </button>
+          </div>
+
           {/* Edges Header & Quick Templates */}
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10.5px] font-medium text-slate-300 flex items-center gap-1">
-              <span>Edges</span>
-              <span className="text-[10px] text-slate-500 font-mono">(u v [w])</span>
+              <span>Input</span>
+              <span className="text-[10px] text-slate-500 font-mono">(u v [w] or u)</span>
             </span>
             <div className="flex items-center gap-1">
               <button
+                onClick={() => insertTemplate('single')}
+                className="text-[10px] text-emerald-400 hover:text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 hover:border-emerald-500/40 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+                title="Single node"
+              >
+                Single
+              </button>
+              <button
+                onClick={() => insertTemplate('mixed')}
+                className="text-[10px] text-purple-400 hover:text-purple-300 bg-purple-950/30 border border-purple-800/40 hover:border-purple-500/40 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+                title="Mixed types (Char, String, Bool, Int)"
+              >
+                Mixed
+              </button>
+              <button
                 onClick={() => insertTemplate('edge_list')}
-                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
               >
                 Sample
               </button>
               <button
                 onClick={() => insertTemplate('weighted')}
-                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+                className="text-[10px] text-slate-400 hover:text-blue-400 bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
               >
                 Weighted
               </button>
               <button
                 onClick={() => insertTemplate('clear')}
-                className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950 border border-slate-800/80 hover:border-red-500/30 px-2 py-0.5 rounded transition-colors whitespace-nowrap"
+                className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950 border border-slate-800/80 hover:border-red-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
               >
                 Clear
               </button>
             </div>
           </div>
 
-          {/* Monospace Code Editor Area for Pure Edges */}
+          {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
           <div className="flex-1 relative flex flex-col bg-[#070a10] border border-slate-800 rounded-lg overflow-hidden focus-within:border-blue-500/50">
             <textarea
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
-              placeholder={`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`}
+              placeholder={`# Single node:\nA\n# Mixed types:\nA true 5\ntrue 42\nAlice B\nSingleNode`}
               spellCheck={false}
               className="flex-1 w-full p-3 bg-transparent text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"
             />
+          </div>
+          <div className="pt-1.5 px-0.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+            <span>Supports Char, String, Bool, Int & Single nodes</span>
           </div>
         </div>
       )}
@@ -334,7 +387,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               >
                 {data.nodes.map(n => (
                   <option key={n.id} value={n.id}>
-                    Node {n.label}
+                    Node {n.label} {n.nodeType ? `[${n.nodeType}]` : ''}
                   </option>
                 ))}
               </select>

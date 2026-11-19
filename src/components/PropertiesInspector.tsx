@@ -1,6 +1,6 @@
 import React from 'react';
 import { GraphNode, GraphEdge, GraphSettings } from '../types/graph';
-import { CP_PALETTE, CODEFORCES_TIER_COLORS } from '../utils/parser';
+import { CP_PALETTE, CODEFORCES_TIER_COLORS, detectNodeType } from '../utils/parser';
 import { Trash2, ArrowLeftRight, X, Palette, Pin, CheckCircle2, Sliders } from 'lucide-react';
 
 interface PropertiesInspectorProps {
@@ -52,18 +52,64 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       {/* Docked Body: Scrollable */}
       <div className="flex-1 p-4 overflow-y-auto space-y-4">
         {/* NODE PROPERTIES */}
-        {selectedNode && (
-          <div className="space-y-4">
-            {/* Label / Name */}
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">Label / Name</label>
-              <input
-                type="text"
-                value={selectedNode.label}
-                onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
+        {selectedNode && (() => {
+          const nodeType = selectedNode.nodeType || detectNodeType(selectedNode.label || selectedNode.id);
+          const typeBadgeStyles = {
+            int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
+            char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
+            bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
+            string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
+          }[nodeType] || 'bg-slate-800 border-slate-700 text-slate-300';
+
+          return (
+            <div className="space-y-4">
+              {/* Label / Name with Type Badge */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-medium text-slate-400">Node Identifier</label>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
+                    {nodeType}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={selectedNode.label}
+                  onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-1.5"
+                  placeholder="e.g. A, true, 42, Alice"
+                />
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                  >
+                    Char ('A')
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                  >
+                    Bool ({selectedNode.label === 'true' ? 'false' : 'true'})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                  >
+                    Int ('1')
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                  >
+                    String
+                  </button>
+                </div>
+              </div>
 
             {/* Fixed / Pin Position Toggle */}
             <div>
@@ -156,7 +202,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </button>
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* EDGE PROPERTIES */}
         {selectedEdge && (

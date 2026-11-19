@@ -45,12 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
   const GITHUB_REPO = 'https://github.com/mostafa-cse/Graph-visualization';
   const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor.Setup.1.0.0.exe';
-  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-win.zip';
-  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-arm64.dmg';
-  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0-arm64-mac.zip';
-  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/CP.Graph.Editor-1.0.0.AppImage';
-  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v1.0.0/cp-graph-editor_1.0.0_amd64.deb';
+  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor.Setup.2.0.0.exe';
+  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-win.zip';
+  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.dmg';
+  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-mac.zip';
+  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.AppImage';
+  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/cp-graph-editor_2.0.0_amd64.deb';
 
   const faqs = [
     {

@@ -1,4 +1,4 @@
-import { GraphData, GraphNode, GraphEdge, GraphSettings } from '../types/graph';
+import { GraphData, GraphNode, GraphEdge, GraphSettings, NodeType } from '../types/graph';
 
 // Standard colors
 export const DEFAULT_NODE_COLOR = '#3b82f6'; // Bright blue
@@ -38,7 +38,60 @@ export interface ParseResult {
 }
 
 /**
- * Parses raw Competitive Programming input text into GraphData
+ * Detects whether a node identifier represents an integer, char, boolean, or string.
+ */
+export function detectNodeType(val: string): NodeType {
+  const trimmed = val.trim();
+  // 1. Integer check: optional leading minus, followed by digits
+  if (/^-?\d+$/.test(trimmed)) {
+    return 'int';
+  }
+  // 2. Boolean check: true or false (case-insensitive)
+  if (/^(true|false)$/i.test(trimmed)) {
+    return 'bool';
+  }
+  // 3. Char check: 1 character or single character enclosed in quotes
+  if (
+    trimmed.length === 1 ||
+    (trimmed.length === 3 && (trimmed.startsWith("'") && trimmed.endsWith("'") || trimmed.startsWith('"') && trimmed.endsWith('"')))
+  ) {
+    return 'char';
+  }
+  // 4. Default: string
+  return 'string';
+}
+
+/**
+ * Splits a line into tokens, respecting double and single quotes.
+ * e.g. `A true 5` -> `['A', 'true', '5']`
+ * e.g. `"node 1" false` -> `['node 1', 'false']`
+ */
+export function splitLineTokens(line: string): string[] {
+  const tokens: string[] = [];
+  const regex = /"([^"]*)"|'([^']*)'|[^\s"']+/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(line)) !== null) {
+    if (match[1] !== undefined) {
+      tokens.push(match[1]);
+    } else if (match[2] !== undefined) {
+      tokens.push(match[2]);
+    } else {
+      tokens.push(match[0]);
+    }
+  }
+  return tokens;
+}
+
+/**
+ * Parses raw input text into GraphData.
+ * Supports:
+ * - Single node (e.g. `A`, `1`, `true`, `hello`)
+ * - Mixed node types in the same graph (Char, String, Bool, Int)
+ * - Isolated nodes alongside edges
+ * - Edge list (u v [w])
+ * - Adjacency list (u: v1 v2)
+ * - Adjacency matrix
+ * - Standard CP header (N M)
  */
 export function parseGraphInput(
   rawText: string,
@@ -57,14 +110,18 @@ export function parseGraphInput(
     };
   }
 
-  // Check if first line might be `t` (number of testcases).
-  // If line 1 is "1", skip or ignore it if line 2 has "n m"
   let lines = cleanLines;
-  if (lines.length > 1 && /^\d+$/.test(lines[0]) && lines[1].split(/\s+/).length >= 2) {
-    // Might be single number of testcases T = 1
-    const t = parseInt(lines[0], 10);
-    if (t === 1) {
-      lines = lines.slice(1);
+
+  // Check if first line might be `t` (number of testcases T = 1).
+  // Only slice line 0 if line 1 explicitly starts a CP header `N M` matching following lines count
+  if (lines.length > 2 && lines[0] === '1') {
+    const headerTokens = splitLineTokens(lines[1]);
+    if (headerTokens.length === 2) {
+      const n = parseInt(headerTokens[0], 10);
+      const m = parseInt(headerTokens[1], 10);
+      if (!isNaN(n) && !isNaN(m) && lines.length - 2 === m) {
+        lines = lines.slice(1);
+      }
     }
   }
 
@@ -80,7 +137,7 @@ export function parseGraphInput(
   if (
     lines.length > 1 &&
     firstRowNumbers.length === lines.length &&
-    lines.every(l => l.split(/\s+/).length === lines.length)
+    lines.every(l => l.split(/\s+/).length === lines.length && l.split(/\s+/).every(x => !isNaN(Number(x))))
   ) {
     return parseAdjacencyMatrix(lines, currentSettings, existingNodes);
   }
@@ -99,14 +156,8 @@ function parseEdgeList(
   let declaredM: number | null = null;
   let edgeStartIndex = 0;
 
-  const firstTokens = lines[0].split(/\s+/);
+  const firstTokens = splitLineTokens(lines[0]);
   // Check if first line is explicitly a CP header `N M`
-  // We only treat line 0 as a header if:
-  // 1. lines.length > 1
-  // 2. Exactly 2 integers in line 0: n >= 1, m >= 0
-  // 3. Exactly m following lines: lines.length - 1 === m
-  // 4. All vertex numbers in subsequent lines are within 1..n (or 0..n-1)
-  // 5. At least one subsequent vertex is > 1 (preventing single-node edge chains from being misidentified)
   if (lines.length > 1 && firstTokens.length === 2) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
@@ -114,7 +165,7 @@ function parseEdgeList(
       let allValid = true;
       let hasVertexAboveOne = false;
       for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(/\s+/);
+        const parts = splitLineTokens(lines[i]);
         if (parts.length >= 2) {
           const u = parseInt(parts[0], 10);
           const v = parseInt(parts[1], 10);
@@ -138,9 +189,13 @@ function parseEdgeList(
     }
   }
 
-  // If first line has 1 token and second line has tokens (parent array format)
-  if (!hasHeader && lines.length === 2 && firstTokens.length === 1 && lines[1].split(/\s+/).length > 1) {
-    return parseParentArray(lines, settings, existingNodes);
+  // Parent array check: strictly when line 0 is N (integer >= 2) and line 1 has exactly N-1 integer parents
+  if (!hasHeader && lines.length === 2 && firstTokens.length === 1) {
+    const n = parseInt(firstTokens[0], 10);
+    const secondTokens = splitLineTokens(lines[1]);
+    if (!isNaN(n) && n >= 2 && secondTokens.length === n - 1 && secondTokens.every(t => /^-?\d+$/.test(t))) {
+      return parseParentArray(lines, settings, existingNodes);
+    }
   }
 
   const rawEdges: { u: string; v: string; w?: number }[] = [];
@@ -149,8 +204,17 @@ function parseEdgeList(
   let foundZero = false;
 
   for (let i = edgeStartIndex; i < lines.length; i++) {
-    const parts = lines[i].split(/\s+/);
-    if (parts.length >= 2) {
+    const parts = splitLineTokens(lines[i]);
+    if (parts.length === 1) {
+      // Single isolated node! E.g. 'A', 'true', '42', 'Alice'
+      const uStr = parts[0];
+      if (uStr.length > 0) {
+        nodeIds.add(uStr);
+        if (uStr === '0') {
+          foundZero = true;
+        }
+      }
+    } else if (parts.length >= 2) {
       const uStr = parts[0];
       const vStr = parts[1];
       let weight: number | undefined = undefined;
@@ -181,42 +245,45 @@ function parseEdgeList(
     }
   }
 
-  // Convert node IDs to sorted array for clean numbering
+  // Sort node IDs cleanly: integers numerically first, then non-integers alphabetically
   const sortedNodeIds = Array.from(nodeIds).sort((a, b) => {
-    const na = Number(a);
-    const nb = Number(b);
-    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    const aIsNum = /^-?\d+$/.test(a);
+    const bIsNum = /^-?\d+$/.test(b);
+    if (aIsNum && bIsNum) return Number(a) - Number(b);
+    if (aIsNum && !bIsNum) return -1;
+    if (!aIsNum && bIsNum) return 1;
     return a.localeCompare(b);
   });
 
-  // Calculate layout / positions
+  const count = sortedNodeIds.length;
   const nodes: GraphNode[] = sortedNodeIds.map((id, idx) => {
     const existing = existingNodes?.get(id);
     const num = Number(id);
-    const index = !isNaN(num) ? num : idx + (isZeroIndexed ? 0 : 1);
+    const isNum = !isNaN(num) && /^-?\d+$/.test(id);
+    const index = isNum ? num : idx + (isZeroIndexed ? 0 : 1);
 
     if (existing) {
       return {
         ...existing,
         id,
-        label: id,
+        label: existing.label || id,
+        nodeType: detectNodeType(id),
         index,
       };
     }
 
-    // Default positions spread on a circle
-    const count = sortedNodeIds.length;
     const angle = (idx / Math.max(1, count)) * 2 * Math.PI;
-    const radius = Math.min(280, 50 + count * 15);
+    const radius = count === 1 ? 0 : Math.min(280, 50 + count * 15);
     const cx = 400;
     const cy = 300;
 
     return {
       id,
       label: id,
+      nodeType: detectNodeType(id),
       index,
-      x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
-      y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
+      x: count === 1 ? cx : cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+      y: count === 1 ? cy : cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
       color: DEFAULT_NODE_COLOR,
     };
   });
@@ -228,14 +295,14 @@ function parseEdgeList(
   rawEdges.forEach(e => {
     const key = settings.isDirected
       ? `${e.u}->${e.v}`
-      : `${Math.min(Number(e.u), Number(e.v))}-${Math.max(Number(e.u), Number(e.v))}`;
+      : `${e.u < e.v ? e.u : e.v}-${e.u < e.v ? e.v : e.u}`;
     edgePairCount.set(key, (edgePairCount.get(key) || 0) + 1);
   });
 
   const edges: GraphEdge[] = rawEdges.map((e, index) => {
     const key = settings.isDirected
       ? `${e.u}->${e.v}`
-      : `${Math.min(Number(e.u), Number(e.v))}-${Math.max(Number(e.u), Number(e.v))}`;
+      : `${e.u < e.v ? e.u : e.v}-${e.u < e.v ? e.v : e.u}`;
     const total = edgePairCount.get(key) || 1;
     const currentIdx = edgePairIndices.get(key) || 0;
     edgePairIndices.set(key, currentIdx + 1);
@@ -273,7 +340,7 @@ function parseParentArray(
   existingNodes?: Map<string, GraphNode>
 ): ParseResult {
   const n = parseInt(lines[0].trim(), 10);
-  const parents = lines[1].trim().split(/\s+/).map(Number);
+  const parents = splitLineTokens(lines[1]).map(Number);
   const isZeroIndexed = parents.some(p => p === 0) || settings.isZeroIndexed;
 
   const nodes: GraphNode[] = [];
@@ -289,6 +356,7 @@ function parseParentArray(
       existing || {
         id,
         label: id,
+        nodeType: 'int',
         index: i,
         x: 400 + Math.cos((i / n) * 2 * Math.PI) * 200,
         y: 300 + Math.sin((i / n) * 2 * Math.PI) * 200,
@@ -339,6 +407,7 @@ function parseAdjacencyMatrix(
       existing || {
         id,
         label: id,
+        nodeType: 'int',
         index: isZeroIndexed ? i : i + 1,
         x: 400 + Math.cos((i / n) * 2 * Math.PI) * 200,
         y: 300 + Math.sin((i / n) * 2 * Math.PI) * 200,
@@ -392,28 +461,55 @@ function parseAdjacencyList(
   const nodeIds = new Set<string>();
 
   for (const line of lines) {
-    const parts = line.split(/:|->/).map(s => s.trim());
-    if (parts.length >= 2) {
-      const u = parts[0];
-      nodeIds.add(u);
-      const targets = parts[1].split(/[,\s]+/).filter(Boolean);
-      for (const t of targets) {
-        nodeIds.add(t);
-        rawEdges.push({ u, v: t });
+    if (line.includes(':') || line.includes('->')) {
+      const parts = line.split(/:|->/).map(s => s.trim());
+      if (parts.length >= 1 && parts[0]) {
+        const u = parts[0];
+        nodeIds.add(u);
+        if (parts.length >= 2 && parts[1]) {
+          const targets = parts[1].split(/[,\s]+/).filter(Boolean);
+          for (const t of targets) {
+            nodeIds.add(t);
+            rawEdges.push({ u, v: t });
+          }
+        }
+      }
+    } else {
+      const trimmed = line.trim();
+      if (trimmed.length > 0) {
+        nodeIds.add(trimmed);
       }
     }
   }
 
-  const sortedNodeIds = Array.from(nodeIds);
+  const sortedNodeIds = Array.from(nodeIds).sort((a, b) => {
+    const aIsNum = /^-?\d+$/.test(a);
+    const bIsNum = /^-?\d+$/.test(b);
+    if (aIsNum && bIsNum) return Number(a) - Number(b);
+    if (aIsNum && !bIsNum) return -1;
+    if (!aIsNum && bIsNum) return 1;
+    return a.localeCompare(b);
+  });
+
+  const count = sortedNodeIds.length;
   const nodes = sortedNodeIds.map((id, idx) => {
     const existing = existingNodes?.get(id);
+    const num = Number(id);
+    const isNum = !isNaN(num) && /^-?\d+$/.test(id);
+    const index = isNum ? num : idx + (settings.isZeroIndexed ? 0 : 1);
+    const angle = (idx / Math.max(1, count)) * 2 * Math.PI;
+    const radius = count === 1 ? 0 : Math.min(280, 50 + count * 15);
+    const cx = 400;
+    const cy = 300;
+
     return (
       existing || {
         id,
         label: id,
-        index: idx + (settings.isZeroIndexed ? 0 : 1),
-        x: 400 + Math.cos((idx / sortedNodeIds.length) * 2 * Math.PI) * 200,
-        y: 300 + Math.sin((idx / sortedNodeIds.length) * 2 * Math.PI) * 200,
+        nodeType: detectNodeType(id),
+        index,
+        x: count === 1 ? cx : cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+        y: count === 1 ? cy : cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
         color: DEFAULT_NODE_COLOR,
       }
     );
@@ -434,8 +530,8 @@ function parseAdjacencyList(
 }
 
 /**
- * Serializes GraphData back to standard CP input format
- * By default, outputs pure edges without N M header so users only edit edges between nodes
+ * Serializes GraphData back to standard input format.
+ * Preserves isolated / single nodes by emitting them on separate lines.
  */
 export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings, includeHeader = false): string {
   let out = '';
@@ -444,28 +540,42 @@ export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings
     const m = data.edges.length;
     out += `${n} ${m}\n`;
   }
+
+  const connectedNodes = new Set<string>();
   for (const edge of data.edges) {
+    connectedNodes.add(edge.source);
+    connectedNodes.add(edge.target);
     if (settings.isWeighted && edge.weight !== undefined) {
       out += `${edge.source} ${edge.target} ${edge.weight}\n`;
     } else {
       out += `${edge.source} ${edge.target}\n`;
     }
   }
+
+  // Any node not connected to any edge is output as a single isolated node line
+  for (const node of data.nodes) {
+    if (!connectedNodes.has(node.id)) {
+      out += `${node.id}\n`;
+    }
+  }
+
   return out.trim();
 }
 
 /**
- * Shifts graph indexing between 0-based and 1-based
+ * Shifts graph indexing between 0-based and 1-based.
+ * Only numeric integer nodes are shifted; Char, String, Bool nodes remain untouched.
  */
 export function toggleGraphIndexing(data: GraphData, toZeroIndexed: boolean): GraphData {
   const idMap = new Map<string, string>();
 
   const newNodes = data.nodes.map(node => {
-    const num = Number(node.id);
+    const isPureInt = /^-?\d+$/.test(node.id.trim());
     let newId = node.id;
     let newIndex = node.index;
 
-    if (!isNaN(num)) {
+    if (isPureInt) {
+      const num = Number(node.id);
       if (toZeroIndexed && num > 0) {
         newId = String(num - 1);
         newIndex = num - 1;
@@ -481,6 +591,7 @@ export function toggleGraphIndexing(data: GraphData, toZeroIndexed: boolean): Gr
       id: newId,
       label: newId,
       index: newIndex,
+      nodeType: detectNodeType(newId),
     };
   });
 
