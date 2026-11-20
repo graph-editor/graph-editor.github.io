@@ -47,7 +47,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Platform Download Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4">
           {/* Windows */}
           <div className="flex flex-col justify-between p-4 rounded-xl bg-[#141d33] border border-blue-500/15 hover:border-blue-500/40 transition-all">
             <div>
@@ -59,11 +59,11 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <div className="space-y-1.5 text-[11px] text-gray-300">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>NSIS Setup Wizard (.exe)</span>
+                  <span>⚡ 1-Click Instant Setup (6 MB)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Portable ZIP archive</span>
+                  <span>Silent auto-install & shortcuts</span>
                 </div>
               </div>
             </div>
@@ -71,15 +71,16 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <a 
                 href={WIN_EXE_URL}
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-colors"
+                title="Single-click to install and launch instantly"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Installer (.exe)</span>
+                <span>⚡ 1-Click Setup (.exe)</span>
               </a>
               <a 
                 href={WIN_ZIP_URL}
                 className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
               >
-                <span>Portable (.zip)</span>
+                <span>MSI Installer (.msi)</span>
               </a>
             </div>
           </div>
@@ -95,11 +96,11 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <div className="space-y-1.5 text-[11px] text-gray-300">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Apple UDIF Disk Image (.dmg)</span>
+                  <span>Universal Disk Image (14 MB)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Drag to /Applications</span>
+                  <span>M1/M2/M3/M4 & Intel native</span>
                 </div>
               </div>
             </div>
@@ -115,7 +116,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                 href={MAC_ZIP_URL}
                 className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
               >
-                <span>Portable (.zip)</span>
+                <span>Portable (.tar.gz)</span>
               </a>
             </div>
           </div>
@@ -131,11 +132,11 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <div className="space-y-1.5 text-[11px] text-gray-300">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Universal AppImage (64-bit)</span>
+                  <span>⚡ 1-Click AppImage (Run anywhere)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Debian / Ubuntu (.deb)</span>
+                  <span>Lightweight DEB package (7 MB)</span>
                 </div>
               </div>
             </div>
@@ -143,17 +144,31 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <a 
                 href={LINUX_APPIMAGE_URL}
                 className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition-colors"
+                title="Single-click executable for any Linux distro"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Universal (.AppImage)</span>
+                <span>⚡ 1-Click AppImage</span>
               </a>
               <a 
                 href={LINUX_DEB_URL}
                 className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
               >
-                <span>Debian Package (.deb)</span>
+                <span>Debian / Ubuntu (.deb)</span>
               </a>
             </div>
+          </div>
+        </div>
+
+        {/* 1-Click Terminal Install One-Liner */}
+        <div className="p-3.5 rounded-xl bg-[#09101f] border border-blue-500/30 mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold text-blue-300 flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              <span>⚡ 1-Click Terminal Installer (Linux &amp; macOS):</span>
+            </span>
+          </div>
+          <div className="bg-black/60 p-2 rounded border border-gray-800 font-mono text-[11px] text-gray-300 select-all overflow-x-auto">
+            curl -fsSL https://raw.githubusercontent.com/mostafa-cse/Graph-visualization/master/install.sh | bash
           </div>
         </div>
 
