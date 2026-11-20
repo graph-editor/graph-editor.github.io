@@ -34,7 +34,6 @@ export interface PropertiesInspectorProps {
   onUpdateEdge: (edgeId: string, updates: Partial<GraphEdge>) => void;
   onDeleteEdge: (edgeId: string) => void;
   onSetTreeRoot: (nodeId: string) => void;
-  onTogglePinNode: (nodeId: string) => void;
   onRunAlgorithm?: (algo: AlgorithmType, startNodeId: string) => void;
   onSelectNode?: (nodeId: string | null) => void;
   onClose: () => void;
@@ -52,7 +51,6 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   onUpdateEdge,
   onDeleteEdge,
   onSetTreeRoot,
-  onTogglePinNode,
   onRunAlgorithm,
   onSelectNode,
   onClose,
@@ -466,20 +464,6 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     </button>
                   </div>
                 </div>
-
-                {/* Fixed/Pin Action */}
-                <button
-                  type="button"
-                  onClick={() => onTogglePinNode(selectedNode.id)}
-                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all mt-2 ${
-                    selectedNode.isPinned
-                      ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/60 shadow-inner'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <Pin size={12} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
-                  <span>{selectedNode.isPinned ? 'Position Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
-                </button>
               </div>
 
               {/* Card 2: Value & Hierarchy */}
@@ -849,20 +833,6 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   </button>
                 </div>
               </div>
-
-              {/* Pin Toggle */}
-              <button
-                type="button"
-                onClick={() => onTogglePinNode(selectedNode.id)}
-                className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all ${
-                  selectedNode.isPinned
-                    ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/60 shadow-inner'
-                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <Pin size={12} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
-                <span>{selectedNode.isPinned ? 'Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
-              </button>
 
               {/* Node Weight */}
               <div className="pt-2 border-t border-slate-800/80">

@@ -361,11 +361,11 @@ export function applyForceLayoutStep(
         const fx = dx * force;
         const fy = dy * force;
 
-        if (!nodes[i].isPinned && (nodes[i].fx === undefined || nodes[i].fx === null)) {
+        if (nodes[i].fx === undefined || nodes[i].fx === null) {
           nodes[i].vx = (nodes[i].vx || 0) + fx;
           nodes[i].vy = (nodes[i].vy || 0) + fy;
         }
-        if (!nodes[j].isPinned && (nodes[j].fx === undefined || nodes[j].fx === null)) {
+        if (nodes[j].fx === undefined || nodes[j].fx === null) {
           nodes[j].vx = (nodes[j].vx || 0) - fx;
           nodes[j].vy = (nodes[j].vy || 0) - fy;
         }
@@ -387,11 +387,11 @@ export function applyForceLayoutStep(
       const fx = (dx / dist) * force;
       const fy = (dy / dist) * force;
 
-      if (!nodes[u].isPinned && (nodes[u].fx === undefined || nodes[u].fx === null)) {
+      if (nodes[u].fx === undefined || nodes[u].fx === null) {
         nodes[u].vx = (nodes[u].vx || 0) + fx;
         nodes[u].vy = (nodes[u].vy || 0) + fy;
       }
-      if (!nodes[v].isPinned && (nodes[v].fx === undefined || nodes[v].fx === null)) {
+      if (nodes[v].fx === undefined || nodes[v].fx === null) {
         nodes[v].vx = (nodes[v].vx || 0) - fx;
         nodes[v].vy = (nodes[v].vy || 0) - fy;
       }
@@ -400,7 +400,7 @@ export function applyForceLayoutStep(
     // 3. Center gravity and update positions
     for (let i = 0; i < n; i++) {
       const node = nodes[i];
-      if (node.isPinned || (node.fx !== undefined && node.fx !== null && node.fy !== undefined && node.fy !== null)) {
+      if (node.fx !== undefined && node.fx !== null && node.fy !== undefined && node.fy !== null) {
         node.x = node.fx ?? node.x;
         node.y = node.fy ?? node.y;
         node.vx = 0;

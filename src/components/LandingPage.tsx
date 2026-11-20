@@ -74,8 +74,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       a: 'Yes! CP Graph Editor is fully packaged as native desktop apps for Windows (.exe installer and portable .zip), macOS (.dmg disk image), and Linux (.AppImage and .deb package). All algorithm simulations and physics run 100% locally with zero internet dependency.'
     },
     {
-      q: 'How does node pinning (fix in place) work?',
-      a: 'Double-clicking any vertex locks it rigidly at its current canvas coordinate. When continuous physics simulation runs, pinned nodes display an anchor ring and stay completely motionless while unpinned nodes naturally repel and arrange around them. Double-clicking again frees the node.'
+      q: 'How does Lasso multi-selection and drag-and-drop work?',
+      a: 'Use the Lasso tool (or Shift + drag) to draw a freehand loop around any nodes and edges. All enclosed items are selected simultaneously, displaying a glowing selection enclosure. You can drag and reposition them together, batch change their colors, assign weights, or delete them in one click.'
     },
     {
       q: 'Is CP Graph Editor completely free and open-source?',

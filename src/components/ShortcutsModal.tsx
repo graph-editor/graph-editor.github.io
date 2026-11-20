@@ -7,10 +7,9 @@ interface ShortcutsModalProps {
 
 export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose }) => {
   const shortcuts = [
-    { key: 'V / S', desc: 'Select & Move tool (drag unpinned nodes)' },
-    { key: 'L', desc: 'Lasso tool (select multiple nodes & edges)' },
+    { key: 'V / S', desc: 'Select & Move tool (drag nodes freely)' },
+    { key: 'L', desc: 'Lasso tool (draw loop to select nodes & edges)' },
     { key: 'Shift + Drag', desc: 'Quick Lasso select in any tool' },
-    { key: 'Double-click Node', desc: 'Fix node in place (won\'t move) / Unpin' },
     { key: 'Double-click Canvas', desc: 'Quickly add a new node' },
     { key: 'Drag Canvas', desc: 'Pan graph view' },
     { key: 'N', desc: 'Add Node tool' },

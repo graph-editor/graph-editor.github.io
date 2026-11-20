@@ -17,7 +17,6 @@ export interface BatchActionToolbarProps {
   onBatchDelete: () => void;
   onBatchColor: (color: string) => void;
   onBatchAddValue: (value: string | number | undefined) => void;
-  onBatchPin: (pin: boolean) => void;
   onClearSelection: () => void;
 }
 
@@ -27,7 +26,6 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
   onBatchDelete,
   onBatchColor,
   onBatchAddValue,
-  onBatchPin,
   onClearSelection,
 }) => {
   const [valInput, setValInput] = useState<string>('');
@@ -198,19 +196,6 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
             </div>
           )}
         </div>
-
-        {/* Action: Pin / Fix Position */}
-        {selectedNodeIds.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onBatchPin(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-amber-300 font-medium transition-colors shrink-0"
-            title="Lock positions of selected nodes in place"
-          >
-            <Pin size={12} className="text-amber-400" />
-            <span className="hidden sm:inline">Pin</span>
-          </button>
-        )}
 
         {/* Action: Batch Delete */}
         <button

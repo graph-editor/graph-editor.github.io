@@ -174,9 +174,6 @@ export function App() {
   // Compute live graph stats
   const stats = useMemo(() => computeGraphStats(data, settings.isDirected), [data, settings.isDirected]);
 
-  // Pinned nodes count
-  const pinnedCount = useMemo(() => data.nodes.filter(n => n.isPinned).length, [data.nodes]);
-
   // Visual Node Addition
   const handleAddNode = (x: number, y: number) => {
     const existingNums = data.nodes
@@ -315,16 +312,15 @@ export function App() {
     }));
   };
 
-  // Finish dragging: keep node fixed at its exact dropped position so it never jumps or moves away
+  // Finish dragging: keep node coordinates cleanly updated
   const handleFinishDragNode = (id: string) => {
     setData(prev => {
       const nextNodes = prev.nodes.map(n => {
         if (n.id === id) {
           return {
             ...n,
-            isPinned: true, // Locks to the dropped position so physics never drifts it
-            fx: n.x,
-            fy: n.y,
+            fx: null,
+            fy: null,
             vx: 0,
             vy: 0,
           };
@@ -335,42 +331,6 @@ export function App() {
       syncGraphToText(nextData, settings);
       return nextData;
     });
-  };
-
-  // Toggle Fixed / Pin Node (Double click on node or inspector button)
-  const handleTogglePinNode = (nodeId: string) => {
-    setData(prev => {
-      const nextNodes = prev.nodes.map(n => {
-        if (n.id === nodeId) {
-          const nextPinned = !n.isPinned;
-          return {
-            ...n,
-            isPinned: nextPinned,
-            fx: nextPinned ? n.x : null,
-            fy: nextPinned ? n.y : null,
-            vx: 0,
-            vy: 0,
-          };
-        }
-        return n;
-      });
-      return { ...prev, nodes: nextNodes };
-    });
-  };
-
-  // Unpin all nodes
-  const handleUnpinAllNodes = () => {
-    setData(prev => ({
-      ...prev,
-      nodes: prev.nodes.map(n => ({
-        ...n,
-        isPinned: false,
-        fx: null,
-        fy: null,
-        vx: 0,
-        vy: 0,
-      })),
-    }));
   };
 
   // Node property update
@@ -527,30 +487,6 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
   }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText]);
-
-  // Batch Pin: Fix or unpin all selected nodes together
-  const handleBatchPin = useCallback((pinned: boolean) => {
-    if (selectedNodeIds.length === 0) return;
-    const nodeSet = new Set(selectedNodeIds);
-
-    const nextNodes = data.nodes.map(n => {
-      if (nodeSet.has(n.id)) {
-        return {
-          ...n,
-          isPinned: pinned,
-          fx: pinned ? n.x : null,
-          fy: pinned ? n.y : null,
-          vx: 0,
-          vy: 0,
-        };
-      }
-      return n;
-    });
-
-    const nextData = { ...data, nodes: nextNodes };
-    setData(nextData);
-    syncGraphToText(nextData, settings);
-  }, [selectedNodeIds, data, settings, syncGraphToText]);
 
   // Change indexing mode (0-based vs 1-based)
   const handleToggleIndexMode = () => {
@@ -806,7 +742,6 @@ export function App() {
               onAddEdge={handleAddEdge}
               onUpdateNodePosition={handleUpdateNodePosition}
               onFinishDragNode={handleFinishDragNode}
-              onTogglePinNode={handleTogglePinNode}
               onUpdateGraphData={setData}
               currentStep={algorithmSteps ? algorithmSteps[currentStepIndex] : undefined}
               isPhysicsActive={isPhysicsActive}
@@ -820,7 +755,6 @@ export function App() {
               onBatchDelete={handleBatchDelete}
               onBatchColor={handleBatchColor}
               onBatchAddValue={handleBatchAddValue}
-              onBatchPin={handleBatchPin}
               onClearSelection={handleClearBatchSelection}
             />
 
@@ -853,7 +787,6 @@ export function App() {
               onUpdateEdge={handleUpdateEdge}
               onDeleteEdge={handleDeleteEdge}
               onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
-              onTogglePinNode={handleTogglePinNode}
               onRunAlgorithm={handleRunAlgorithm}
               onSelectNode={handleSelectNode}
               onClose={() => {
@@ -879,7 +812,6 @@ export function App() {
             onUpdateEdge={handleUpdateEdge}
             onDeleteEdge={handleDeleteEdge}
             onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
-            onTogglePinNode={handleTogglePinNode}
             onRunAlgorithm={handleRunAlgorithm}
             onSelectNode={handleSelectNode}
             onClose={() => {
@@ -902,8 +834,6 @@ export function App() {
         onFitView={() => canvasRef.current?.fitView()}
         isPhysicsActive={isPhysicsActive}
         onTogglePhysics={() => setIsPhysicsActive(!isPhysicsActive)}
-        pinnedCount={pinnedCount}
-        onUnpinAll={handleUnpinAllNodes}
       />
 
       {/* Export Modal Dialog */}
