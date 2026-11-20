@@ -88,7 +88,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (type === 'edge_list') {
       onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6\n3 7`);
     } else if (type === 'weighted') {
-      onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3\n1 [10]\n2 [25]\n3 [15]\n4 [50]\n5 [30]`);
+      onRawTextChange(`1 2 4\n1 3 2\n2 4 5\n3 4 1\n4 5 3`);
     } else if (type === 'tree') {
       onRawTextChange(`1 2\n1 3\n2 4\n2 5\n3 6`);
     } else if (type === 'clear') {
@@ -251,18 +251,38 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   <Hash size={12} className="text-blue-500" />
                   <span>Nodes (N)</span>
                 </label>
-                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                  isLight ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-blue-950/70 text-blue-300 border border-blue-900/40'
-                }`}>
-                  Auto
-                </span>
+                <button
+                  type="button"
+                  onClick={() => onSetCustomNodeCount?.(null)}
+                  className={`text-[9px] font-mono px-1.5 py-0.2 rounded transition-colors cursor-pointer ${
+                    settings.nodeCountPreserved
+                      ? (isLight ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200' : 'bg-amber-950/70 hover:bg-amber-900/70 text-amber-300 border border-amber-900/40')
+                      : (isLight ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-blue-950/70 text-blue-300 border border-blue-900/40')
+                  }`}
+                  title={settings.nodeCountPreserved ? 'Click to reset to Auto' : 'Auto-detected'}
+                >
+                  {settings.nodeCountPreserved ? 'Custom ✕' : 'Auto'}
+                </button>
               </div>
               <input
-                type="text"
-                readOnly
-                value={data.nodes.length}
-                className="bg-transparent text-sm font-mono font-bold text-blue-500 focus:outline-none w-full cursor-default"
-                title="Total nodes (auto-detected from edges)"
+                type="number"
+                min="0"
+                value={settings.nodeCountPreserved ?? data.nodes.length}
+                onChange={e => {
+                  const val = e.target.value.trim();
+                  if (val === '') {
+                    onSetCustomNodeCount?.(null);
+                  } else {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num) && num >= 0) {
+                      onSetCustomNodeCount?.(num);
+                    }
+                  }
+                }}
+                className={`bg-transparent text-sm font-mono font-bold focus:outline-none w-full ${
+                  settings.nodeCountPreserved ? 'text-amber-500' : 'text-blue-500'
+                }`}
+                title="Total nodes (Auto-detected from graph, or type custom N)"
               />
             </div>
 
