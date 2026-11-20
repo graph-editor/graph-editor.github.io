@@ -15,12 +15,13 @@ import {
   PanelBottom,
   PanelRight,
   ChevronDown,
+  LassoSelect,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
 interface TopBarProps {
-  activeTool: 'select' | 'node' | 'edge';
-  onSelectTool: (tool: 'select' | 'node' | 'edge') => void;
+  activeTool: 'select' | 'lasso' | 'node' | 'edge';
+  onSelectTool: (tool: 'select' | 'lasso' | 'node' | 'edge') => void;
   settings: GraphSettings;
   onUpdateSettings: (newSettings: Partial<GraphSettings>) => void;
   onApplyLayout: (layout: LayoutMode) => void;
@@ -76,7 +77,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <div className="w-[1px] h-5 bg-slate-800/80 hidden sm:block" />
 
-        {/* Main Editing Tools (Move, Add Node, Connect) on the LEFT SIDE */}
+        {/* Main Editing Tools (Move, Lasso, Add Node, Connect) on the LEFT SIDE */}
         <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => onSelectTool('select')}
@@ -89,6 +90,19 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <MousePointer size={13} />
             <span className="hidden md:inline">Move</span>
+          </button>
+
+          <button
+            onClick={() => onSelectTool('lasso')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+              activeTool === 'lasso'
+                ? 'bg-blue-600 text-white shadow-sm font-semibold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+            title="Lasso Select Nodes & Edges (L or Shift+Drag)"
+          >
+            <LassoSelect size={13} />
+            <span className="hidden md:inline">Lasso</span>
           </button>
 
           <button
