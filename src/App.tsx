@@ -29,18 +29,20 @@ export function App() {
   const isElectron = typeof window !== 'undefined' && window.navigator?.userAgent?.toLowerCase().includes('electron');
   const [currentView, setCurrentView] = useState<'landing' | 'editor'>(() => {
     if (isElectron) return 'editor';
-    if (typeof window !== 'undefined' && window.location.hash === '#editor') return 'editor';
-    return 'landing';
+    if (typeof window !== 'undefined' && (window.location.hash === '#about' || window.location.hash === '#landing')) {
+      return 'landing';
+    }
+    return 'editor';
   });
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (isElectron) return;
     const handleHashChange = () => {
-      if (window.location.hash === '#editor') {
-        setCurrentView('editor');
-      } else if (window.location.hash === '' || window.location.hash === '#') {
+      if (window.location.hash === '#about' || window.location.hash === '#landing') {
         setCurrentView('landing');
+      } else {
+        setCurrentView('editor');
       }
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -685,7 +687,7 @@ export function App() {
         <LandingPage
           onOpenEditor={() => {
             setCurrentView('editor');
-            if (typeof window !== 'undefined') window.location.hash = '#editor';
+            if (typeof window !== 'undefined') window.location.hash = '';
           }}
           onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
         />
@@ -722,7 +724,7 @@ export function App() {
         onToggleTracerPosition={handleToggleTracerPosition}
         onGoHome={isElectron ? undefined : () => {
           setCurrentView('landing');
-          if (typeof window !== 'undefined') window.location.hash = '';
+          if (typeof window !== 'undefined') window.location.hash = '#about';
         }}
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
         theme={theme}
