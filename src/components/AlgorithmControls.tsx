@@ -17,6 +17,7 @@ interface AlgorithmControlsProps {
   currentStepIndex: number;
   onSetStepIndex: (index: number) => void;
   onClose: () => void;
+  theme?: 'dark' | 'light';
 }
 
 export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
@@ -24,7 +25,9 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
   currentStepIndex,
   onSetStepIndex,
   onClose,
+  theme = 'dark',
 }) => {
+  const isLight = theme === 'light';
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<number>(300); // ms per step (Fast default)
 
@@ -77,13 +80,17 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
   const progressPercent = totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 100;
 
   return (
-    <div className="bg-[#0b101b]/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-4 sm:p-5 select-none w-full animate-slide-up">
+    <div className={`backdrop-blur-xl border rounded-2xl shadow-2xl p-4 sm:p-5 select-none w-full animate-slide-up ${
+      isLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl' : 'bg-black/95 border-neutral-800 text-white shadow-2xl'
+    }`}>
       {/* Top Header Row: Green Dot + Title + Step Badge | Speed + Close */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+      <div className={`flex items-center justify-between pb-2 border-b ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
         <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-          <h3 className="font-bold text-sm text-white tracking-tight">{currentStep.title}</h3>
-          <span className="text-xs bg-slate-800/80 text-slate-300 px-2.5 py-0.5 rounded-full font-mono font-medium">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+          <h3 className={`font-bold text-sm tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>{currentStep.title}</h3>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-medium ${
+            isLight ? 'bg-slate-100 text-slate-700' : 'bg-neutral-900 text-neutral-300'
+          }`}>
             Step {currentStepIndex + 1} / {totalSteps}
           </span>
         </div>

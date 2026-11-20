@@ -22,6 +22,8 @@ import {
   Columns,
   Circle,
   Check,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -50,6 +52,8 @@ interface TopBarProps {
   onToggleTracerPosition?: () => void;
   onGoHome?: () => void;
   onOpenDownloadModal?: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -68,7 +72,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleTracerPosition,
   onGoHome,
   onOpenDownloadModal,
+  theme = 'dark',
+  onToggleTheme,
 }) => {
+  const isLight = theme === 'light';
   const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
@@ -134,7 +141,9 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const activeLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layout) || LAYOUT_OPTIONS[0];
   return (
-    <header className="h-13 border-b border-slate-800 bg-slate-950 px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative">
+    <header className={`h-13 border-b px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative transition-colors ${
+      isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+    }`}>
       {/* Left: Brand / Logo + Main Editing Tools Group */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Brand */}
@@ -147,23 +156,27 @@ export const TopBar: React.FC<TopBarProps> = ({
             <Share2 size={16} />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-sm tracking-tight text-white font-sans hidden xs:inline">CP Graph</span>
-            <span className="text-[9.5px] bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-medium px-1.5 py-0.5 rounded">
+            <span className={`font-bold text-sm tracking-tight font-sans hidden xs:inline ${isLight ? 'text-slate-900' : 'text-white'}`}>CP Graph</span>
+            <span className="text-[9.5px] bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-medium px-1.5 py-0.5 rounded">
               PRO
             </span>
           </div>
         </div>
 
-        <div className="w-[1px] h-5 bg-slate-800/80 hidden sm:block" />
+        <div className={`w-[1px] h-5 hidden sm:block ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
 
         {/* Main Editing Tools (Move, Lasso, Add Node, Connect) on the LEFT SIDE */}
-        <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <div className={`flex items-center p-1 rounded-xl border transition-colors ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-neutral-900 border-neutral-800'
+        }`}>
           <button
             onClick={() => onSelectTool('select')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'select'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
             title="Move & Drag Nodes (V)"
           >
@@ -173,10 +186,12 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <button
             onClick={() => onSelectTool('lasso')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'lasso'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
             title="Lasso Select Nodes & Edges (L or Shift+Drag)"
           >
@@ -186,10 +201,12 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <button
             onClick={() => onSelectTool('node')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'node'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
             title="Add Node (N)"
           >
@@ -199,10 +216,12 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <button
             onClick={() => onSelectTool('edge')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'edge'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
             title="Connect Edges (E)"
           >
@@ -212,14 +231,18 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right: CP Configuration Toggles & Actions */}
+      {/* Right: CP Configuration Toggles, Theme Switcher & Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* 1-indexed vs 0-indexed toggle */}
         <button
           onClick={onToggleIndexMode}
-          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors border cursor-pointer ${
             settings.isZeroIndexed
-              ? 'bg-purple-950/40 border-purple-500/40 text-purple-300'
+              ? isLight
+                ? 'bg-purple-100 border-purple-300 text-purple-800 font-bold'
+                : 'bg-purple-950/40 border-purple-500/40 text-purple-300'
+              : isLight
+              ? 'bg-indigo-50 border-indigo-200 text-indigo-800 font-bold'
               : 'bg-indigo-950/40 border-indigo-500/40 text-indigo-300'
           }`}
           title="Toggle 0-indexed / 1-indexed"
@@ -232,10 +255,14 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Directed vs Undirected toggle */}
         <button
           onClick={() => onUpdateSettings({ isDirected: !settings.isDirected })}
-          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
             settings.isDirected
-              ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
-              : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+              ? isLight
+                ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold'
+                : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+              : isLight
+              ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
           }`}
           title="Toggle Directed / Undirected (D)"
         >
@@ -247,10 +274,14 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Weighted vs Unweighted toggle */}
         <button
           onClick={() => onUpdateSettings({ isWeighted: !settings.isWeighted })}
-          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+          className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
             settings.isWeighted
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-              : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
+              ? isLight
+                ? 'bg-emerald-100 border-emerald-300 text-emerald-800 font-bold'
+                : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              : isLight
+              ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
           }`}
           title="Toggle Edge Weights (W)"
         >
@@ -265,14 +296,18 @@ export const TopBar: React.FC<TopBarProps> = ({
             ref={triggerButtonRef}
             type="button"
             onClick={toggleDropdown}
-            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 hover:border-slate-700 px-2.5 py-1 transition-all shadow-sm cursor-pointer"
+            className={`flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all shadow-sm cursor-pointer ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200 hover:border-slate-300'
+                : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border-neutral-800 hover:border-neutral-700'
+            }`}
             title="Auto-organize graph layout"
           >
             {activeLayout.icon}
             <span className="max-w-[95px] sm:max-w-none truncate">{activeLayout.label}</span>
             <ChevronDown
               size={11}
-              className={`text-slate-400 transition-transform ${isLayoutDropdownOpen ? 'rotate-180 text-blue-400' : ''}`}
+              className={`transition-transform ${isLayoutDropdownOpen ? 'rotate-180 text-blue-500' : isLight ? 'text-slate-500' : 'text-neutral-400'}`}
             />
           </button>
 
@@ -286,11 +321,15 @@ export const TopBar: React.FC<TopBarProps> = ({
                 width: '216px',
                 zIndex: 9999,
               }}
-              className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 pointer-events-auto"
+              className={`backdrop-blur-xl border rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 pointer-events-auto ${
+                isLight ? 'bg-white/95 border-slate-200 text-slate-900' : 'bg-neutral-950/95 border-neutral-800 text-white'
+              }`}
             >
-              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-1 flex items-center justify-between">
+              <div className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider border-b mb-1 flex items-center justify-between ${
+                isLight ? 'text-slate-500 border-slate-100' : 'text-neutral-400 border-neutral-800/80'
+              }`}>
                 <span>Graph Layouts</span>
-                <span className="text-[9px] text-slate-500 font-normal">Auto-arrange</span>
+                <span className={`text-[9px] font-normal ${isLight ? 'text-slate-400' : 'text-neutral-500'}`}>Auto-arrange</span>
               </div>
               {LAYOUT_OPTIONS.map(opt => {
                 const isSelected = settings.layout === opt.id;
@@ -304,18 +343,22 @@ export const TopBar: React.FC<TopBarProps> = ({
                     }}
                     className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-600/20 text-blue-300 font-semibold border border-blue-500/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent'
+                        ? isLight
+                          ? 'bg-blue-50 text-blue-700 font-semibold border border-blue-200'
+                          : 'bg-blue-600/20 text-blue-300 font-semibold border border-blue-500/30'
+                        : isLight
+                        ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                        : 'text-neutral-300 hover:text-white hover:bg-neutral-900 border border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {opt.icon}
                       <div className="text-left">
                         <div className="leading-tight">{opt.label}</div>
-                        <div className="text-[9.5px] text-slate-500">{opt.desc}</div>
+                        <div className={`text-[9.5px] ${isLight ? 'text-slate-500' : 'text-neutral-500'}`}>{opt.desc}</div>
                       </div>
                     </div>
-                    {isSelected && <Check size={13} className="text-blue-400 shrink-0 ml-1" />}
+                    {isSelected && <Check size={13} className="text-blue-500 shrink-0 ml-1" />}
                   </button>
                 );
               })}
@@ -324,12 +367,38 @@ export const TopBar: React.FC<TopBarProps> = ({
           )}
         </div>
 
-        <div className="w-[1px] h-4 bg-slate-800 my-auto hidden sm:block" />
+        {/* Theme Switcher: Dark Black & Clean White */}
+        {onToggleTheme && (
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-2xs'
+                : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-800 text-neutral-200 shadow-2xs'
+            }`}
+            title={isLight ? 'Switch to Dark Black Theme' : 'Switch to Clean White Theme'}
+          >
+            {isLight ? (
+              <>
+                <Moon size={12} className="text-indigo-600 shrink-0" />
+                <span className="hidden md:inline font-medium">Dark Black</span>
+              </>
+            ) : (
+              <>
+                <Sun size={12} className="text-amber-400 shrink-0" />
+                <span className="hidden md:inline font-medium">Clean White</span>
+              </>
+            )}
+          </button>
+        )}
+
+        <div className={`w-[1px] h-4 my-auto hidden sm:block ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
 
         {/* Export & Actions */}
         <button
           onClick={onOpenExportModal}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all cursor-pointer"
           title="Export C++, Python, Text, Image"
         >
           <Download size={13} />
@@ -338,19 +407,29 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           onClick={onClearGraph}
-          className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors"
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            isLight
+              ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+              : 'text-neutral-400 hover:text-red-400 hover:bg-red-950/30'
+          }`}
           title="Clear Graph"
         >
           <Trash2 size={15} />
         </button>
 
-        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 p-0.5">
+        <div className={`flex items-center rounded-lg border p-0.5 ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-neutral-900 border-neutral-800'
+        }`}>
           <button
             onClick={onToggleInspector}
-            className={`p-1.5 rounded-md transition-colors ${
+            className={`p-1.5 rounded-md transition-colors cursor-pointer ${
               isInspectorOpen
-                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                ? isLight
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
             }`}
             title={`Toggle Node Tracer (${tracerPosition === 'bottom' ? 'Bottom Dock' : 'Side Dock'})`}
           >
@@ -359,13 +438,15 @@ export const TopBar: React.FC<TopBarProps> = ({
           {onToggleTracerPosition && (
             <button
               onClick={onToggleTracerPosition}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition-colors"
+              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+              }`}
               title={`Switch Tracer to ${tracerPosition === 'bottom' ? 'Side Dock' : 'Bottom Dock'}`}
             >
               {tracerPosition === 'bottom' ? (
-                <PanelBottom size={14} className="text-blue-400" />
+                <PanelBottom size={14} className="text-blue-500" />
               ) : (
-                <PanelRight size={14} className="text-blue-400" />
+                <PanelRight size={14} className="text-blue-500" />
               )}
             </button>
           )}
@@ -373,7 +454,9 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           onClick={onOpenShortcutsModal}
-          className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            isLight ? 'text-slate-400 hover:text-slate-800 hover:bg-slate-100' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
+          }`}
           title="Keyboard & Mouse Shortcuts"
         >
           <HelpCircle size={15} />

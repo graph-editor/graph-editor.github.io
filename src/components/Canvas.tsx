@@ -142,6 +142,7 @@ interface CanvasProps {
   currentStep?: AlgorithmStep;
   isPhysicsActive: boolean;
   onZoomChange?: (scale: number) => void;
+  theme?: 'dark' | 'light';
 }
 
 export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
@@ -163,7 +164,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   currentStep,
   isPhysicsActive,
   onZoomChange,
+  theme = 'dark',
 }, ref) => {
+  const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -839,7 +842,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Check algorithm highlight
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
-    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? '#94a3b8' : edge.color);
+    const defaultColor = isLight ? '#94a3b8' : '#52525b';
+    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? (isLight ? '#475569' : '#a1a1aa') : (edge.color === '#64748b' ? defaultColor : edge.color));
     const strokeWidth = isSelected || algoEdgeHighlight ? 3.5 : isHovered ? 2.5 : 2;
 
     const handleEdgeClick = (e: React.MouseEvent) => {
@@ -1000,14 +1004,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               width="28"
               height="18"
               rx="4"
-              fill="#0f172a"
-              stroke={isSelected ? '#38bdf8' : '#334155'}
+              fill={isLight ? '#ffffff' : '#0a0a0a'}
+              stroke={isSelected ? '#38bdf8' : isLight ? '#cbd5e1' : '#262626'}
               strokeWidth="1"
             />
             <text
               textAnchor="middle"
               dy="4"
-              fill={isSelected ? '#38bdf8' : '#f8fafc'}
+              fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#f8fafc'}
               fontSize="11"
               fontFamily="Fira Code, monospace"
               fontWeight="600"
@@ -1071,7 +1075,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <circle
           r={r}
           fill={baseColor}
-          stroke={isSelected ? '#ffffff' : '#0f172a'}
+          stroke={isSelected ? (isLight ? '#0f172a' : '#ffffff') : isLight ? '#cbd5e1' : '#000000'}
           strokeWidth={isSelected ? '2.5' : '2'}
         />
 
@@ -1091,7 +1095,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Badge (e.g. Root, Hub, Cut) */}
         {node.badge && (
           <g transform={`translate(0, ${-r - 8})`}>
-            <rect x="-18" y="-7" width="36" height="14" rx="4" fill="#0f172a" stroke="#ef4444" strokeWidth="1" />
+            <rect x="-18" y="-7" width="36" height="14" rx="4" fill={isLight ? '#ffffff' : '#0a0a0a'} stroke="#ef4444" strokeWidth="1" />
             <text textAnchor="middle" dy="3.5" fill="#ef4444" fontSize="9" fontWeight="700">
               {node.badge}
             </text>
@@ -1113,14 +1117,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 width={badgeWidth}
                 height="16"
                 rx="8"
-                fill="#0b101b"
-                stroke={isSelected ? '#38bdf8' : '#818cf8'}
+                fill={isLight ? '#ffffff' : '#0a0a0a'}
+                stroke={isSelected ? '#38bdf8' : isLight ? '#cbd5e1' : '#334155'}
                 strokeWidth="1.2"
               />
               <text
                 textAnchor="middle"
                 dy="3.5"
-                fill="#c7d2fe"
+                fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#c7d2fe'}
                 fontSize="9.5"
                 fontFamily="Fira Code, monospace"
                 fontWeight="700"
@@ -1183,10 +1187,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full overflow-hidden bg-[#090d16] select-none flex-1 touch-none ${
+      className={`relative w-full h-full overflow-hidden select-none flex-1 touch-none transition-colors ${
+        isLight ? 'bg-white' : 'bg-black'
+      } ${
         isPanning ? 'cursor-grabbing' : 'cursor-default'
       }`}
-      style={{ backgroundColor: '#090d16', isolation: 'isolate' }}
+      style={{ backgroundColor: isLight ? '#ffffff' : '#000000', isolation: 'isolate' }}
       onContextMenu={e => e.preventDefault()}
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
@@ -1213,10 +1219,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       <svg
         ref={svgRef}
         className="w-full h-full block"
-        style={{ backgroundColor: '#090d16', contain: 'strict' }}
+        style={{ backgroundColor: isLight ? '#ffffff' : '#000000', contain: 'strict' }}
       >
         {/* Solid Canvas Background rect to guarantee clean frame clears without WebKit/Chromium dirty-rect trails */}
-        <rect width="100%" height="100%" fill="#090d16" />
+        <rect width="100%" height="100%" fill={isLight ? '#ffffff' : '#000000'} />
 
         <defs>
           {/* Dynamic Arrowheads for each color */}
@@ -1316,7 +1322,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 cy={activeLassoPoints[0].y}
                 r="4.5"
                 fill="#38bdf8"
-                stroke="#090d16"
+                stroke={isLight ? '#ffffff' : '#000000'}
                 strokeWidth="2"
               />
             </g>
@@ -1326,7 +1332,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
       {/* Interactive Toast Notification (cleanly centered top banner that fades) */}
       {toastMessage && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-medium text-slate-200 shadow-2xl border border-slate-700/80 pointer-events-none animate-slide-up flex items-center gap-2 z-30">
+        <div className={`absolute top-4 left-1/2 -translate-x-1/2 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-medium shadow-2xl border pointer-events-none animate-slide-up flex items-center gap-2 z-30 ${
+          isLight ? 'bg-white/95 text-slate-800 border-slate-200 shadow-xl' : 'bg-neutral-900/95 text-neutral-200 border-neutral-700 shadow-2xl'
+        }`}>
           <span>{toastMessage}</span>
         </div>
       )}

@@ -104,6 +104,33 @@ export function App() {
   // Zoom scale reported by Canvas
   const [zoomScale, setZoomScale] = useState<number>(1);
 
+  // Theme mode: 'dark' (Dark Black) | 'light' (Clean White)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cp_graph_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    }
+    return 'dark';
+  });
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cp_graph_theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [theme]);
+
   // Physics Simulation
   const [isPhysicsActive, setIsPhysicsActive] = useState<boolean>(false);
 
@@ -679,7 +706,9 @@ export function App() {
   }
 
   return (
-    <div className="flex flex-col w-screen h-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
+    <div className={`flex flex-col w-screen h-screen overflow-hidden font-sans transition-colors duration-150 ${
+      theme === 'light' ? 'bg-white text-slate-900' : 'bg-black text-white'
+    }`}>
       {/* Top Navigation Bar */}
       <TopBar
         activeTool={activeTool}
@@ -704,6 +733,8 @@ export function App() {
           if (typeof window !== 'undefined') window.location.hash = '';
         }}
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Workspace: Left Panel, Center Canvas Area, Bottom/Right Docked Inspector */}
@@ -720,12 +751,13 @@ export function App() {
           onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
           onSetCustomNodeCount={handleSetCustomNodeCount}
           onAddSingleNode={handleAddSingleNode}
+          theme={theme}
         />
 
         {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}
         <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
-          {/* Unobstructed Canvas with Solid Dark Background */}
-          <div className="flex-1 relative overflow-hidden bg-[#090d16]">
+          {/* Unobstructed Canvas with Solid Background (Dark Black or Clean White) */}
+          <div className={`flex-1 relative overflow-hidden transition-colors ${theme === 'light' ? 'bg-white' : 'bg-black'}`}>
             <Canvas
               ref={canvasRef}
               data={data}
@@ -746,6 +778,7 @@ export function App() {
               currentStep={algorithmSteps ? algorithmSteps[currentStepIndex] : undefined}
               isPhysicsActive={isPhysicsActive}
               onZoomChange={setZoomScale}
+              theme={theme}
             />
 
             {/* Batch Action Toolbar: Floats over canvas when nodes/edges are lasso/multi-selected */}
@@ -756,6 +789,7 @@ export function App() {
               onBatchColor={handleBatchColor}
               onBatchAddValue={handleBatchAddValue}
               onClearSelection={handleClearBatchSelection}
+              theme={theme}
             />
 
             {/* Algorithm Controls Card: Floating at BOTTOM CENTER matching user screenshot */}
@@ -767,6 +801,7 @@ export function App() {
                     currentStepIndex={currentStepIndex}
                     onSetStepIndex={setCurrentStepIndex}
                     onClose={() => setAlgorithmSteps(null)}
+                    theme={theme}
                   />
                 </div>
               </div>
@@ -794,6 +829,7 @@ export function App() {
                 setSelectedEdgeId(null);
                 setIsInspectorOpen(false);
               }}
+              theme={theme}
             />
           )}
         </div>
@@ -819,6 +855,7 @@ export function App() {
               setSelectedEdgeId(null);
               setIsInspectorOpen(false);
             }}
+            theme={theme}
           />
         )}
       </div>
@@ -834,6 +871,7 @@ export function App() {
         onFitView={() => canvasRef.current?.fitView()}
         isPhysicsActive={isPhysicsActive}
         onTogglePhysics={() => setIsPhysicsActive(!isPhysicsActive)}
+        theme={theme}
       />
 
       {/* Export Modal Dialog */}
@@ -842,12 +880,16 @@ export function App() {
           data={data}
           settings={settings}
           onClose={() => setIsExportModalOpen(false)}
+          theme={theme}
         />
       )}
 
       {/* Keyboard & Mouse Shortcuts Dialog */}
       {isShortcutsModalOpen && (
-        <ShortcutsModal onClose={() => setIsShortcutsModalOpen(false)} />
+        <ShortcutsModal
+          onClose={() => setIsShortcutsModalOpen(false)}
+          theme={theme}
+        />
       )}
 
       {/* Desktop App Download Dialog */}
@@ -855,6 +897,7 @@ export function App() {
         <DownloadModal
           isOpen={isDownloadModalOpen}
           onClose={() => setIsDownloadModalOpen(false)}
+          theme={theme}
         />
       )}
     </div>

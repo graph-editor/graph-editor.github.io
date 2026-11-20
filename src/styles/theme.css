@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
 @font-face {
   font-family: 'Google Sans';
   font-style: normal;
@@ -62,13 +65,32 @@
 }
 
 @layer base {
-  :root {
-    --bg-main: #020617;
-    --bg-surface: #0f172a;
-    --border-color: #1e293b;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
+  :root, [data-theme="dark"] {
+    --bg-main: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-surface-elevated: #121212;
+    --bg-card: #141416;
+    --border-color: #222225;
+    --border-subtle: #17171a;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
     --color-accent: #3b82f6;
+    --canvas-bg: #000000;
+  }
+
+  [data-theme="light"] {
+    --bg-main: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f8fafc;
+    --bg-card: #f1f5f9;
+    --border-color: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --text-primary: #09090b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --color-accent: #2563eb;
+    --canvas-bg: #ffffff;
   }
 
   html {
@@ -79,10 +101,11 @@
   body {
     margin: 0;
     padding: 0;
-    background-color: #020617;
-    color: #f8fafc;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   code, kbd, pre {
@@ -160,12 +183,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #27272a;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Hide number input increase/decrease stepper spin buttons */

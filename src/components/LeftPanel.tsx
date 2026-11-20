@@ -38,6 +38,7 @@ interface LeftPanelProps {
   onToggleCollapse: () => void;
   onSetCustomNodeCount?: (count: number | null) => void;
   onAddSingleNode?: (name?: string) => void;
+  theme?: 'dark' | 'light';
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -51,7 +52,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onToggleCollapse,
   onSetCustomNodeCount,
   onAddSingleNode,
+  theme = 'dark',
 }) => {
+  const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
   const [selectedAlgo, setSelectedAlgo] = useState<AlgorithmType>('bfs');
   const [startNodeId, setStartNodeId] = useState<string>(data.nodes[0]?.id || (settings.isZeroIndexed ? '0' : '1'));
@@ -133,8 +136,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             setActiveTab('presets');
             onToggleCollapse();
           }}
-          className={`p-2 rounded-lg transition-colors ${
-            activeTab === 'presets' ? 'text-blue-400 bg-blue-950/50' : 'text-slate-400 hover:text-white'
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            activeTab === 'presets'
+              ? 'text-blue-500 bg-blue-500/10'
+              : isLight
+              ? 'text-slate-500 hover:text-slate-900'
+              : 'text-neutral-400 hover:text-white'
           }`}
           title="Graph Generators"
         >
@@ -145,16 +152,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   }
 
   return (
-    <aside className="w-80 border-r border-slate-800 bg-[#0c1019] flex flex-col z-10 select-none shrink-0 h-full overflow-hidden">
+    <aside className={`w-80 border-r flex flex-col z-10 select-none shrink-0 h-full overflow-hidden transition-colors ${
+      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+    }`}>
       {/* Classic Tab Header */}
-      <div className="h-12 border-b border-slate-800 flex items-center justify-between px-3 bg-slate-950/60 shrink-0">
+      <div className={`h-12 border-b flex items-center justify-between px-3 shrink-0 ${
+        isLight ? 'border-slate-200 bg-white' : 'border-neutral-800 bg-black'
+      }`}>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab('editor')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
               activeTab === 'editor'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
             <FileCode2 size={13} />
@@ -162,10 +175,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('algorithms')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
               activeTab === 'algorithms'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
             <Cpu size={13} />
@@ -173,10 +188,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('presets')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
               activeTab === 'presets'
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
             <Sparkles size={13} />
@@ -186,7 +203,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
         <button
           onClick={onToggleCollapse}
-          className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 rounded-md transition-colors"
+          className={`p-1 rounded-md transition-colors cursor-pointer ${
+            isLight ? 'text-slate-400 hover:text-slate-700 hover:bg-slate-200' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+          }`}
           title="Collapse Sidebar"
         >
           <ChevronLeft size={16} />
@@ -198,16 +217,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         <div className="flex-1 flex flex-col p-3 overflow-hidden">
           {/* Quick Format & Action Row */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <span className={`text-[11px] font-semibold uppercase tracking-wider ${
+              isLight ? 'text-slate-500' : 'text-neutral-400'
+            }`}>
               Graph Input & Counts
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleCopyInput}
-                className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
+                className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                  isLight
+                    ? 'text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-2xs'
+                    : 'text-neutral-300 hover:text-white bg-neutral-900 hover:bg-neutral-800 border-neutral-800'
+                }`}
                 title="Copy Raw Edges"
               >
-                {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
@@ -216,13 +241,19 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           {/* Auto-detected Nodes & Edges Text Fields */}
           <div className="grid grid-cols-2 gap-2 mb-2.5">
             {/* Nodes Text Field */}
-            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1">
+            <div className={`border rounded-lg p-2.5 flex flex-col gap-1 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-neutral-950 border-neutral-800'
+            }`}>
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                  <Hash size={12} className="text-blue-400" />
+                <label className={`text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1 ${
+                  isLight ? 'text-slate-600' : 'text-neutral-300'
+                }`}>
+                  <Hash size={12} className="text-blue-500" />
                   <span>Nodes (N)</span>
                 </label>
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-950/70 text-blue-300 border border-blue-900/40">
+                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
+                  isLight ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-blue-950/70 text-blue-300 border border-blue-900/40'
+                }`}>
                   Auto
                 </span>
               </div>
@@ -230,19 +261,25 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 type="text"
                 readOnly
                 value={data.nodes.length}
-                className="bg-transparent text-sm font-mono font-bold text-blue-400 focus:outline-none w-full cursor-default"
+                className="bg-transparent text-sm font-mono font-bold text-blue-500 focus:outline-none w-full cursor-default"
                 title="Total nodes (auto-detected from edges)"
               />
             </div>
 
             {/* Edges Text Field */}
-            <div className="bg-[#070a10] border border-slate-800 rounded-lg p-2.5 flex flex-col gap-1">
+            <div className={`border rounded-lg p-2.5 flex flex-col gap-1 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-neutral-950 border-neutral-800'
+            }`}>
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                  <Share2 size={12} className="text-emerald-400" />
+                <label className={`text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1 ${
+                  isLight ? 'text-slate-600' : 'text-neutral-300'
+                }`}>
+                  <Share2 size={12} className="text-emerald-500" />
                   <span>Edges (M)</span>
                 </label>
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-900/40">
+                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
+                  isLight ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-emerald-950/70 text-emerald-300 border border-emerald-900/40'
+                }`}>
                   Auto
                 </span>
               </div>
@@ -250,14 +287,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 type="text"
                 readOnly
                 value={data.edges.length}
-                className="bg-transparent text-sm font-mono font-bold text-emerald-400 focus:outline-none w-full cursor-default"
+                className="bg-transparent text-sm font-mono font-bold text-emerald-500 focus:outline-none w-full cursor-default"
                 title="Total edges (auto-detected from edge list)"
               />
             </div>
           </div>
 
           {/* Quick Add Single Node Input */}
-          <div className="flex items-center gap-1.5 mb-2 bg-[#070a10] p-1.5 rounded-lg border border-slate-800">
+          <div className={`flex items-center gap-1.5 mb-2 p-1.5 rounded-lg border ${
+            isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-neutral-950 border-neutral-800'
+          }`}>
             <input
               type="text"
               value={singleNodeInput}
@@ -269,14 +308,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 }
               }}
               placeholder="Add node (e.g. A, A: 10, 42, city)"
-              className="flex-1 bg-transparent text-xs font-mono text-slate-200 px-2 py-0.5 focus:outline-none placeholder:text-slate-600 min-w-0"
+              className={`flex-1 bg-transparent text-xs font-mono px-2 py-0.5 focus:outline-none min-w-0 ${
+                isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
+              }`}
             />
             <button
               onClick={() => {
                 onAddSingleNode?.(singleNodeInput);
                 setSingleNodeInput('');
               }}
-              className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm"
+              className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm cursor-pointer"
               title="Add Single Node (Supports weights e.g. A: 10, A [10])"
             >
               <Plus size={12} />
@@ -286,14 +327,20 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
           {/* Edges Header & Quick Templates */}
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+            <span className={`text-[11px] font-medium flex items-center gap-1.5 ${
+              isLight ? 'text-slate-700' : 'text-neutral-300'
+            }`}>
               <span>Input</span>
-              <span className="text-[10px] text-slate-500 font-mono">(u v [w] or u [w])</span>
+              <span className={`text-[10px] font-mono ${isLight ? 'text-slate-400' : 'text-neutral-500'}`}>(u v [w] or u [w])</span>
             </span>
             <button
               type="button"
               onClick={() => insertTemplate('clear')}
-              className="text-[10px] text-slate-400 hover:text-red-400 bg-slate-950/80 hover:bg-red-950/30 border border-slate-800/80 hover:border-red-500/30 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors whitespace-nowrap cursor-pointer ${
+                isLight
+                  ? 'text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 hover:border-red-200'
+                  : 'text-neutral-400 hover:text-red-400 bg-neutral-950 hover:bg-red-950/30 border-neutral-800 hover:border-red-500/30'
+              }`}
               title="Clear input"
             >
               Clear
@@ -304,7 +351,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               type="button"
               onClick={() => insertTemplate('single')}
-              className="py-1 px-1 rounded text-[10px] font-medium bg-emerald-950/30 border border-emerald-800/40 hover:border-emerald-500/40 text-emerald-300 text-center transition-colors truncate"
+              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
+                isLight
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                  : 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300 hover:border-emerald-500/40'
+              }`}
               title="Single node (e.g. A)"
             >
               Single
@@ -312,7 +363,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               type="button"
               onClick={() => insertTemplate('mixed')}
-              className="py-1 px-1 rounded text-[10px] font-medium bg-purple-950/30 border border-purple-800/40 hover:border-purple-500/40 text-purple-300 text-center transition-colors truncate"
+              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
+                isLight
+                  ? 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100'
+                  : 'bg-purple-950/30 border-purple-800/40 text-purple-300 hover:border-purple-500/40'
+              }`}
               title="Mixed types (Char, String, Bool, Int)"
             >
               Mixed
@@ -320,7 +375,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               type="button"
               onClick={() => insertTemplate('edge_list')}
-              className="py-1 px-1 rounded text-[10px] font-medium bg-slate-950 border border-slate-800 hover:border-blue-500/40 text-slate-300 text-center transition-colors truncate"
+              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
+                isLight
+                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-blue-500/40'
+              }`}
               title="Sample tree / edge list"
             >
               Sample
@@ -328,7 +387,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               type="button"
               onClick={() => insertTemplate('weighted')}
-              className="py-1 px-1 rounded text-[10px] font-medium bg-slate-950 border border-slate-800 hover:border-blue-500/40 text-slate-300 text-center transition-colors truncate"
+              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
+                isLight
+                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-blue-500/40'
+              }`}
               title="Weighted graph & nodes"
             >
               Weighted
@@ -336,16 +399,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </div>
 
           {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
-          <div className="flex-1 relative flex flex-col bg-[#070a10] border border-slate-800 rounded-lg overflow-hidden focus-within:border-blue-500/50">
+          <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden focus-within:border-blue-500 ${
+            isLight ? 'bg-white border-slate-300 shadow-inner' : 'bg-neutral-950 border-neutral-800'
+          }`}>
             <textarea
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
               placeholder={`# Edges (u v [w]):\n1 2\n2 3 5\n\n# Weighted nodes (u [w] or u: w):\n1 [10]\n2: 'A'\n3: "goal"\n\n# Isolated node:\nSingleNode`}
               spellCheck={false}
-              className="flex-1 w-full p-3 bg-transparent text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"
+              className={`flex-1 w-full p-3 bg-transparent text-xs font-mono focus:outline-none resize-none leading-relaxed ${
+                isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
+              }`}
             />
           </div>
-          <div className="pt-1.5 px-0.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+          <div className={`pt-1.5 px-0.5 flex items-center justify-between text-[10px] font-mono ${
+            isLight ? 'text-slate-500' : 'text-neutral-500'
+          }`}>
             <span>Supports Weighted Nodes, Chars, Strings & CP inputs</span>
           </div>
         </div>
@@ -355,13 +424,17 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       {activeTab === 'algorithms' && (
         <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
           <div>
-            <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+            <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-1.5 ${
+              isLight ? 'text-slate-600' : 'text-neutral-400'
+            }`}>
               Algorithm to Run
             </label>
             <select
               value={selectedAlgo}
               onChange={e => setSelectedAlgo(e.target.value as AlgorithmType)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-sans"
+              className={`w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 font-sans cursor-pointer ${
+                isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-800 text-neutral-200'
+              }`}
             >
               <optgroup label="Traversals">
                 <option value="bfs">BFS (Breadth-First Search)</option>
@@ -386,13 +459,17 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
           {['bfs', 'dfs', 'dijkstra'].includes(selectedAlgo) && (
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+              <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-1.5 ${
+                isLight ? 'text-slate-600' : 'text-neutral-400'
+              }`}>
                 Starting Vertex
               </label>
               <select
                 value={startNodeId}
                 onChange={e => setStartNodeId(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
+                className={`w-full border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 font-mono cursor-pointer ${
+                  isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-800 text-neutral-200'
+                }`}
               >
                 {data.nodes.map(n => (
                   <option key={n.id} value={n.id}>
@@ -404,8 +481,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           )}
 
           {/* Algorithm Info Card */}
-          <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
-            <div className="font-semibold text-slate-200 text-xs">Algorithm Details:</div>
+          <div className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+            isLight ? 'bg-white border-slate-200 text-slate-600 shadow-2xs' : 'bg-neutral-950 border-neutral-800 text-neutral-400'
+          }`}>
+            <div className={`font-semibold text-xs ${isLight ? 'text-slate-900' : 'text-neutral-200'}`}>Algorithm Details:</div>
             {selectedAlgo === 'bfs' && (
               <p className="text-[11px] leading-relaxed">
                 Computes unweighted shortest path distances from source. Explores layer-by-layer using FIFO queue.
@@ -451,7 +530,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           <button
             onClick={handleRunAlgorithm}
             disabled={data.nodes.length === 0}
-            className="w-full mt-auto py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium text-xs rounded-lg flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition-all"
+            className="w-full mt-auto py-2.5 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium text-xs rounded-lg flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
           >
             <Play size={14} className="fill-white" />
             <span>Launch Algorithm Tracer</span>
@@ -463,11 +542,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       {activeTab === 'presets' && (
         <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
           {/* Controls */}
-          <div className="space-y-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+          <div className={`space-y-3 p-3 rounded-xl border ${
+            isLight ? 'bg-white border-slate-200 shadow-2xs text-slate-800' : 'bg-neutral-950 border-neutral-800 text-neutral-300'
+          }`}>
             <div>
-              <div className="flex justify-between text-xs text-slate-300 mb-1">
+              <div className="flex justify-between text-xs mb-1">
                 <span>Vertices (N)</span>
-                <span className="font-mono text-blue-400 font-semibold">{presetN}</span>
+                <span className="font-mono text-blue-500 font-semibold">{presetN}</span>
               </div>
               <input
                 type="range"
@@ -480,9 +561,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
 
             <div>
-              <div className="flex justify-between text-xs text-slate-300 mb-1">
+              <div className="flex justify-between text-xs mb-1">
                 <span>Edges (M, for DAG)</span>
-                <span className="font-mono text-blue-400 font-semibold">{presetM}</span>
+                <span className="font-mono text-blue-500 font-semibold">{presetM}</span>
               </div>
               <input
                 type="range"
@@ -494,7 +575,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pt-1">
+            <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
               <input
                 type="checkbox"
                 checked={presetWeighted}
@@ -507,126 +588,63 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
           {/* Preset Buttons Grid */}
           <div className="space-y-2">
-            <button
-              onClick={() => {
-                const res = generateBamboo({
-                  n: presetN,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Bamboo / Line Graph
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Tests linear chains & recursion limit</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateStar({
-                  n: presetN,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Star Graph
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Central hub connected to all leaves</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateRandomTree({
-                  n: presetN,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Random Tree
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Connected acyclic graph</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateRandomDAG({
-                  n: presetN,
-                  m: presetM,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Random DAG
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Directed acyclic graph for topological DP</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateComplete({
-                  n: Math.min(presetN, 12),
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Complete Graph (K_n)
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Every pair of vertices connected</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateGrid({
-                  r: 3,
-                  c: 4,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                3x4 Grid Lattice
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">2D matrix BFS / maze problems</div>
-            </button>
-
-            <button
-              onClick={() => {
-                const res = generateCycle({
-                  n: presetN,
-                  weighted: presetWeighted,
-                  isZeroIndexed: settings.isZeroIndexed,
-                });
-                onLoadPreset(res.data, res.settings);
-              }}
-              className="w-full text-left p-2.5 bg-slate-950 hover:bg-slate-900 border border-slate-800/80 rounded-lg transition-colors group"
-            >
-              <div className="text-xs font-semibold text-slate-200 group-hover:text-blue-400">
-                Simple Cycle (C_n)
-              </div>
-              <div className="text-[10.5px] text-slate-400 mt-0.5">Tests 2-coloring & cycle detection</div>
-            </button>
+            {[
+              {
+                title: 'Bamboo / Line Graph',
+                desc: 'Tests linear chains & recursion limit',
+                action: () => generateBamboo({ n: presetN, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Star Graph',
+                desc: 'Central hub connected to all leaves',
+                action: () => generateStar({ n: presetN, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Random Tree',
+                desc: 'Connected acyclic graph',
+                action: () => generateRandomTree({ n: presetN, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Random DAG',
+                desc: 'Directed Acyclic Graph for topological sorting',
+                action: () => generateRandomDAG({ n: presetN, m: presetM, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Complete Clique (K_n)',
+                desc: 'Every vertex connected to every other vertex',
+                action: () => generateComplete({ n: presetN, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Grid Lattice',
+                desc: '2D matrix / coordinate grid graph',
+                action: () => generateGrid({ r: 3, c: 4, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+              {
+                title: 'Cycle Graph (C_n)',
+                desc: 'Single closed cycle / ring',
+                action: () => generateCycle({ n: presetN, weighted: presetWeighted, isZeroIndexed: settings.isZeroIndexed }),
+              },
+            ].map(preset => (
+              <button
+                key={preset.title}
+                onClick={() => {
+                  const res = preset.action();
+                  onLoadPreset(res.data, res.settings);
+                }}
+                className={`w-full text-left p-2.5 border rounded-lg transition-colors group cursor-pointer ${
+                  isLight
+                    ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-2xs'
+                    : 'bg-neutral-950 hover:bg-neutral-900 border-neutral-800 text-neutral-200'
+                }`}
+              >
+                <div className={`text-xs font-semibold group-hover:text-blue-500 ${isLight ? 'text-slate-900' : 'text-neutral-200'}`}>
+                  {preset.title}
+                </div>
+                <div className={`text-[10.5px] mt-0.5 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+                  {preset.desc}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
