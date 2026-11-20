@@ -57,23 +57,31 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         {/* Status badges */}
         <div className="hidden sm:flex items-center gap-1.5 ml-2">
           {stats.isTree && (
-            <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] text-emerald-400 font-sans font-medium">
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-sans font-medium border ${
+              isLight ? 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold' : 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400'
+            }`}>
               Tree
             </span>
           )}
           {stats.isDAG && !stats.isTree && (
-            <span className="px-1.5 py-0.5 rounded bg-blue-950/60 border border-blue-500/30 text-[10px] text-blue-400 font-sans font-medium">
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-sans font-medium border ${
+              isLight ? 'bg-blue-100 border-blue-300 text-blue-800 font-semibold' : 'bg-blue-950/60 border-blue-500/30 text-blue-400'
+            }`}>
               DAG
             </span>
           )}
           {stats.isBipartite && !stats.isTree && (
-            <span className="px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-[10px] text-purple-400 font-sans font-medium">
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-sans font-medium border ${
+              isLight ? 'bg-purple-100 border-purple-300 text-purple-800 font-semibold' : 'bg-purple-950/60 border-purple-500/30 text-purple-400'
+            }`}>
               Bipartite
             </span>
           )}
           {stats.hasSelfLoops && (
             <span
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 text-[10px] text-amber-300 font-sans font-medium"
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-medium border ${
+                isLight ? 'bg-amber-100 border-amber-300 text-amber-900 font-semibold' : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+              }`}
               title="Warning: Self-loops detected"
             >
               <AlertTriangle size={10} />
@@ -82,7 +90,9 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
           )}
           {stats.hasMultiEdges && (
             <span
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 text-[10px] text-amber-300 font-sans font-medium"
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-sans font-medium border ${
+                isLight ? 'bg-amber-100 border-amber-300 text-amber-900 font-semibold' : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+              }`}
               title="Warning: Multi-edges between same node pair"
             >
               <AlertTriangle size={10} />
@@ -133,25 +143,25 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 
         {/* Zoom Controls */}
         <div className={`flex items-center gap-1 px-1 py-0.5 rounded border ${
-          isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-neutral-900 border-neutral-800 text-neutral-300'
+          isLight ? 'bg-slate-100 border-slate-300 text-slate-800 shadow-2xs' : 'bg-neutral-900 border-neutral-800 text-neutral-300'
         }`}>
           <button
             onClick={onZoomOut}
-            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-200' : 'hover:text-white hover:bg-neutral-800'}`}
+            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom Out (-)"
           >
             <ZoomOut size={12} />
           </button>
           <button
             onClick={onResetZoom}
-            className={`px-1 text-[10px] font-mono cursor-pointer ${isLight ? 'hover:text-slate-900' : 'hover:text-white'}`}
+            className={`px-1 text-[10px] font-mono cursor-pointer font-medium ${isLight ? 'text-slate-800 hover:text-slate-950' : 'hover:text-white'}`}
             title="Reset Zoom to 100%"
           >
             {Math.round(zoomScale * 100)}%
           </button>
           <button
             onClick={onZoomIn}
-            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-200' : 'hover:text-white hover:bg-neutral-800'}`}
+            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom In (+)"
           >
             <ZoomIn size={12} />
@@ -160,25 +170,25 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 
         <button
           onClick={onFitView}
-          className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-100' : 'hover:text-white hover:bg-neutral-800'}`}
+          className={`p-1 rounded transition-colors cursor-pointer border ${isLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-200 shadow-2xs' : 'border-transparent hover:text-white hover:bg-neutral-800'}`}
           title="Fit Graph to View (F)"
         >
           <Maximize2 size={13} />
         </button>
 
-        <div className={`w-[1px] h-3 ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
+        <div className={`w-[1px] h-3 ${isLight ? 'bg-slate-300' : 'bg-neutral-800'}`} />
 
         {/* Physics Simulation Toggle */}
         <button
           onClick={onTogglePhysics}
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer border ${
             isPhysicsActive
               ? isLight
-                ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
-                : 'bg-blue-600/20 text-blue-400 border border-blue-500/30 font-semibold'
+                ? 'bg-blue-100 text-blue-800 border-blue-300 font-semibold shadow-2xs'
+                : 'bg-blue-600/20 text-blue-400 border-blue-500/30 font-semibold'
               : isLight
-              ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
-              : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
+              ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-950 shadow-2xs'
+              : 'border-transparent hover:bg-neutral-800 text-neutral-400 hover:text-white'
           }`}
           title="Toggle Organic Physics Simulation (Space)"
         >
