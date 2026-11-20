@@ -280,7 +280,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               title="Add Single Node (Supports weights e.g. A: 10, A [10])"
             >
               <Plus size={12} />
-              <span>+ Node</span>
+              <span>Node</span>
             </button>
           </div>
 
