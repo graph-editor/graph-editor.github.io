@@ -141,23 +141,23 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const activeLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layout) || LAYOUT_OPTIONS[0];
   return (
-    <header className={`h-13 border-b px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative transition-colors ${
+    <header className={`h-13 border-b px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative transition-colors overflow-x-auto no-scrollbar scroll-smooth ${
       isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
     }`}>
       {/* Left: Brand / Logo + Main Editing Tools Group */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {/* Brand */}
         <div 
           onClick={onGoHome}
-          className={`flex items-center gap-2 ${onGoHome ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
+          className={`flex items-center gap-1.5 ${onGoHome ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
           title={onGoHome ? 'Return to Home & Landing Page' : 'CP Graph Editor'}
         >
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
             <Share2 size={16} />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={`font-bold text-sm tracking-tight font-sans hidden xs:inline ${isLight ? 'text-slate-900' : 'text-white'}`}>CP Graph</span>
-            <span className="text-[9.5px] bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-medium px-1.5 py-0.5 rounded">
+            <span className={`font-bold text-sm tracking-tight font-sans hidden sm:inline ${isLight ? 'text-slate-900' : 'text-white'}`}>CP Graph</span>
+            <span className="text-[9.5px] bg-blue-500/10 text-blue-500 border border-blue-500/20 font-mono font-medium px-1.5 py-0.5 rounded hidden xs:inline">
               PRO
             </span>
           </div>
@@ -166,12 +166,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className={`w-[1px] h-5 hidden sm:block ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
 
         {/* Main Editing Tools (Move, Lasso, Add Node, Connect) on the LEFT SIDE */}
-        <div className={`flex items-center p-1 rounded-xl border transition-colors ${
+        <div className={`flex items-center p-0.5 sm:p-1 rounded-xl border transition-colors shrink-0 ${
           isLight ? 'bg-slate-100 border-slate-200' : 'bg-neutral-900 border-neutral-800'
         }`}>
           <button
             onClick={() => onSelectTool('select')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'select'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -180,13 +180,13 @@ export const TopBar: React.FC<TopBarProps> = ({
             }`}
             title="Move & Drag Nodes (V)"
           >
-            <MousePointer size={13} />
+            <MousePointer size={14} />
             <span className="hidden md:inline">Move</span>
           </button>
 
           <button
             onClick={() => onSelectTool('lasso')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'lasso'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
                 : isLight
@@ -195,13 +195,13 @@ export const TopBar: React.FC<TopBarProps> = ({
             }`}
             title="Lasso Select Nodes & Edges (L or Shift+Drag)"
           >
-            <LassoSelect size={13} />
+            <LassoSelect size={14} />
             <span className="hidden md:inline">Lasso</span>
           </button>
 
           <button
             onClick={() => onSelectTool('node')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'node'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -210,13 +210,13 @@ export const TopBar: React.FC<TopBarProps> = ({
             }`}
             title="Add Node (N)"
           >
-            <CircleDot size={13} />
+            <CircleDot size={14} />
             <span className="hidden md:inline">Add Node</span>
           </button>
 
           <button
             onClick={() => onSelectTool('edge')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activeTool === 'edge'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -225,7 +225,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             }`}
             title="Connect Edges (E)"
           >
-            <Share2 size={13} />
+            <Share2 size={14} />
             <span className="hidden md:inline">Connect</span>
           </button>
         </div>
@@ -372,7 +372,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             type="button"
             onClick={onToggleTheme}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-all border cursor-pointer shrink-0 ${
               isLight
                 ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-2xs'
                 : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-800 text-neutral-200 shadow-2xs'
@@ -381,13 +381,13 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             {isLight ? (
               <>
-                <Moon size={12} className="text-indigo-600 shrink-0" />
-                <span className="hidden md:inline font-medium">Dark Black</span>
+                <Moon size={13} className="text-indigo-600 shrink-0" />
+                <span className="hidden xl:inline font-medium">Dark Black</span>
               </>
             ) : (
               <>
-                <Sun size={12} className="text-amber-400 shrink-0" />
-                <span className="hidden md:inline font-medium">Clean White</span>
+                <Sun size={13} className="text-amber-400 shrink-0" />
+                <span className="hidden xl:inline font-medium">Clean White</span>
               </>
             )}
           </button>

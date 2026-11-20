@@ -98,22 +98,30 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
   if (isCollapsed) {
     return (
-      <aside className="w-12 border-r border-slate-800 bg-[#0c1019] flex flex-col items-center py-3.5 gap-4 z-10 select-none shrink-0">
+      <aside className={`w-11 sm:w-12 border-r flex flex-col items-center py-3.5 gap-3.5 z-10 select-none shrink-0 transition-colors ${
+        isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-black border-neutral-800 text-neutral-300'
+      }`}>
         <button
           onClick={onToggleCollapse}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors"
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+          }`}
           title="Expand Sidebar"
         >
           <ChevronRight size={16} />
         </button>
-        <div className="w-5 h-[1px] bg-slate-800" />
+        <div className={`w-5 h-[1px] ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
         <button
           onClick={() => {
             setActiveTab('editor');
             onToggleCollapse();
           }}
-          className={`p-2 rounded-lg transition-colors ${
-            activeTab === 'editor' ? 'text-blue-400 bg-blue-950/50' : 'text-slate-400 hover:text-white'
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            activeTab === 'editor'
+              ? 'text-blue-500 bg-blue-500/10'
+              : isLight
+              ? 'text-slate-500 hover:text-slate-900'
+              : 'text-neutral-400 hover:text-white'
           }`}
           title="I/O Editor"
         >
@@ -124,8 +132,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             setActiveTab('algorithms');
             onToggleCollapse();
           }}
-          className={`p-2 rounded-lg transition-colors ${
-            activeTab === 'algorithms' ? 'text-blue-400 bg-blue-950/50' : 'text-slate-400 hover:text-white'
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            activeTab === 'algorithms'
+              ? 'text-blue-500 bg-blue-500/10'
+              : isLight
+              ? 'text-slate-500 hover:text-slate-900'
+              : 'text-neutral-400 hover:text-white'
           }`}
           title="CP Algorithms"
         >
@@ -152,9 +164,17 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   }
 
   return (
-    <aside className={`w-80 border-r flex flex-col z-10 select-none shrink-0 h-full overflow-hidden transition-colors ${
-      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-    }`}>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+        onClick={onToggleCollapse}
+        aria-hidden="true"
+      />
+
+      <aside className={`fixed inset-y-0 left-0 z-40 w-[88vw] max-w-xs md:relative md:inset-auto md:w-80 md:z-10 border-r flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-right md:animate-none transition-colors ${
+        isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+      }`}>
       {/* Classic Tab Header */}
       <div className={`h-12 border-b flex items-center justify-between px-3 shrink-0 ${
         isLight ? 'border-slate-200 bg-white' : 'border-neutral-800 bg-black'
@@ -668,6 +688,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </div>
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   );
 };
