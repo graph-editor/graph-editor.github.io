@@ -175,12 +175,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     ? (selectedNode.nodeType || detectNodeType(selectedNode.label || selectedNode.id))
     : 'int';
 
-  const typeBadgeStyles = {
-    int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
-    char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
-    bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
-    string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
-  }[nodeType] || 'bg-slate-800 border-slate-700 text-slate-300';
+  const typeBadgeStyles = isLight
+    ? {
+        int: 'bg-blue-100 border-blue-300 text-blue-800 font-semibold',
+        char: 'bg-purple-100 border-purple-300 text-purple-800 font-semibold',
+        bool: 'bg-amber-100 border-amber-300 text-amber-900 font-semibold',
+        string: 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold',
+      }[nodeType] || 'bg-slate-100 border-slate-300 text-slate-800 font-semibold'
+    : {
+        int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
+        char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
+        bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
+        string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
+      }[nodeType] || 'bg-slate-800 border-slate-700 text-slate-300';
 
   // Weighted node type and badge styling
   const rawWeight = selectedNode?.weight ?? selectedNode?.value;
@@ -188,12 +195,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   const weightType = hasWeight ? detectNodeType(String(rawWeight)) : null;
 
   const weightBadgeStyles = weightType
-    ? {
-        int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
-        char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
-        bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
-        string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
-      }[weightType] || 'bg-slate-800 border-slate-700 text-slate-300'
+    ? isLight
+      ? {
+          int: 'bg-indigo-100 border-indigo-300 text-indigo-900 font-semibold',
+          char: 'bg-purple-100 border-purple-300 text-purple-800 font-semibold',
+          bool: 'bg-amber-100 border-amber-300 text-amber-900 font-semibold',
+          string: 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold',
+        }[weightType] || 'bg-slate-100 border-slate-300 text-slate-800 font-semibold'
+      : {
+          int: 'bg-blue-950/70 border-blue-500/50 text-blue-300',
+          char: 'bg-purple-950/70 border-purple-500/50 text-purple-300',
+          bool: 'bg-amber-950/70 border-amber-500/50 text-amber-300',
+          string: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300',
+        }[weightType] || 'bg-slate-800 border-slate-700 text-slate-300'
     : '';
 
   // Header Title formatter (avoids truncation in side dock)
@@ -276,7 +290,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className={`p-1.5 rounded-lg transition-colors border ${
               isSettingsOpen
-                ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 shadow-sm'
+                ? isLight
+                  ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
+                  : 'bg-blue-600/20 text-blue-400 border-blue-500/40 shadow-sm'
+                : isLight
+                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 border-transparent'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800 border-transparent'
             }`}
             title="Tracer Position Preferences"
@@ -288,23 +306,31 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             <div
               className={`absolute right-0 ${
                 isBottom ? 'bottom-full mb-2' : 'top-full mt-2'
-              } w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl p-3 z-50 text-xs text-slate-200 space-y-2.5 animate-in fade-in zoom-in-95`}
+              } w-64 rounded-xl shadow-2xl p-3 z-50 text-xs space-y-2.5 animate-in fade-in zoom-in-95 border ${
+                isLight ? 'bg-white border-slate-300 text-slate-800 shadow-xl' : 'bg-slate-950 border-slate-800 text-slate-200'
+              }`}
             >
-              <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
-                <span className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider">
+              <div className={`flex items-center justify-between pb-1.5 border-b ${
+                isLight ? 'border-slate-200' : 'border-slate-800/80'
+              }`}>
+                <span className={`font-semibold text-[11px] uppercase tracking-wider ${
+                  isLight ? 'text-slate-700' : 'text-slate-300'
+                }`}>
                   Tracer Setup
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsSettingsOpen(false)}
-                  className="text-slate-500 hover:text-slate-300 p-0.5"
+                  className={`p-0.5 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   <X size={12} />
                 </button>
               </div>
 
               <div>
-                <label className="text-[11px] font-medium text-slate-400 block mb-1.5">
+                <label className={`text-[11px] font-medium block mb-1.5 ${
+                  isLight ? 'text-slate-600' : 'text-slate-400'
+                }`}>
                   Default Dock Position:
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -314,15 +340,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       onPositionChange?.('bottom');
                       setIsSettingsOpen(false);
                     }}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-medium transition-all ${
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                       position === 'bottom'
-                        ? 'bg-blue-950/70 border-blue-500 text-blue-300 shadow-sm'
+                        ? isLight
+                          ? 'bg-blue-100 border-blue-400 text-blue-900 font-semibold shadow-sm'
+                          : 'bg-blue-950/70 border-blue-500 text-blue-300 shadow-sm'
+                        : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                         : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
                   >
                     <PanelBottom size={13} />
                     <span>Bottom</span>
-                    {position === 'bottom' && <Check size={12} className="text-blue-400" />}
+                    {position === 'bottom' && <Check size={12} className={isLight ? 'text-blue-700' : 'text-blue-400'} />}
                   </button>
 
                   <button
@@ -331,21 +361,27 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       onPositionChange?.('right');
                       setIsSettingsOpen(false);
                     }}
-                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-medium transition-all ${
+                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                       position === 'right'
-                        ? 'bg-blue-950/70 border-blue-500 text-blue-300 shadow-sm'
+                        ? isLight
+                          ? 'bg-blue-100 border-blue-400 text-blue-900 font-semibold shadow-sm'
+                          : 'bg-blue-950/70 border-blue-500 text-blue-300 shadow-sm'
+                        : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                         : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
                   >
                     <PanelRight size={13} />
                     <span>Right Side</span>
-                    {position === 'right' && <Check size={12} className="text-blue-400" />}
+                    {position === 'right' && <Check size={12} className={isLight ? 'text-blue-700' : 'text-blue-400'} />}
                   </button>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 leading-normal">
-                Clicking any node on the canvas opens this tracer at your chosen position (<strong className="text-slate-200">{position === 'bottom' ? 'Bottom' : 'Right Side'}</strong>).
+              <div className={`pt-2 border-t text-[10px] leading-normal ${
+                isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-400'
+              }`}>
+                Clicking any node on the canvas opens this tracer at your chosen position (<strong className={isLight ? 'text-slate-800' : 'text-slate-200'}>{position === 'bottom' ? 'Bottom' : 'Right Side'}</strong>).
               </div>
             </div>
           )}
@@ -444,11 +480,13 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           {selectedNode && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 h-full items-stretch">
               {/* Card 1: Identity & Pinning */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between transition-colors ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs hover:border-slate-300' : 'bg-slate-900/60 border-slate-800/80 shadow-sm hover:border-slate-700/80'
+              }`}>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Tag size={12} className="text-blue-400" />
+                    <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <Tag size={12} className={isLight ? 'text-blue-600' : 'text-blue-400'} />
                       <span>Node Identifier</span>
                     </span>
                     <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
@@ -459,36 +497,46 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     type="text"
                     value={selectedNode.label}
                     onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-2"
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-2 border focus:outline-none focus:border-blue-500 ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                    }`}
                     placeholder="e.g. 1, A, true, Root"
                   />
                   <div className="flex items-center gap-1 flex-wrap mb-2">
-                    <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                    <span className={`text-[10px] mr-0.5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Presets:</span>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                      }`}
                     >
                       Int ('1')
                     </button>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' : 'bg-purple-950/40 border-purple-800/40 text-purple-300 hover:bg-purple-900/50'
+                      }`}
                     >
                       Char ('A')
                     </button>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100' : 'bg-amber-950/40 border-amber-800/40 text-amber-300 hover:bg-amber-900/50'
+                      }`}
                     >
                       Bool
                     </button>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50'
+                      }`}
                     >
                       String
                     </button>
@@ -497,11 +545,13 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Card 2: Value & Hierarchy */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between transition-colors ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs hover:border-slate-300' : 'bg-slate-900/60 border-slate-800/80 shadow-sm hover:border-slate-700/80'
+              }`}>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Scale size={12} className="text-indigo-400" />
+                    <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <Scale size={12} className={isLight ? 'text-indigo-600' : 'text-indigo-400'} />
                       <span>Node Weight / Value</span>
                     </span>
                     {weightType && (
@@ -524,28 +574,36 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         value: resolved,
                       });
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-2"
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-2 border focus:outline-none focus:border-indigo-500 ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                    }`}
                   />
                   <div className="flex items-center gap-1 flex-wrap mb-2">
-                    <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                    <span className={`text-[10px] mr-0.5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Presets:</span>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                      }`}
                     >
                       Int (10)
                     </button>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' : 'bg-purple-950/40 border-purple-800/40 text-purple-300 hover:bg-purple-900/50'
+                      }`}
                     >
                       Char ('A')
                     </button>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50'
+                      }`}
                     >
                       Text
                     </button>
@@ -553,7 +611,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       <button
                         type="button"
                         onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
-                        className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                        className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                          isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+                        }`}
                       >
                         Clear
                       </button>
@@ -565,27 +625,35 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetTreeRoot(selectedNode.id)}
-                  className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium mt-2"
+                  className={`w-full py-1.5 px-2 border text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium mt-2 cursor-pointer ${
+                    isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'
+                  }`}
                 >
-                  <GitBranch size={12} className="text-emerald-400" />
+                  <GitBranch size={12} className={isLight ? 'text-emerald-600' : 'text-emerald-400'} />
                   <span>Set as Tree Root</span>
                 </button>
               </div>
 
               {/* Card 3: Connections & Algorithm Traversal */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between transition-colors ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs hover:border-slate-300' : 'bg-slate-900/60 border-slate-800/80 shadow-sm hover:border-slate-700/80'
+              }`}>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Network size={12} className="text-cyan-400" />
+                    <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <Network size={12} className={isLight ? 'text-cyan-600' : 'text-cyan-400'} />
                       <span>Connections</span>
                     </span>
                     {settings.isDirected ? (
-                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                      <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded border ${
+                        isLight ? 'text-slate-700 bg-slate-100 border-slate-300 font-medium' : 'text-slate-400 bg-slate-950 border-slate-800'
+                      }`}>
                         In: {nodeConnections.inDegree} | Out: {nodeConnections.outDegree}
                       </span>
                     ) : (
-                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                      <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded border ${
+                        isLight ? 'text-slate-700 bg-slate-100 border-slate-300 font-medium' : 'text-slate-400 bg-slate-950 border-slate-800'
+                      }`}>
                         Degree: {nodeConnections.totalDegree}
                       </span>
                     )}
@@ -594,26 +662,30 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   {/* Adjacent Vertices chips with clear directional cues */}
                   <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto mb-2">
                     {nodeConnections.neighbors.length === 0 ? (
-                      <span className="text-[10px] text-slate-500 italic py-1">Isolated vertex (0 edges)</span>
+                      <span className={`text-[10px] italic py-1 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Isolated vertex (0 edges)</span>
                     ) : (
                       nodeConnections.neighbors.map((n, idx) => (
                         <button
                           type="button"
                           key={`${n.edgeId}-${idx}`}
                           onClick={() => onSelectNode?.(n.id)}
-                          className="px-2 py-0.5 rounded text-[10.5px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 text-slate-200 flex items-center gap-1 font-mono transition-colors group"
+                          className={`px-2 py-0.5 rounded text-[10.5px] border flex items-center gap-1 font-mono transition-colors group cursor-pointer ${
+                            isLight
+                              ? 'bg-slate-100 border-slate-300 hover:border-blue-500 text-slate-800'
+                              : 'bg-slate-950 border-slate-800 hover:border-blue-500/60 text-slate-200'
+                          }`}
                           title={`Click to trace Node ${n.label}`}
                         >
                           {n.dir === 'outgoing' ? (
-                            <ArrowRight size={10} className="text-blue-400" />
+                            <ArrowRight size={10} className={isLight ? 'text-blue-600' : 'text-blue-400'} />
                           ) : n.dir === 'incoming' ? (
-                            <ArrowLeft size={10} className="text-purple-400" />
+                            <ArrowLeft size={10} className={isLight ? 'text-purple-600' : 'text-purple-400'} />
                           ) : (
-                            <CircleDot size={9} className="text-cyan-400" />
+                            <CircleDot size={9} className={isLight ? 'text-cyan-600' : 'text-cyan-400'} />
                           )}
-                          <span className="font-semibold text-white">{n.label}</span>
+                          <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{n.label}</span>
                           {n.weight !== undefined && (
-                            <span className="text-slate-500 text-[9px]">w:{n.weight}</span>
+                            <span className={`text-[9px] ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>w:{n.weight}</span>
                           )}
                         </button>
                       ))
@@ -623,24 +695,32 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
                 {/* Quick Algorithm Trace Launcher */}
                 {onRunAlgorithm && (
-                  <div className="pt-2 border-t border-slate-800/80">
+                  <div className={`pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => onRunAlgorithm('bfs', selectedNode.id)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                        className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                          isLight
+                            ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                            : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/30'
+                        }`}
                         title="Run BFS traversal starting from this node"
                       >
-                        <Play size={11} className="fill-blue-300" />
+                        <Play size={11} className={isLight ? 'fill-blue-700' : 'fill-blue-300'} />
                         <span>Trace BFS</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => onRunAlgorithm('dfs', selectedNode.id)}
-                        className="flex-1 py-1.5 px-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                        className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                          isLight
+                            ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                            : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border-indigo-500/30'
+                        }`}
                         title="Run DFS traversal starting from this node"
                       >
-                        <Play size={11} className="fill-indigo-300" />
+                        <Play size={11} className={isLight ? 'fill-indigo-700' : 'fill-indigo-300'} />
                         <span>Trace DFS</span>
                       </button>
                     </div>
@@ -649,14 +729,18 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Card 4: Appearance & Actions */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between transition-colors ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs hover:border-slate-300' : 'bg-slate-900/60 border-slate-800/80 shadow-sm hover:border-slate-700/80'
+              }`}>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Palette size={12} className="text-pink-400" />
+                    <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <Palette size={12} className="text-pink-500" />
                       <span>Node Color</span>
                     </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                    <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+                      isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                    }`} title="Pick any custom live color">
                       <input
                         type="color"
                         value={selectedNode.color || '#3b82f6'}
@@ -664,7 +748,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         onChange={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
                         className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
                       />
-                      <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                      <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
                     </label>
                   </div>
                   <div className="grid grid-cols-5 gap-1.5 mb-2">
@@ -673,10 +757,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         type="button"
                         key={p.color}
                         onClick={() => onUpdateNode(selectedNode.id, { color: p.color })}
-                        className={`h-6 rounded-lg transition-transform border ${
+                        className={`h-6 rounded-lg transition-transform border cursor-pointer ${
                           selectedNode.color === p.color
-                            ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                            : 'border-slate-800 hover:scale-105'
+                            ? isLight ? 'scale-110 border-slate-900 ring-2 ring-blue-500' : 'scale-110 border-white ring-2 ring-blue-500/50'
+                            : isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
                         }`}
                         style={{ backgroundColor: p.color }}
                         title={p.name}
@@ -689,7 +773,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 <button
                   type="button"
                   onClick={() => onDeleteNode(selectedNode.id)}
-                  className="w-full py-1.5 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/25 flex items-center justify-center gap-1.5 text-xs font-medium mt-2"
+                  className={`w-full py-1.5 px-2 rounded-lg transition-colors border flex items-center justify-center gap-1.5 text-xs font-medium mt-2 cursor-pointer ${
+                    isLight
+                      ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+                      : 'text-red-400 hover:bg-red-950/40 border-red-500/25'
+                  }`}
                   title="Delete Node (Del)"
                 >
                   <Trash2 size={13} />
@@ -703,13 +791,17 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           {selectedEdge && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-full items-stretch max-w-4xl">
               {/* Edge Direction */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+              }`}>
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Connection</span>
-                  <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-200 font-mono flex items-center justify-between mb-2">
-                    <strong className="text-blue-400">{selectedEdge.source}</strong>
-                    <span className="text-slate-500">{selectedEdge.directed ? '→' : '—'}</span>
-                    <strong className="text-blue-400">{selectedEdge.target}</strong>
+                  <span className={`text-[11px] font-semibold block mb-2 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Connection</span>
+                  <div className={`p-2 rounded-lg border text-xs font-mono flex items-center justify-between mb-2 ${
+                    isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
+                  }`}>
+                    <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{selectedEdge.source}</strong>
+                    <span className={isLight ? 'text-slate-500' : 'text-slate-500'}>{selectedEdge.directed ? '→' : '—'}</span>
+                    <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{selectedEdge.target}</strong>
                   </div>
                 </div>
                 {settings.isDirected && (
@@ -721,7 +813,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         target: selectedEdge.source,
                       })
                     }
-                    className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    className={`w-full py-1.5 px-2 border text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-medium' : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'
+                    }`}
                   >
                     <ArrowLeftRight size={12} />
                     <span>Reverse Direction</span>
@@ -730,9 +824,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Edge Weight */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+              }`}>
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Weight</span>
+                  <span className={`text-[11px] font-semibold block mb-2 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Weight</span>
                   <input
                     type="number"
                     value={selectedEdge.weight ?? ''}
@@ -742,20 +838,26 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         weight: e.target.value === '' ? undefined : Number(e.target.value),
                       })
                     }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                    }`}
                   />
                 </div>
               </div>
 
               {/* Edge Color & Delete */}
-              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+              <div className={`border rounded-xl p-3 flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+              }`}>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Palette size={12} className="text-pink-400" />
+                    <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <Palette size={12} className="text-pink-500" />
                       <span>Edge Color</span>
                     </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                    <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+                      isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                    }`} title="Pick any custom live color">
                       <input
                         type="color"
                         value={selectedEdge.color || '#64748b'}
@@ -763,7 +865,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         onChange={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
                         className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
                       />
-                      <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                      <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
                     </label>
                   </div>
                   <div className="grid grid-cols-5 gap-1.5 mb-2">
@@ -772,10 +874,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         type="button"
                         key={p.color}
                         onClick={() => onUpdateEdge(selectedEdge.id, { color: p.color })}
-                        className={`h-6 rounded-lg transition-transform border ${
+                        className={`h-6 rounded-lg transition-transform border cursor-pointer ${
                           selectedEdge.color === p.color
-                            ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                            : 'border-slate-800 hover:scale-105'
+                            ? isLight ? 'scale-110 border-slate-900 ring-2 ring-blue-500' : 'scale-110 border-white ring-2 ring-blue-500/50'
+                            : isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
                         }`}
                         style={{ backgroundColor: p.color }}
                         title={p.name}
@@ -787,7 +889,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 <button
                   type="button"
                   onClick={() => onDeleteEdge(selectedEdge.id)}
-                  className="w-full py-1.5 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/25 flex items-center justify-center gap-1.5 text-xs"
+                  className={`w-full py-1.5 px-2 rounded-lg transition-colors border flex items-center justify-center gap-1.5 text-xs cursor-pointer ${
+                    isLight ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200 font-medium' : 'text-red-400 hover:bg-red-950/40 border-red-500/25'
+                  }`}
                 >
                   <Trash2 size={13} />
                   <span>Delete Edge (Del)</span>
@@ -823,11 +927,13 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         {selectedNode && (
           <>
             {/* Card 1: Identity & Value */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+            <div className={`border rounded-xl p-3 space-y-2.5 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Tag size={12} className="text-blue-400" />
+                  <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                    <Tag size={12} className={isLight ? 'text-blue-600' : 'text-blue-400'} />
                     <span>Node Identifier</span>
                   </span>
                   <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
@@ -838,36 +944,46 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   type="text"
                   value={selectedNode.label}
                   onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-1.5"
+                  className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-1.5 border focus:outline-none focus:border-blue-500 ${
+                    isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                  }`}
                   placeholder="e.g. 1, A, true, Root"
                 />
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                  <span className={`text-[10px] mr-0.5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Presets:</span>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                    }`}
                   >
                     Int ('1')
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' : 'bg-purple-950/40 border-purple-800/40 text-purple-300 hover:bg-purple-900/50'
+                    }`}
                   >
                     Char ('A')
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100' : 'bg-amber-950/40 border-amber-800/40 text-amber-300 hover:bg-amber-900/50'
+                    }`}
                   >
                     Bool
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50'
+                    }`}
                   >
                     String
                   </button>
@@ -875,10 +991,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               {/* Node Weight */}
-              <div className="pt-2 border-t border-slate-800/80">
+              <div className={`pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Scale size={12} className="text-indigo-400" />
+                  <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                    <Scale size={12} className={isLight ? 'text-indigo-600' : 'text-indigo-400'} />
                     <span>Weight / Value</span>
                   </span>
                   {weightType && (
@@ -901,28 +1017,36 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       value: resolved,
                     });
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1.5"
+                  className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-1.5 border focus:outline-none focus:border-indigo-500 ${
+                    isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                  }`}
                 />
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                  <span className={`text-[10px] mr-0.5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Presets:</span>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                    }`}
                   >
                     Int (10)
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' : 'bg-purple-950/40 border-purple-800/40 text-purple-300 hover:bg-purple-900/50'
+                    }`}
                   >
                     Char ('A')
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                      isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50'
+                    }`}
                   >
                     Text
                   </button>
@@ -930,7 +1054,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                      className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                        isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+                      }`}
                     >
                       Clear
                     </button>
@@ -940,18 +1066,24 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             </div>
 
             {/* Card 2: Graph Connections & Traversal */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+            <div className={`border rounded-xl p-3 space-y-2.5 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Network size={12} className="text-cyan-400" />
+                <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <Network size={12} className={isLight ? 'text-cyan-600' : 'text-cyan-400'} />
                   <span>Connections &amp; Degree</span>
                 </span>
                 {settings.isDirected ? (
-                  <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                  <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded border ${
+                    isLight ? 'text-slate-700 bg-slate-100 border-slate-300 font-medium' : 'text-slate-400 bg-slate-950 border-slate-800'
+                  }`}>
                     In: {nodeConnections.inDegree} | Out: {nodeConnections.outDegree}
                   </span>
                 ) : (
-                  <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                  <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded border ${
+                    isLight ? 'text-slate-700 bg-slate-100 border-slate-300 font-medium' : 'text-slate-400 bg-slate-950 border-slate-800'
+                  }`}>
                     Deg: {nodeConnections.totalDegree}
                   </span>
                 )}
@@ -959,29 +1091,33 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
               {/* Neighbor Chips */}
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-500 block">Adjacent Vertices:</span>
+                <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Adjacent Vertices:</span>
                 <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                   {nodeConnections.neighbors.length === 0 ? (
-                    <span className="text-[10px] text-slate-500 italic py-1">No connected edges (Isolated)</span>
+                    <span className={`text-[10px] italic py-1 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>No connected edges (Isolated)</span>
                   ) : (
                     nodeConnections.neighbors.map((n, idx) => (
                       <button
                         type="button"
                         key={`${n.edgeId}-${idx}`}
                         onClick={() => onSelectNode?.(n.id)}
-                        className="px-2 py-0.5 rounded text-[10.5px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 text-slate-200 flex items-center gap-1 font-mono transition-colors"
+                        className={`px-2 py-0.5 rounded text-[10.5px] border flex items-center gap-1 font-mono transition-colors cursor-pointer ${
+                          isLight
+                            ? 'bg-slate-100 border-slate-300 hover:border-blue-500 text-slate-800'
+                            : 'bg-slate-950 border-slate-800 hover:border-blue-500/60 text-slate-200'
+                        }`}
                         title={`Click to trace Node ${n.label}`}
                       >
                         {n.dir === 'outgoing' ? (
-                          <ArrowRight size={10} className="text-blue-400" />
+                          <ArrowRight size={10} className={isLight ? 'text-blue-600' : 'text-blue-400'} />
                         ) : n.dir === 'incoming' ? (
-                          <ArrowLeft size={10} className="text-purple-400" />
+                          <ArrowLeft size={10} className={isLight ? 'text-purple-600' : 'text-purple-400'} />
                         ) : (
-                          <CircleDot size={9} className="text-cyan-400" />
+                          <CircleDot size={9} className={isLight ? 'text-cyan-600' : 'text-cyan-400'} />
                         )}
-                        <span className="font-semibold text-white">{n.label}</span>
+                        <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{n.label}</span>
                         {n.weight !== undefined && (
-                          <span className="text-slate-500 text-[9px]">w:{n.weight}</span>
+                          <span className={`text-[9px] ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>w:{n.weight}</span>
                         )}
                       </button>
                     ))
@@ -991,25 +1127,33 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
               {/* Quick Algorithm Trace */}
               {onRunAlgorithm && (
-                <div className="pt-2 border-t border-slate-800/80">
-                  <span className="text-[10px] text-slate-500 block mb-1.5">Launch Traversal from this Node:</span>
+                <div className={`pt-2 border-t ${isLight ? 'border-slate-200' : 'border-slate-800/80'}`}>
+                  <span className={`text-[10px] block mb-1.5 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>Launch Traversal from this Node:</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
                       onClick={() => onRunAlgorithm('bfs', selectedNode.id)}
-                      className="py-1.5 px-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                      className={`py-1.5 px-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                        isLight
+                          ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                          : 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/30'
+                      }`}
                       title="Run BFS traversal starting from this node"
                     >
-                      <Play size={11} className="fill-blue-300" />
+                      <Play size={11} className={isLight ? 'fill-blue-700' : 'fill-blue-300'} />
                       <span>Trace BFS</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => onRunAlgorithm('dfs', selectedNode.id)}
-                      className="py-1.5 px-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                      className={`py-1.5 px-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                        isLight
+                          ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                          : 'bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border-indigo-500/30'
+                      }`}
                       title="Run DFS traversal starting from this node"
                     >
-                      <Play size={11} className="fill-indigo-300" />
+                      <Play size={11} className={isLight ? 'fill-indigo-700' : 'fill-indigo-300'} />
                       <span>Trace DFS</span>
                     </button>
                   </div>
@@ -1018,13 +1162,17 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             </div>
 
             {/* Card 3: Color & Hierarchy */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+            <div className={`border rounded-xl p-3 space-y-2.5 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Palette size={12} className="text-pink-400" />
+                <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <Palette size={12} className="text-pink-500" />
                   <span>Node Color</span>
                 </span>
-                <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+                  isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                }`} title="Pick any custom live color">
                   <input
                     type="color"
                     value={selectedNode.color || '#3b82f6'}
@@ -1032,7 +1180,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     onChange={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
                     className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
                   />
-                  <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                  <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
                 </label>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
@@ -1041,10 +1189,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     type="button"
                     key={p.color}
                     onClick={() => onUpdateNode(selectedNode.id, { color: p.color })}
-                    className={`h-6 rounded-lg transition-transform border ${
+                    className={`h-6 rounded-lg transition-transform border cursor-pointer ${
                       selectedNode.color === p.color
-                        ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                        : 'border-slate-800 hover:scale-105'
+                        ? isLight ? 'scale-110 border-slate-900 ring-2 ring-blue-500' : 'scale-110 border-white ring-2 ring-blue-500/50'
+                        : isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
                     }`}
                     style={{ backgroundColor: p.color }}
                     title={p.name}
@@ -1055,9 +1203,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               <button
                 type="button"
                 onClick={() => onSetTreeRoot(selectedNode.id)}
-                className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
+                className={`w-full py-1.5 px-2 border text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium cursor-pointer ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800' : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'
+                }`}
               >
-                <GitBranch size={12} className="text-emerald-400" />
+                <GitBranch size={12} className={isLight ? 'text-emerald-600' : 'text-emerald-400'} />
                 <span>Set as Tree Root</span>
               </button>
             </div>
@@ -1066,7 +1216,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             <button
               type="button"
               onClick={() => onDeleteNode(selectedNode.id)}
-              className="w-full py-2 px-3 text-red-400 hover:bg-red-950/40 rounded-xl transition-colors border border-red-500/25 flex items-center justify-center gap-2 text-xs font-medium"
+              className={`w-full py-2 px-3 rounded-xl transition-colors border flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer ${
+                isLight ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'text-red-400 hover:bg-red-950/40 border-red-500/25'
+              }`}
               title="Delete Node (Del)"
             >
               <Trash2 size={14} />
@@ -1078,12 +1230,16 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         {/* EDGE PROPERTIES */}
         {selectedEdge && (
           <div className="space-y-3">
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
-              <span className="text-[11px] font-semibold text-slate-300 block">Edge Connection</span>
-              <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-200 font-mono flex items-center justify-between">
-                <strong className="text-blue-400">{selectedEdge.source}</strong>
-                <span className="text-slate-500">{selectedEdge.directed ? '→' : '—'}</span>
-                <strong className="text-blue-400">{selectedEdge.target}</strong>
+            <div className={`border rounded-xl p-3 space-y-2.5 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
+              <span className={`text-[11px] font-semibold block ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Connection</span>
+              <div className={`p-2 rounded-lg border text-xs font-mono flex items-center justify-between ${
+                isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
+              }`}>
+                <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{selectedEdge.source}</strong>
+                <span className={isLight ? 'text-slate-500' : 'text-slate-500'}>{selectedEdge.directed ? '→' : '—'}</span>
+                <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{selectedEdge.target}</strong>
               </div>
               {settings.isDirected && (
                 <button
@@ -1094,7 +1250,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       target: selectedEdge.source,
                     })
                   }
-                  className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                  className={`w-full py-1.5 px-2 border text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                    isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-medium' : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'
+                  }`}
                 >
                   <ArrowLeftRight size={12} />
                   <span>Reverse Direction</span>
@@ -1102,8 +1260,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               )}
             </div>
 
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2">
-              <span className="text-[11px] font-semibold text-slate-300 block">Edge Weight</span>
+            <div className={`border rounded-xl p-3 space-y-2 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
+              <span className={`text-[11px] font-semibold block ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Weight</span>
               <input
                 type="number"
                 value={selectedEdge.weight ?? ''}
@@ -1113,17 +1273,23 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     weight: e.target.value === '' ? undefined : Number(e.target.value),
                   })
                 }
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${
+                  isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+                }`}
               />
             </div>
 
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2">
+            <div className={`border rounded-xl p-3 space-y-2 ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Palette size={12} className="text-pink-400" />
+                <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <Palette size={12} className="text-pink-500" />
                   <span>Edge Color</span>
                 </span>
-                <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+                  isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                }`} title="Pick any custom live color">
                   <input
                     type="color"
                     value={selectedEdge.color || '#64748b'}
@@ -1131,7 +1297,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     onChange={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
                     className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
                   />
-                  <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                  <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
                 </label>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
@@ -1140,10 +1306,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     type="button"
                     key={p.color}
                     onClick={() => onUpdateEdge(selectedEdge.id, { color: p.color })}
-                    className={`h-6 rounded-lg transition-transform border ${
+                    className={`h-6 rounded-lg transition-transform border cursor-pointer ${
                       selectedEdge.color === p.color
-                        ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                        : 'border-slate-800 hover:scale-105'
+                        ? isLight ? 'scale-110 border-slate-900 ring-2 ring-blue-500' : 'scale-110 border-white ring-2 ring-blue-500/50'
+                        : isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
                     }`}
                     style={{ backgroundColor: p.color }}
                     title={p.name}
@@ -1155,7 +1321,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             <button
               type="button"
               onClick={() => onDeleteEdge(selectedEdge.id)}
-              className="w-full py-2 px-3 text-red-400 hover:bg-red-950/40 rounded-xl transition-colors border border-red-500/25 flex items-center justify-center gap-2 text-xs font-medium"
+              className={`w-full py-2 px-3 rounded-xl transition-colors border flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer ${
+                isLight ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'text-red-400 hover:bg-red-950/40 border-red-500/25'
+              }`}
               title="Delete Edge (Del)"
             >
               <Trash2 size={14} />

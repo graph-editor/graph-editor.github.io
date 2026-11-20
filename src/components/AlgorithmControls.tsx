@@ -97,24 +97,30 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
 
         <div className="flex items-center gap-3">
           {/* Speed Selector Pill */}
-          <div className="relative flex items-center bg-slate-950/90 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300">
-            <Gauge size={13} className="text-slate-400 mr-1.5" />
+          <div className={`relative flex items-center border rounded-lg px-2.5 py-1 text-xs ${
+            isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950/90 border-slate-800 text-slate-300'
+          }`}>
+            <Gauge size={13} className={`mr-1.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`} />
             <select
               value={speed}
               onChange={e => setSpeed(Number(e.target.value))}
-              className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer pr-4 appearance-none font-mono"
+              className={`bg-transparent text-xs focus:outline-none cursor-pointer pr-4 appearance-none font-mono ${
+                isLight ? 'text-slate-800 font-medium' : 'text-slate-200'
+              }`}
             >
-              <option value={300} className="bg-slate-900">Fast (0.3s)</option>
-              <option value={800} className="bg-slate-900">Normal (0.8s)</option>
-              <option value={1500} className="bg-slate-900">Slow (1.5s)</option>
+              <option value={300} className={isLight ? 'bg-white text-slate-900' : 'bg-slate-900'}>Fast (0.3s)</option>
+              <option value={800} className={isLight ? 'bg-white text-slate-900' : 'bg-slate-900'}>Normal (0.8s)</option>
+              <option value={1500} className={isLight ? 'bg-white text-slate-900' : 'bg-slate-900'}>Slow (1.5s)</option>
             </select>
-            <ChevronDown size={12} className="text-slate-400 pointer-events-none absolute right-2" />
+            <ChevronDown size={12} className={`pointer-events-none absolute right-2 ${isLight ? 'text-slate-600' : 'text-slate-400'}`} />
           </div>
 
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-lg transition-colors"
+            className={`p-1 rounded-lg transition-colors ${
+              isLight ? 'text-slate-500 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+            }`}
             title="Close Tracer (Esc)"
           >
             <X size={16} />
@@ -123,10 +129,14 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
       </div>
 
       {/* Description Text */}
-      <div className="pt-2.5 pb-2 text-xs text-slate-400 leading-relaxed min-h-[36px] flex items-center justify-between">
+      <div className={`pt-2.5 pb-2 text-xs leading-relaxed min-h-[36px] flex items-center justify-between ${
+        isLight ? 'text-slate-700 font-medium' : 'text-slate-400'
+      }`}>
         <span>{currentStep.description}</span>
         {currentStep.dataStructureView && currentStep.dataStructureView.items.length > 0 && (
-          <span className="hidden sm:inline-block ml-2 text-[11px] font-mono text-blue-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+          <span className={`hidden sm:inline-block ml-2 text-[11px] font-mono px-2 py-0.5 rounded border ${
+            isLight ? 'text-blue-700 bg-blue-50 border-blue-200 font-semibold' : 'text-blue-400 bg-slate-950 border-slate-800'
+          }`}>
             {currentStep.dataStructureView.name}: [{currentStep.dataStructureView.items.slice(0, 5).join(', ')}]
           </span>
         )}
@@ -145,7 +155,7 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
               onSetStepIndex(Number(e.target.value));
             }}
             style={{
-              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${progressPercent}%, #1e293b ${progressPercent}%, #1e293b 100%)`,
+              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${progressPercent}%, ${isLight ? '#cbd5e1' : '#1e293b'} ${progressPercent}%, ${isLight ? '#cbd5e1' : '#1e293b'} 100%)`,
             }}
             className="w-full h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none accent-blue-500"
           />
@@ -156,7 +166,9 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
       <div className="flex items-center justify-center gap-3 pt-1">
         <button
           onClick={handleReset}
-          className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl transition-colors"
+          className={`p-2 rounded-xl transition-colors ${
+            isLight ? 'text-slate-500 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
           title="Reset to Step 1"
         >
           <RotateCcw size={16} />
@@ -165,7 +177,9 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
         <button
           onClick={handlePrev}
           disabled={currentStepIndex === 0}
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/60 disabled:opacity-30 rounded-xl transition-colors"
+          className={`p-2 disabled:opacity-30 rounded-xl transition-colors ${
+            isLight ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+          }`}
           title="Previous Step"
         >
           <SkipBack size={18} />
@@ -182,7 +196,9 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
         <button
           onClick={handleNext}
           disabled={currentStepIndex === totalSteps - 1}
-          className="p-2 text-slate-300 hover:text-white hover:bg-slate-800/60 disabled:opacity-30 rounded-xl transition-colors"
+          className={`p-2 disabled:opacity-30 rounded-xl transition-colors ${
+            isLight ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+          }`}
           title="Next Step"
         >
           <SkipForward size={18} />

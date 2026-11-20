@@ -83,6 +83,21 @@ function computeConvexHull(points: { x: number; y: number }[]): { x: number; y: 
   return lower.concat(upper);
 }
 
+// Contrast calculation to guarantee node labels are crisp & visible across any node background color
+function getContrastTextColor(hexColor?: string, isLightMode = false): string {
+  if (!hexColor) return isLightMode ? '#0f172a' : '#ffffff';
+  let hex = hexColor.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  if (hex.length !== 6) return isLightMode ? '#0f172a' : '#ffffff';
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 150 ? '#0f172a' : '#ffffff';
+}
+
 // Compute smooth lasso perimeter around any set of selected nodes
 function computeSelectionLassoPolygon(
   selectedNodes: GraphNode[],
@@ -844,8 +859,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Check algorithm highlight
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
-    const defaultColor = isLight ? '#94a3b8' : '#52525b';
-    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? (isLight ? '#475569' : '#a1a1aa') : (edge.color === '#64748b' ? defaultColor : edge.color));
+    const defaultColor = isLight ? '#334155' : '#52525b';
+    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? (isLight ? '#0f172a' : '#a1a1aa') : (edge.color === '#64748b' ? defaultColor : edge.color));
     const strokeWidth = isSelected || algoEdgeHighlight ? 3.5 : isHovered ? 2.5 : 2;
 
     const handleEdgeClick = (e: React.MouseEvent) => {
@@ -887,7 +902,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             <path
               d={pathD}
               fill="none"
-              stroke="#38bdf8"
+              stroke={isLight ? '#2563eb' : '#38bdf8'}
               strokeWidth={strokeWidth + 5}
               strokeOpacity="0.5"
               strokeLinecap="round"
@@ -903,8 +918,25 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           />
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
-              <rect x="-14" y="-9" width="28" height="18" rx="4" fill="#0f172a" stroke={effectiveEdgeColor} strokeWidth="1" />
-              <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontFamily={CANVAS_MONO_FONT} fontWeight="600">
+              <rect
+                x="-14"
+                y="-9"
+                width="28"
+                height="18"
+                rx="4"
+                fill={isLight ? '#ffffff' : '#0f172a'}
+                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : effectiveEdgeColor}
+                strokeWidth={isLight ? '1.5' : '1'}
+                filter={isLight ? 'url(#badge-shadow)' : undefined}
+              />
+              <text
+                textAnchor="middle"
+                dy="4"
+                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
+                fontSize="11"
+                fontFamily={CANVAS_MONO_FONT}
+                fontWeight="700"
+              >
                 {edge.weight}
               </text>
             </g>
@@ -980,7 +1012,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           <path
             d={pathD}
             fill="none"
-            stroke="#38bdf8"
+            stroke={isLight ? '#2563eb' : '#38bdf8'}
             strokeWidth={strokeWidth + 5}
             strokeOpacity="0.5"
             strokeLinecap="round"
@@ -1007,16 +1039,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               height="18"
               rx="4"
               fill={isLight ? '#ffffff' : '#0a0a0a'}
-              stroke={isSelected ? '#38bdf8' : isLight ? '#cbd5e1' : '#262626'}
-              strokeWidth="1"
+              stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : '#262626'}
+              strokeWidth={isLight ? '1.5' : '1'}
+              filter={isLight ? 'url(#badge-shadow)' : undefined}
             />
             <text
               textAnchor="middle"
               dy="4"
-              fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#f8fafc'}
+              fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
               fontSize="11"
               fontFamily={CANVAS_MONO_FONT}
-              fontWeight="600"
+              fontWeight="700"
             >
               {edge.weight}
             </text>
@@ -1062,7 +1095,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           <circle
             r={r + 7}
             fill="none"
-            stroke={isActiveAlgo ? '#f59e0b' : '#38bdf8'}
+            stroke={isActiveAlgo ? '#f59e0b' : (isLight ? '#2563eb' : '#38bdf8')}
             strokeWidth="2.5"
             strokeDasharray={isActiveAlgo ? '4,4' : undefined}
           />
@@ -1077,15 +1110,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <circle
           r={r}
           fill={baseColor}
-          stroke={isSelected ? (isLight ? '#0f172a' : '#ffffff') : isLight ? '#cbd5e1' : '#000000'}
-          strokeWidth={isSelected ? '2.5' : '2'}
+          stroke={isSelected ? (isLight ? '#1d4ed8' : '#ffffff') : isLight ? '#0f172a' : '#000000'}
+          strokeWidth={isSelected ? '2.8' : isLight ? '2.2' : '2'}
+          filter={isLight ? 'url(#node-shadow)' : undefined}
         />
 
-        {/* Node Index / Label */}
+        {/* Node Index / Label with high-contrast luminance text */}
         <text
           textAnchor="middle"
           dy={fontSize * 0.35}
-          fill="#ffffff"
+          fill={getContrastTextColor(baseColor, isLight)}
           fontSize={fontSize}
           fontFamily={CANVAS_MONO_FONT}
           fontWeight="700"
@@ -1097,7 +1131,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Badge (e.g. Root, Hub, Cut) */}
         {node.badge && (
           <g transform={`translate(0, ${-r - 8})`}>
-            <rect x="-18" y="-7" width="36" height="14" rx="4" fill={isLight ? '#ffffff' : '#0a0a0a'} stroke="#ef4444" strokeWidth="1" />
+            <rect x="-18" y="-7" width="36" height="14" rx="4" fill={isLight ? '#ffffff' : '#0a0a0a'} stroke="#ef4444" strokeWidth="1" filter={isLight ? 'url(#badge-shadow)' : undefined} />
             <text textAnchor="middle" dy="3.5" fill="#ef4444" fontSize="9" fontWeight="700">
               {node.badge}
             </text>
@@ -1120,13 +1154,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 height="16"
                 rx="8"
                 fill={isLight ? '#ffffff' : '#0a0a0a'}
-                stroke={isSelected ? '#38bdf8' : isLight ? '#cbd5e1' : '#334155'}
-                strokeWidth="1.2"
+                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : '#334155'}
+                strokeWidth={isLight ? '1.5' : '1.2'}
+                filter={isLight ? 'url(#badge-shadow)' : undefined}
               />
               <text
                 textAnchor="middle"
                 dy="3.5"
-                fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#c7d2fe'}
+                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#c7d2fe'}
                 fontSize="9.5"
                 fontFamily={CANVAS_MONO_FONT}
                 fontWeight="700"
@@ -1151,17 +1186,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 width={Math.max(44, annotation.length * 8)}
                 height="16"
                 rx="4"
-                fill="#0f172a"
-                stroke="#334155"
-                strokeWidth="1"
+                fill={isLight ? '#ffffff' : '#0f172a'}
+                stroke={isLight ? '#2563eb' : '#334155'}
+                strokeWidth={isLight ? '1.5' : '1'}
+                filter={isLight ? 'url(#badge-shadow)' : undefined}
               />
               <text
                 textAnchor="middle"
                 dy="3.5"
-                fill="#38bdf8"
+                fill={isLight ? '#1d4ed8' : '#38bdf8'}
                 fontSize="10"
                 fontFamily={CANVAS_MONO_FONT}
-                fontWeight="600"
+                fontWeight="700"
               >
                 {annotation}
               </text>
@@ -1177,6 +1213,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const colors = new Set<string>();
     colors.add('#64748b'); // default edge
     colors.add('#38bdf8'); // selected
+    colors.add('#2563eb'); // selected light
+    colors.add('#334155'); // default edge light
+    colors.add('#0f172a'); // hovered edge light
     colors.add('#94a3b8'); // hovered
     colors.add('#10b981'); // success/MST
     colors.add('#ef4444'); // error/bridge
@@ -1227,6 +1266,21 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <rect width="100%" height="100%" fill={isLight ? '#ffffff' : '#000000'} />
 
         <defs>
+          {/* Subtle Grid Dot Pattern for Canvas Orientation */}
+          <pattern id="canvas-grid-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="14" cy="14" r={isLight ? 1.15 : 1} fill={isLight ? '#94a3b8' : '#262626'} opacity={isLight ? 0.45 : 0.75} />
+          </pattern>
+
+          {/* Elevated Drop Shadow Filter for Nodes in Light Mode */}
+          <filter id="node-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#0f172a" floodOpacity={isLight ? 0.12 : 0.45} />
+          </filter>
+
+          {/* Crisp Shadow Filter for Badges in Light Mode */}
+          <filter id="badge-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#0f172a" floodOpacity={isLight ? 0.10 : 0.40} />
+          </filter>
+
           {/* Dynamic Arrowheads for each color */}
           {arrowheadColors.map(c => (
             <marker
@@ -1244,8 +1298,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           ))}
         </defs>
 
-        {/* Pan/Zoom World Container: Clean Solid Canvas without grid shapes */}
+        {/* Pan/Zoom World Container: Clean Solid Canvas with subtle dot orientation */}
         <g transform={`translate(${viewTransform.x}, ${viewTransform.y}) scale(${viewTransform.scale})`}>
+          {/* Subtle Dot Grid Layer */}
+          <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#canvas-grid-dots)" pointerEvents="none" />
+
           {/* Edges Layer */}
           <g className="edges-layer">{data.edges.map(renderEdge)}</g>
 
@@ -1254,19 +1311,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             <g className="selection-lasso pointer-events-none">
               <path
                 d={pointsToSvgPath(displayLassoPoints)}
-                fill="rgba(56, 189, 248, 0.10)"
-                stroke="rgba(56, 189, 248, 0.35)"
+                fill={isLight ? "rgba(37, 99, 235, 0.07)" : "rgba(56, 189, 248, 0.10)"}
+                stroke={isLight ? "rgba(37, 99, 235, 0.25)" : "rgba(56, 189, 248, 0.35)"}
                 strokeWidth="4"
                 strokeLinejoin="round"
               />
               <path
                 d={pointsToSvgPath(displayLassoPoints)}
                 fill="none"
-                stroke="#38bdf8"
+                stroke={isLight ? "#2563eb" : "#38bdf8"}
                 strokeWidth="2"
                 strokeDasharray="6,4"
                 strokeLinejoin="round"
-                filter="drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))"
+                filter={isLight ? "drop-shadow(0 0 4px rgba(37, 99, 235, 0.3))" : "drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))"}
               />
             </g>
           )}
@@ -1278,7 +1335,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               y1={nodeMap.get(connectSourceId)!.y}
               x2={mousePos.x}
               y2={mousePos.y}
-              stroke="#38bdf8"
+              stroke={isLight ? "#2563eb" : "#38bdf8"}
               strokeWidth="2.5"
               strokeDasharray="4,4"
               className="pointer-events-none"
@@ -1294,18 +1351,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               {/* Semi-transparent closed preview */}
               <path
                 d={pointsToSvgPath(activeLassoPoints)}
-                fill="rgba(56, 189, 248, 0.14)"
+                fill={isLight ? "rgba(37, 99, 235, 0.09)" : "rgba(56, 189, 248, 0.14)"}
                 stroke="none"
               />
               {/* Active drawn path line */}
               <path
                 d={activeLassoPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')}
                 fill="none"
-                stroke="#38bdf8"
+                stroke={isLight ? "#2563eb" : "#38bdf8"}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                filter="drop-shadow(0 0 5px rgba(56, 189, 248, 0.7))"
+                filter={isLight ? "drop-shadow(0 0 4px rgba(37, 99, 235, 0.4))" : "drop-shadow(0 0 5px rgba(56, 189, 248, 0.7))"}
               />
               {/* Dashed closing line back to loop origin */}
               <line
@@ -1313,7 +1370,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 y1={activeLassoPoints[activeLassoPoints.length - 1].y}
                 x2={activeLassoPoints[0].x}
                 y2={activeLassoPoints[0].y}
-                stroke="#38bdf8"
+                stroke={isLight ? "#2563eb" : "#38bdf8"}
                 strokeWidth="1.5"
                 strokeDasharray="4,4"
                 opacity="0.8"
@@ -1323,7 +1380,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 cx={activeLassoPoints[0].x}
                 cy={activeLassoPoints[0].y}
                 r="4.5"
-                fill="#38bdf8"
+                fill={isLight ? "#2563eb" : "#38bdf8"}
                 stroke={isLight ? '#ffffff' : '#000000'}
                 strokeWidth="2"
               />

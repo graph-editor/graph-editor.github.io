@@ -84,11 +84,11 @@
     --bg-surface: #ffffff;
     --bg-surface-elevated: #f8fafc;
     --bg-card: #f1f5f9;
-    --border-color: #e2e8f0;
-    --border-subtle: #f1f5f9;
-    --text-primary: #09090b;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --border-color: #cbd5e1;
+    --border-subtle: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
     --color-accent: #2563eb;
     --canvas-bg: #ffffff;
   }
