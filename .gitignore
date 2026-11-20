@@ -5,5 +5,7 @@ release/
 .DS_Store
 *.log
 build/bin/
+src-tauri/target/
+src-tauri/gen/
 scripts/upload_all_assets.py
 scripts/release_v2.py

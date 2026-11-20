@@ -3,6 +3,14 @@ const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+// Low-memory & lightweight Chromium optimization flags
+app.commandLine.appendSwitch('disable-breakpad');
+app.commandLine.appendSwitch('disable-component-update');
+app.commandLine.appendSwitch('disable-domain-reliability');
+app.commandLine.appendSwitch('disable-sync');
+app.commandLine.appendSwitch('renderer-process-limit', '1');
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=128');
+
 let mainWindow = null;
 
 function createWindow() {
@@ -19,6 +27,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      spellcheck: false,
+      backgroundThrottling: true,
     },
     show: false, // Wait until ready-to-show to prevent white flash
   });
