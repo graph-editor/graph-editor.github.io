@@ -135,6 +135,9 @@ pnpm package:all
 ### Automated Multi-Platform CI / CD
 The repository includes a ready-to-run GitHub Actions workflow at [`.github/workflows/desktop-builds.yml`](file:///home/m0stafa/Documents/Graph%20Editor/.github/workflows/desktop-builds.yml) which automatically compiles and uploads artifacts across `ubuntu-latest`, `windows-latest` (NSIS installer), and `macos-latest` (DMG & universal binaries).
 
+### GitHub Pages
+The Pages workflow builds the web app and publishes its compiled files to the repository root on `master`, matching the current branch-based GitHub Pages configuration.
+
 # Preview build
 pnpm preview
 ```

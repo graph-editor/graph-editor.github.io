@@ -1,0 +1,17 @@
+{
+  "name": "CP Graph Visualizer & Editor",
+  "short_name": "CP Graph",
+  "description": "Ultra-clean Graph Visualizer & Editor tailored for Competitive Programming and Algorithm Simulation",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

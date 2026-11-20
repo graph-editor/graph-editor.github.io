@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: 'pages'
@@ -16,9 +14,6 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,14 +36,15 @@ jobs:
       - name: Build Web Application
         run: pnpm build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish built site to Pages branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf assets fonts
+          rm -f index.html icon.png manifest.json robots.txt sitemap.xml sw.js
+          cp -R dist/. .
+          git add index.html assets fonts icon.png manifest.json robots.txt sitemap.xml sw.js
+          if ! git diff --cached --quiet; then
+            git commit -m "Deploy website to GitHub Pages"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
