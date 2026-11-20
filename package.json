@@ -5,8 +5,8 @@
   "main": "electron/main.cjs",
   "description": "Ultra-clean Graph Visualizer & Editor tailored for Competitive Programming",
   "author": {
-    "name": "CP Graph Team",
-    "email": "dev@cpgraph.local"
+    "name": "Mostafa",
+    "url": "https://github.com/mostafa-cse"
   },
   "homepage": "https://graph-editor.github.io/",
   "scripts": {

@@ -109,6 +109,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
           <div className="flex items-center gap-3">
             <a
+              href="https://github.com/mostafa-cse"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-700/80 bg-gray-900/40 hover:bg-gray-800 text-xs font-medium text-gray-300 hover:text-white transition-colors"
+              title="Author: Mostafa (@mostafa-cse)"
+            >
+              <GithubIcon className="w-3.5 h-3.5 text-blue-400" />
+              <span>@mostafa-cse</span>
+            </a>
+
+            <a
               href={GITHUB_REPO}
               target="_blank"
               rel="noreferrer"
@@ -826,8 +837,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             </a>
           </div>
 
-          <div>
-            Built with ❤️ for the Competitive Programming Community
+          <div className="flex items-center gap-1.5">
+            <span>Built with ❤️ by</span>
+            <a
+              href="https://github.com/mostafa-cse"
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2 flex items-center gap-1"
+            >
+              <span>Mostafa (@mostafa-cse)</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
       </footer>

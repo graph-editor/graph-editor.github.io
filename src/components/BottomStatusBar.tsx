@@ -103,7 +103,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
       </div>
 
       {/* Center: Active Tool & Mode Hint */}
-      <div className={`hidden md:flex items-center gap-2 font-sans ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+      <div className={`hidden md:flex items-center gap-2.5 font-sans ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
         {activeTool === 'select' && (
           <span className="flex items-center gap-1.5">
             <MousePointer size={12} className="text-blue-500" />
@@ -136,6 +136,22 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
             <span className="text-[10.5px]">Click source node, then click target node • Press Esc to cancel</span>
           </span>
         )}
+
+        <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
+
+        {/* Authorship */}
+        <a
+          href="https://github.com/mostafa-cse"
+          target="_blank"
+          rel="noreferrer"
+          className={`flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline ${
+            isLight ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
+          }`}
+          title="Author: Mostafa (https://github.com/mostafa-cse)"
+        >
+          <span className={isLight ? 'text-slate-400' : 'text-neutral-500'}>by</span>
+          <span className="font-semibold">@mostafa-cse</span>
+        </a>
       </div>
 
       {/* Right: Zoom, Fit & Physics */}

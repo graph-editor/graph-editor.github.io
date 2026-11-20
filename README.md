@@ -138,3 +138,13 @@ The repository includes a ready-to-run GitHub Actions workflow at [`.github/work
 # Preview build
 pnpm preview
 ```
+
+---
+
+## 👤 Author & Maintainer
+
+Created, designed, and maintained by **Mostafa** ([@mostafa-cse](https://github.com/mostafa-cse)).
+
+* GitHub: [https://github.com/mostafa-cse](https://github.com/mostafa-cse)
+* Project: [https://github.com/graph-editor/graph-editor.github.io](https://github.com/graph-editor/graph-editor.github.io)
+* Live Web App: [https://graph-editor.github.io/](https://graph-editor.github.io/)
