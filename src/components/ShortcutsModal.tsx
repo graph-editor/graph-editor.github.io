@@ -65,6 +65,20 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
             </div>
           ))}
         </div>
+
+        <div className={`px-5 py-3 border-t text-xs flex items-center justify-between ${
+          isLight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-neutral-800 bg-neutral-950/80 text-neutral-400'
+        }`}>
+          <span className="font-medium">CP Graph Editor v2.1</span>
+          <a
+            href="https://github.com/mostafa-cse"
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-500 hover:underline font-semibold flex items-center gap-1"
+          >
+            <span>Author: @mostafa-cse</span>
+          </a>
+        </div>
       </div>
     </div>
   );
