@@ -45,12 +45,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
   const GITHUB_REPO = 'https://github.com/mostafa-cse/Graph-visualization';
   const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64-setup.exe';
-  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64_en-US.msi';
-  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_universal.dmg';
-  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_universal.app.tar.gz';
-  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.AppImage';
-  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.deb';
+  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
+  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
+  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
+  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
+  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
+  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
 
   const faqs = [
     {
@@ -94,7 +94,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             </div>
             <div>
               <span className="font-extrabold text-lg text-white tracking-tight">CP Graph</span>
-              <span className="text-xs px-2 py-0.5 ml-2 font-mono rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v2.0</span>
+              <span className="text-xs px-2 py-0.5 ml-2 font-mono rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v2.1</span>
             </div>
           </div>
 

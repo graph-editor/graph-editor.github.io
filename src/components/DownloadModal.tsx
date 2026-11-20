@@ -8,12 +8,12 @@ interface DownloadModalProps {
 }
 
 const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64-setup.exe';
-const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64_en-US.msi';
-const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_universal.dmg';
-const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_universal.app.tar.gz';
-const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.AppImage';
-const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.deb';
+const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
+const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
+const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
+const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
+const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
+const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, theme = 'dark' }) => {
   if (!isOpen) return null;
@@ -225,7 +225,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, t
 
         {/* Footer */}
         <div className={`mt-5 flex items-center justify-between text-xs ${isLight ? 'text-slate-500' : 'text-neutral-500'}`}>
-          <span>Version 2.0.0 • Free & Open Source</span>
+          <span>Version 2.1.0 • Free & Open Source</span>
           <a 
             href={RELEASES_URL}
             target="_blank"

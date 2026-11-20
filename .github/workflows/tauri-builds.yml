@@ -58,8 +58,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.0.0
-          releaseName: 'CP Graph Editor v2.0.0 (Official Release)'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'CP Graph Editor ${{ github.ref_name }}'
           releaseBody: 'Ultra-lightweight native Tauri desktop builds (~5-10MB)'
           releaseDraft: false
           prerelease: false
