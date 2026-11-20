@@ -166,20 +166,12 @@ export function App() {
 
     setData(finalData);
 
-    // If an N M header was pasted, automatically strip it and put clean edges into rawText
-    if (parsed.detectedHeader) {
-      setRawText(parsed.detectedHeader.strippedEdgesText);
-      setSettings(prev => ({
-        ...prev,
-        ...parsed.settings,
-        nodeCountPreserved: parsed.detectedHeader?.n,
-      }));
-    } else {
-      setRawText(text);
-      if (parsed.settings) {
-        setSettings(prev => ({ ...prev, ...parsed.settings }));
-      }
-    }
+    setRawText(text);
+    setSettings(prev => ({
+      ...prev,
+      ...parsed.settings,
+      nodeCountPreserved: parsed.detectedHeader?.n ?? undefined,
+    }));
   };
 
   // Allow setting custom isolated node count from the Nodes field, or reset to auto (null)

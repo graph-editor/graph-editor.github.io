@@ -51,6 +51,49 @@ export function detectNodeType(val: string): NodeType {
 }
 
 /**
+ * Detects whether lines represent a square Adjacency Matrix (N x N numbers).
+ * In Competitive Programming:
+ * - 2 numbers per line is an unweighted edge (u v).
+ * - 3 numbers per line is a weighted edge (u v w).
+ * A 2-line or 3-line input is almost always an Edge List, NOT an Adjacency Matrix,
+ * UNLESS it strictly has 0 on all diagonal entries AND is either binary (0/1) or symmetric.
+ * For N >= 4, an N x N grid of numbers is safely an Adjacency Matrix.
+ */
+export function isAdjacencyMatrix(lines: string[]): boolean {
+  if (lines.length < 2) return false;
+  const n = lines.length;
+
+  const rows: number[][] = [];
+  for (const line of lines) {
+    const tokens = line.trim().split(/\s+/);
+    if (tokens.length !== n) return false;
+    const nums = tokens.map(Number);
+    if (nums.some(x => isNaN(x))) return false;
+    rows.push(nums);
+  }
+
+  // If N >= 4: Edge lists never have 4+ numbers per line, so N >= 4 square is an Adjacency Matrix.
+  if (n >= 4) {
+    return true;
+  }
+
+  // For N = 2 or N = 3:
+  // Edge lists routinely have 2 numbers (u v) or 3 numbers (u v w).
+  // A 2x2 or 3x3 square is ONLY an Adjacency Matrix if:
+  // 1. The main diagonal is all 0s (matrix[i][i] === 0 for all i)
+  // 2. AND either all values are in {0, 1} OR the matrix is symmetric (matrix[i][j] === matrix[j][i])
+  const allDiagonalZero = rows.every((r, i) => r[i] === 0);
+  if (!allDiagonalZero) {
+    return false;
+  }
+
+  const allBinary = rows.every(r => r.every(x => x === 0 || x === 1));
+  const isSymmetric = rows.every((r, i) => rows.every((_, j) => rows[i][j] === rows[j][i]));
+
+  return allBinary || isSymmetric;
+}
+
+/**
  * Splits a line into tokens, respecting double and single quotes.
  * e.g. `A true 5` -> `['A', 'true', '5']`
  * e.g. `"node 1" false` -> `['node 1', 'false']`
@@ -121,13 +164,7 @@ export function parseGraphInput(
   }
 
   // Check if it's an Adjacency Matrix
-  // Typically N lines with N numbers each
-  const firstRowNumbers = lines[0].split(/\s+/).map(Number);
-  if (
-    lines.length > 1 &&
-    firstRowNumbers.length === lines.length &&
-    lines.every(l => l.split(/\s+/).length === lines.length && l.split(/\s+/).every(x => !isNaN(Number(x))))
-  ) {
+  if (isAdjacencyMatrix(lines)) {
     return parseAdjacencyMatrix(lines, currentSettings, existingNodes);
   }
 
@@ -150,26 +187,43 @@ function parseEdgeList(
   if (lines.length > 1 && firstTokens.length === 2) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
-    if (!isNaN(n) && !isNaN(m) && n >= 2 && m > 0 && lines.length - 1 === m) {
-      let allValid = true;
-      let hasVertexAboveOne = false;
-      for (let i = 1; i < lines.length; i++) {
-        const parts = splitLineTokens(lines[i]);
-        if (parts.length >= 2) {
-          const u = parseInt(parts[0], 10);
-          const v = parseInt(parts[1], 10);
-          if (!isNaN(u) && !isNaN(v)) {
-            if (u > n || v > n) {
+    if (!isNaN(n) && !isNaN(m) && n >= 1 && m >= 0) {
+      let isHeader = false;
+      if (lines.length - 1 === m) {
+        let allValid = true;
+        for (let i = 1; i < lines.length; i++) {
+          const parts = splitLineTokens(lines[i]);
+          if (parts.length >= 2) {
+            const u = parseInt(parts[0], 10);
+            const v = parseInt(parts[1], 10);
+            if (!isNaN(u) && !isNaN(v) && (u > n || v > n)) {
               allValid = false;
               break;
             }
-            if (u > 1 || v > 1) {
-              hasVertexAboveOne = true;
+          }
+        }
+        if (allValid) isHeader = true;
+      } else {
+        let allValid = true;
+        let edgeCount = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const parts = splitLineTokens(lines[i]);
+          if (parts.length >= 2) {
+            edgeCount++;
+            const u = parseInt(parts[0], 10);
+            const v = parseInt(parts[1], 10);
+            if (!isNaN(u) && !isNaN(v) && (u > n || v > n)) {
+              allValid = false;
+              break;
             }
           }
         }
+        if (allValid && edgeCount > 0 && n >= 2) {
+          isHeader = true;
+        }
       }
-      if (allValid && hasVertexAboveOne) {
+
+      if (isHeader) {
         hasHeader = true;
         declaredN = n;
         declaredM = m;
@@ -279,7 +333,7 @@ function parseEdgeList(
     const index = isNum ? num : idx + (isZeroIndexed ? 0 : 1);
 
     const explicitWeight = nodeWeights.get(id);
-    const weight = explicitWeight !== undefined ? explicitWeight : (existing?.weight ?? existing?.value);
+    const weight = explicitWeight !== undefined ? explicitWeight : undefined;
 
     if (existing) {
       return {
@@ -427,15 +481,19 @@ function parseAdjacencyMatrix(
     const id = String(isZeroIndexed ? i : i + 1);
     const existing = existingNodes?.get(id);
     nodes.push(
-      existing || {
-        id,
-        label: id,
-        nodeType: 'int',
-        index: isZeroIndexed ? i : i + 1,
-        x: 400 + Math.cos((i / n) * 2 * Math.PI) * 200,
-        y: 300 + Math.sin((i / n) * 2 * Math.PI) * 200,
-        color: DEFAULT_NODE_COLOR,
-      }
+      existing
+        ? { ...existing, weight: undefined, value: undefined }
+        : {
+            id,
+            label: id,
+            nodeType: 'int',
+            index: isZeroIndexed ? i : i + 1,
+            x: 400 + Math.cos((i / n) * 2 * Math.PI) * 200,
+            y: 300 + Math.sin((i / n) * 2 * Math.PI) * 200,
+            color: DEFAULT_NODE_COLOR,
+            weight: undefined,
+            value: undefined,
+          }
     );
   }
 
