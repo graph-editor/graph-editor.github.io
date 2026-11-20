@@ -88,6 +88,15 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
               >
                 +
               </button>
+              <label className="cursor-pointer ml-0.5 flex items-center" title="Pick any custom live color">
+                <input
+                  type="color"
+                  defaultValue="#3b82f6"
+                  onInput={e => onBatchColor((e.target as HTMLInputElement).value)}
+                  onChange={e => onBatchColor((e.target as HTMLInputElement).value)}
+                  className="w-3.5 h-3.5 rounded-full cursor-pointer border-0 bg-transparent p-0 block"
+                />
+              </label>
             </div>
           </div>
 

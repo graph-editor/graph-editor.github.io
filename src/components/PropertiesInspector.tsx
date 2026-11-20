@@ -642,7 +642,16 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       <Palette size={12} className="text-pink-400" />
                       <span>Node Color</span>
                     </span>
-                    <span className="text-[9.5px] text-slate-500 font-mono">10 Themes</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                      <input
+                        type="color"
+                        value={selectedNode.color || '#3b82f6'}
+                        onInput={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
+                        onChange={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
+                        className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+                      />
+                      <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                    </label>
                   </div>
                   <div className="grid grid-cols-5 gap-1.5 mb-2">
                     {CP_PALETTE.map(p => (
@@ -727,7 +736,22 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               {/* Edge Color & Delete */}
               <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Color</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Palette size={12} className="text-pink-400" />
+                      <span>Edge Color</span>
+                    </span>
+                    <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                      <input
+                        type="color"
+                        value={selectedEdge.color || '#64748b'}
+                        onInput={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
+                        onChange={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
+                        className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+                      />
+                      <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                    </label>
+                  </div>
                   <div className="grid grid-cols-5 gap-1.5 mb-2">
                     {CP_PALETTE.map(p => (
                       <button
@@ -990,6 +1014,16 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   <Palette size={12} className="text-pink-400" />
                   <span>Node Color</span>
                 </span>
+                <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                  <input
+                    type="color"
+                    value={selectedNode.color || '#3b82f6'}
+                    onInput={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
+                    onChange={e => onUpdateNode(selectedNode.id, { color: (e.target as HTMLInputElement).value })}
+                    className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+                  />
+                  <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                </label>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
                 {CP_PALETTE.map(p => (
@@ -1074,7 +1108,22 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2">
-              <span className="text-[11px] font-semibold text-slate-300 block">Edge Color</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Palette size={12} className="text-pink-400" />
+                  <span>Edge Color</span>
+                </span>
+                <label className="flex items-center gap-1.5 cursor-pointer bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 hover:border-slate-700" title="Pick any custom live color">
+                  <input
+                    type="color"
+                    value={selectedEdge.color || '#64748b'}
+                    onInput={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
+                    onChange={e => onUpdateEdge(selectedEdge.id, { color: (e.target as HTMLInputElement).value })}
+                    className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+                  />
+                  <span className="text-[9.5px] text-slate-400 font-mono">Custom</span>
+                </label>
+              </div>
               <div className="grid grid-cols-5 gap-1.5">
                 {CP_PALETTE.map(p => (
                   <button

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep } from '../types/graph';
 import { applyForceLayoutStep } from '../utils/layout';
+import { CP_PALETTE } from '../utils/parser';
 
 // ---------------------------------------------------------------------
 // Geometry helpers for Lasso polygon testing & edge intersection
@@ -697,7 +698,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Check algorithm highlight
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
-    const edgeColor = algoEdgeHighlight?.color || (isSelected ? '#38bdf8' : isHovered ? '#94a3b8' : edge.color);
+    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? '#94a3b8' : edge.color);
     const strokeWidth = isSelected || algoEdgeHighlight ? 3.5 : isHovered ? 2.5 : 2;
 
     const handleEdgeClick = (e: React.MouseEvent) => {
@@ -733,17 +734,28 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           onMouseEnter={() => setHoveredEdgeId(edge.id)}
           onMouseLeave={() => setHoveredEdgeId(null)}
         >
+          {/* Selection Halo */}
+          {isSelected && (
+            <path
+              d={pathD}
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth={strokeWidth + 5}
+              strokeOpacity="0.5"
+              strokeLinecap="round"
+            />
+          )}
           <path
             d={pathD}
             fill="none"
-            stroke={edgeColor}
+            stroke={effectiveEdgeColor}
             strokeWidth={strokeWidth}
             strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
-            markerEnd={settings.isDirected ? `url(#arrowhead-${edgeColor.replace('#', '')})` : undefined}
+            markerEnd={settings.isDirected ? `url(#arrowhead-${effectiveEdgeColor.replace('#', '')})` : undefined}
           />
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
-              <rect x="-14" y="-9" width="28" height="18" rx="4" fill="#0f172a" stroke={edgeColor} strokeWidth="1" />
+              <rect x="-14" y="-9" width="28" height="18" rx="4" fill="#0f172a" stroke={effectiveEdgeColor} strokeWidth="1" />
               <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontFamily="Fira Code, monospace" fontWeight="600">
                 {edge.weight}
               </text>
@@ -802,7 +814,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       labelY = (startY + 2 * midY + endY) / 4;
     }
 
-    const markerId = `arrowhead-${edgeColor.replace('#', '')}`;
+    const markerId = `arrowhead-${effectiveEdgeColor.replace('#', '')}`;
 
     return (
       <g
@@ -815,11 +827,23 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {/* Invisible wider stroke for easy clicking */}
         <path d={pathD} fill="none" stroke="transparent" strokeWidth="16" />
 
+        {/* Selection Halo */}
+        {isSelected && (
+          <path
+            d={pathD}
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth={strokeWidth + 5}
+            strokeOpacity="0.5"
+            strokeLinecap="round"
+          />
+        )}
+
         {/* Visible stroke */}
         <path
           d={pathD}
           fill="none"
-          stroke={edgeColor}
+          stroke={effectiveEdgeColor}
           strokeWidth={strokeWidth}
           strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
           markerEnd={settings.isDirected ? `url(#${markerId})` : undefined}
@@ -1039,6 +1063,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     colors.add('#10b981'); // success/MST
     colors.add('#ef4444'); // error/bridge
     colors.add('#f59e0b'); // active/relax
+    CP_PALETTE.forEach(p => colors.add(p.color));
     data.edges.forEach(e => colors.add(e.color));
     return Array.from(colors);
   }, [data.edges]);
