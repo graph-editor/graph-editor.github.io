@@ -26,13 +26,14 @@
     "wine": "1.0.1"
   },
   "nsis": {
-    "oneClick": false,
+    "oneClick": true,
     "perMachine": false,
     "packElevateHelper": false,
-    "allowToChangeInstallationDirectory": true,
+    "allowToChangeInstallationDirectory": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "CP Graph Editor"
+    "shortcutName": "CP Graph Editor",
+    "runAfterFinish": true
   },
   "mac": {
     "target": ["dmg", "zip"],

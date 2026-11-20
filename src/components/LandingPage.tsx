@@ -590,14 +590,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       {/* Downloads Section */}
       <section id="downloads" className="py-20 border-b border-gray-800/80 bg-[#090e1b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-3">Install Everywhere</h2>
             <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Download Native Desktop Apps
+              ⚡ 1-Click Install for Any Operating System
             </p>
             <p className="mt-4 text-gray-400 text-sm sm:text-base">
-              Work 100% offline during ICPC contests, codeforces rounds, or flights without internet.
+              Ultra-lightweight native apps (only ~6-14 MB). Instant setup, zero bloat, runs 100% offline.
             </p>
+          </div>
+
+          {/* 1-Click Terminal Command */}
+          <div className="max-w-3xl mx-auto mb-10 p-4 rounded-2xl bg-[#0c1426] border border-blue-500/30 text-left">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-blue-300 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-cyan-400" />
+                <span>⚡ 1-Click Instant Terminal Install (Linux &amp; macOS):</span>
+              </span>
+              <span className="text-[10px] text-gray-400 font-mono">Auto-installs desktop icons &amp; launches</span>
+            </div>
+            <div className="bg-black/60 p-2.5 rounded-lg border border-gray-800 font-mono text-xs text-blue-300 select-all overflow-x-auto">
+              curl -fsSL https://raw.githubusercontent.com/mostafa-cse/Graph-visualization/master/install.sh | bash
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -612,15 +626,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 <ul className="text-xs text-gray-300 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>NSIS Setup Wizard (.exe)</span>
+                    <span>⚡ 1-Click Auto Setup (6 MB)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Portable Standalone ZIP</span>
+                    <span>MSI Installer Package (.msi)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Desktop & Start menu shortcuts</span>
+                    <span>Automatic Desktop &amp; Start shortcuts</span>
                   </li>
                 </ul>
               </div>
@@ -628,15 +642,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 <a
                   href={WIN_EXE_URL}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                  title="Single click to install and launch instantly"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download Installer (.exe)</span>
+                  <span>⚡ 1-Click Setup (.exe)</span>
                 </a>
                 <a
                   href={WIN_ZIP_URL}
                   className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
                 >
-                  <span>Download Portable (.zip)</span>
+                  <span>MSI Installer (.msi)</span>
                 </a>
               </div>
             </div>
@@ -648,19 +663,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   <Apple className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold text-white">macOS</h3>
-                <p className="text-xs text-gray-400 mt-1 mb-4">macOS 11+ (Intel & Apple Silicon)</p>
+                <p className="text-xs text-gray-400 mt-1 mb-4">macOS 11+ (Intel &amp; Apple Silicon)</p>
                 <ul className="text-xs text-gray-300 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Apple Disk Image (.dmg)</span>
+                    <span>Universal Disk Image (14 MB)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Drag & Drop to /Applications</span>
+                    <span>M1/M2/M3/M4 &amp; Intel native</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Portable App ZIP bundle</span>
+                    <span>Portable App bundle (.tar.gz)</span>
                   </li>
                 </ul>
               </div>
@@ -670,13 +685,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg transition-colors"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download Disk Image (.dmg)</span>
+                  <span>Universal Disk Image (.dmg)</span>
                 </a>
                 <a
                   href={MAC_ZIP_URL}
                   className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
                 >
-                  <span>Download Portable (.zip)</span>
+                  <span>Portable (.tar.gz)</span>
                 </a>
               </div>
             </div>
@@ -692,15 +707,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 <ul className="text-xs text-gray-300 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Universal AppImage (chmod +x)</span>
+                    <span>⚡ 1-Click AppImage (Run anywhere)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Debian / Ubuntu Package (.deb)</span>
+                    <span>Debian / Ubuntu Package (7 MB)</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Zero dependencies required</span>
+                    <span>Zero root or dependencies needed</span>
                   </li>
                 </ul>
               </div>
@@ -708,9 +723,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 <a
                   href={LINUX_APPIMAGE_URL}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                  title="Single-click executable for any Linux distro"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download AppImage</span>
+                  <span>⚡ 1-Click AppImage</span>
                 </a>
                 <a
                   href={LINUX_DEB_URL}
