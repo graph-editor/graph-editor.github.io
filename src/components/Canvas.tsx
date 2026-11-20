@@ -2,6 +2,56 @@ import React, { useRef, useState, useEffect, useMemo, useCallback, useImperative
 import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep } from '../types/graph';
 import { applyForceLayoutStep } from '../utils/layout';
 
+// ---------------------------------------------------------------------
+// Geometry helpers for Lasso polygon testing & edge intersection
+// ---------------------------------------------------------------------
+function isPointInPolygon(point: { x: number; y: number }, vs: { x: number; y: number }[]): boolean {
+  if (vs.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const xi = vs[i].x, yi = vs[i].y;
+    const xj = vs[j].x, yj = vs[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y))
+        && (point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distToSegment(p: { x: number; y: number }, v: { x: number; y: number }, w: { x: number; y: number }) {
+  const l2 = (v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y);
+  if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}
+
+function isPointOrCircleInPolygon(node: { x: number; y: number }, r: number, vs: { x: number; y: number }[]): boolean {
+  if (isPointInPolygon(node, vs)) return true;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    if (distToSegment(node, vs[j], vs[i]) <= r) return true;
+  }
+  return false;
+}
+
+function segmentsIntersect(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  c: { x: number; y: number },
+  d: { x: number; y: number }
+): boolean {
+  const ccw = (p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number }) =>
+    (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+  return ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d);
+}
+
+function doesEdgeIntersectPolygon(u: { x: number; y: number }, v: { x: number; y: number }, vs: { x: number; y: number }[]): boolean {
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    if (segmentsIntersect(u, v, vs[j], vs[i])) return true;
+  }
+  return false;
+}
+
 export interface CanvasHandle {
   fitView: () => void;
   zoomIn: () => void;
@@ -13,11 +63,14 @@ export interface CanvasHandle {
 interface CanvasProps {
   data: GraphData;
   settings: GraphSettings;
-  activeTool: 'select' | 'node' | 'edge';
+  activeTool: 'select' | 'lasso' | 'node' | 'edge';
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
+  selectedNodeIds?: string[];
+  selectedEdgeIds?: string[];
   onSelectNode: (id: string | null) => void;
   onSelectEdge: (id: string | null) => void;
+  onBatchSelect?: (nodeIds: string[], edgeIds: string[]) => void;
   onAddNode: (x: number, y: number) => void;
   onAddEdge: (sourceId: string, targetId: string) => void;
   onUpdateNodePosition: (id: string, x: number, y: number, isFixed?: boolean) => void;
@@ -35,8 +88,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   activeTool,
   selectedNodeId,
   selectedEdgeId,
+  selectedNodeIds = [],
+  selectedEdgeIds = [],
   onSelectNode,
   onSelectEdge,
+  onBatchSelect,
   onAddNode,
   onAddEdge,
   onUpdateNodePosition,
@@ -59,6 +115,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Dragging Node state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const batchDragStartPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const dragNodeStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Connecting Edge state
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
@@ -67,6 +125,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Hover states
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+
+  // Lasso Multi-selection state
+  const [lassoPoints, setLassoPoints] = useState<{ x: number; y: number }[]>([]);
+  const isLassoingRef = useRef(false);
 
   // Floating Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -166,14 +228,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const cancelAction = useCallback(() => {
     setConnectSourceId(null);
     if (draggingNodeId) {
-      onFinishDragNode(draggingNodeId);
+      if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
+        batchDragStartPositionsRef.current.forEach((_, id) => {
+          onFinishDragNode(id);
+        });
+        batchDragStartPositionsRef.current.clear();
+      } else {
+        onFinishDragNode(draggingNodeId);
+      }
       setDraggingNodeId(null);
     }
     setIsPanning(false);
+    isLassoingRef.current = false;
+    setLassoPoints([]);
+    onBatchSelect?.([], []);
     setHoveredNodeId(null);
     setHoveredEdgeId(null);
     setToastMessage(null);
-  }, [draggingNodeId, onFinishDragNode]);
+  }, [draggingNodeId, onFinishDragNode, onBatchSelect, selectedNodeIds]);
 
   // Expose imperative handle to BottomStatusBar and App
   useImperativeHandle(ref, () => ({
@@ -260,14 +332,25 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setViewTransform({ x: newX, y: newY, scale: newScale });
   };
 
-  // Canvas Mouse Down: Starts panning if clicking background, middle button, right button, or modifier keys
+  // Canvas Mouse Down: Starts Lasso selection, Panning, or Node Creation
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    // Middle click (1), Right click (2), Alt/Shift key, or Left click (0) in select mode
-    if (e.button === 1 || e.button === 2 || e.altKey || e.shiftKey || (e.button === 0 && activeTool === 'select')) {
+    // 1. Lasso Tool or Shift + Left-click: starts drawing Lasso loop
+    if (e.button === 0 && (activeTool === 'lasso' || e.shiftKey)) {
+      isLassoingRef.current = true;
+      const world = screenToWorld(e.clientX, e.clientY);
+      setLassoPoints([world]);
+      return;
+    }
+
+    // 2. Middle click (1), Right click (2), Alt key, or Left click (0) in select mode -> Pan canvas
+    if (e.button === 1 || e.button === 2 || e.altKey || (e.button === 0 && activeTool === 'select')) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
-      onSelectNode(null);
-      onSelectEdge(null);
+      if (!e.shiftKey) {
+        onSelectNode(null);
+        onSelectEdge(null);
+        onBatchSelect?.([], []);
+      }
       setConnectSourceId(null);
       return;
     }
@@ -290,6 +373,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
+    // If holding shift or using Lasso tool: toggle node in/out of multi-selection
+    if (e.shiftKey || activeTool === 'lasso') {
+      const nextNodes = selectedNodeIds.includes(node.id)
+        ? selectedNodeIds.filter(id => id !== node.id)
+        : [...selectedNodeIds, node.id];
+      onBatchSelect?.(nextNodes, selectedEdgeIds);
+      onSelectNode(node.id);
+      return;
+    }
+
     if (activeTool === 'edge') {
       if (!connectSourceId) {
         setConnectSourceId(node.id);
@@ -303,9 +396,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
-    // Select mode or any mode: select and initiate drag
+    // Single select mode: select node and initiate drag
     onSelectNode(node.id);
     onSelectEdge(null);
+    if (!selectedNodeIds.includes(node.id)) {
+      onBatchSelect?.([], []);
+    }
 
     // Always initiate drag - user can drag and move any node freely
     const world = screenToWorld(e.clientX, e.clientY);
@@ -313,6 +409,20 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       x: node.x - world.x,
       y: node.y - world.y,
     };
+    dragNodeStartPosRef.current = { x: node.x, y: node.y };
+
+    if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
+      const posMap = new Map<string, { x: number; y: number }>();
+      data.nodes.forEach(n => {
+        if (selectedNodeIds.includes(n.id)) {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        }
+      });
+      batchDragStartPositionsRef.current = posMap;
+    } else {
+      batchDragStartPositionsRef.current.clear();
+    }
+
     setDraggingNodeId(node.id);
   };
 
@@ -371,6 +481,20 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       const world = screenToWorld(e.clientX, e.clientY);
       setMousePos(world);
 
+      // Handle active Lasso path tracing
+      if (isLassoingRef.current) {
+        setLassoPoints(prev => {
+          if (prev.length === 0) return [world];
+          const last = prev[prev.length - 1];
+          const dist = Math.hypot(world.x - last.x, world.y - last.y);
+          if (dist >= 4) {
+            return [...prev, world];
+          }
+          return prev;
+        });
+        return;
+      }
+
       if (isPanning) {
         setViewTransform(prev => ({
           ...prev,
@@ -383,16 +507,73 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       if (draggingNodeId) {
         const newX = world.x + dragOffsetRef.current.x;
         const newY = world.y + dragOffsetRef.current.y;
-        onUpdateNodePosition(draggingNodeId, newX, newY, false);
+        if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
+          const dx = newX - (dragNodeStartPosRef.current?.x ?? newX);
+          const dy = newY - (dragNodeStartPosRef.current?.y ?? newY);
+          batchDragStartPositionsRef.current.forEach((initialPos, id) => {
+            onUpdateNodePosition(id, initialPos.x + dx, initialPos.y + dy, false);
+          });
+        } else {
+          onUpdateNodePosition(draggingNodeId, newX, newY, false);
+        }
       }
     };
 
     const handleGlobalMouseUp = () => {
+      // Finalize Lasso selection
+      if (isLassoingRef.current) {
+        isLassoingRef.current = false;
+        setLassoPoints(currentPts => {
+          if (currentPts.length >= 3) {
+            const newlySelectedNodeIds: string[] = [];
+            const newlySelectedEdgeIds: string[] = [];
+
+            // Detect enclosed or intersected nodes
+            data.nodes.forEach(node => {
+              const r = getNodeRadius(node);
+              if (isPointOrCircleInPolygon(node, r, currentPts)) {
+                newlySelectedNodeIds.push(node.id);
+              }
+            });
+
+            // Detect edges whose nodes or segments are intersected/enclosed
+            const nodeMap = new Map<string, GraphNode>();
+            data.nodes.forEach(n => nodeMap.set(n.id, n));
+
+            data.edges.forEach(edge => {
+              const u = nodeMap.get(edge.source);
+              const v = nodeMap.get(edge.target);
+              if (u && v) {
+                const uIn = newlySelectedNodeIds.includes(u.id);
+                const vIn = newlySelectedNodeIds.includes(v.id);
+                if ((uIn && vIn) || doesEdgeIntersectPolygon(u, v, currentPts)) {
+                  newlySelectedEdgeIds.push(edge.id);
+                }
+              }
+            });
+
+            onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
+
+            if (newlySelectedNodeIds.length > 0 || newlySelectedEdgeIds.length > 0) {
+              showToast(`Lasso selected ${newlySelectedNodeIds.length} nodes, ${newlySelectedEdgeIds.length} edges`);
+            }
+          }
+          return [];
+        });
+      }
+
       if (isPanning) {
         setIsPanning(false);
       }
       if (draggingNodeId) {
-        onFinishDragNode(draggingNodeId);
+        if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
+          batchDragStartPositionsRef.current.forEach((_, id) => {
+            onFinishDragNode(id);
+          });
+          batchDragStartPositionsRef.current.clear();
+        } else {
+          onFinishDragNode(draggingNodeId);
+        }
         setDraggingNodeId(null);
       }
     };
@@ -511,13 +692,30 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const targetNode = nodeMap.get(edge.target);
     if (!sourceNode || !targetNode) return null;
 
-    const isSelected = selectedEdgeId === edge.id;
+    const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
     const isHovered = hoveredEdgeId === edge.id;
 
     // Check algorithm highlight
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
     const edgeColor = algoEdgeHighlight?.color || (isSelected ? '#38bdf8' : isHovered ? '#94a3b8' : edge.color);
     const strokeWidth = isSelected || algoEdgeHighlight ? 3.5 : isHovered ? 2.5 : 2;
+
+    const handleEdgeClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (e.shiftKey || activeTool === 'lasso') {
+        const nextEdges = selectedEdgeIds.includes(edge.id)
+          ? selectedEdgeIds.filter(id => id !== edge.id)
+          : [...selectedEdgeIds, edge.id];
+        onBatchSelect?.(selectedNodeIds, nextEdges);
+        onSelectEdge(edge.id);
+        return;
+      }
+      onSelectEdge(edge.id);
+      onSelectNode(null);
+      if (!selectedEdgeIds.includes(edge.id)) {
+        onBatchSelect?.([], []);
+      }
+    };
 
     // Self loop
     if (edge.source === edge.target) {
@@ -531,11 +729,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <g
           key={edge.id}
           className="edge-group cursor-pointer"
-          onClick={e => {
-            e.stopPropagation();
-            onSelectEdge(edge.id);
-            onSelectNode(null);
-          }}
+          onClick={handleEdgeClick}
           onMouseEnter={() => setHoveredEdgeId(edge.id)}
           onMouseLeave={() => setHoveredEdgeId(null)}
         >
@@ -614,11 +808,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       <g
         key={edge.id}
         className="edge-group cursor-pointer"
-        onClick={e => {
-          e.stopPropagation();
-          onSelectEdge(edge.id);
-          onSelectNode(null);
-        }}
+        onClick={handleEdgeClick}
         onMouseEnter={() => setHoveredEdgeId(edge.id)}
         onMouseLeave={() => setHoveredEdgeId(null)}
       >
@@ -666,7 +856,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
   // Render individual Node
   const renderNode = (node: GraphNode) => {
-    const isSelected = selectedNodeId === node.id;
+    const isSelected = selectedNodeId === node.id || selectedNodeIds.includes(node.id);
     const isHovered = hoveredNodeId === node.id;
     const isConnectSource = connectSourceId === node.id;
     const isDragging = draggingNodeId === node.id;

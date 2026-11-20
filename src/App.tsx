@@ -13,6 +13,7 @@ import { ExportModal } from './components/ExportModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { LandingPage } from './components/LandingPage';
 import { DownloadModal } from './components/DownloadModal';
+import { BatchActionToolbar } from './components/BatchActionToolbar';
 
 // Initial CP Graph (Tree edges without manual N M header)
 const INITIAL_CP_TEXT = `1 2
@@ -57,9 +58,11 @@ export function App() {
   const [data, setData] = useState<GraphData>({ nodes: [], edges: [] });
 
   // Tools & Selection
-  const [activeTool, setActiveTool] = useState<'select' | 'node' | 'edge'>('select');
+  const [activeTool, setActiveTool] = useState<'select' | 'lasso' | 'node' | 'edge'>('select');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
   // Panels & Modals
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(
@@ -440,6 +443,115 @@ export function App() {
     setSelectedEdgeId(null);
   };
 
+  // Batch Multi-Selection Handlers (Lasso / Shift-select)
+  const handleBatchSelect = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    setSelectedNodeIds(nodeIds);
+    setSelectedEdgeIds(edgeIds);
+  }, []);
+
+  const handleClearBatchSelection = useCallback(() => {
+    setSelectedNodeIds([]);
+    setSelectedEdgeIds([]);
+  }, []);
+
+  // Batch Delete: Delete all selected nodes and edges together
+  const handleBatchDelete = useCallback(() => {
+    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return;
+
+    const nodeSet = new Set(selectedNodeIds);
+    const edgeSet = new Set(selectedEdgeIds);
+
+    const nextNodes = data.nodes.filter(n => !nodeSet.has(n.id));
+    const nextEdges = data.edges.filter(
+      e => !edgeSet.has(e.id) && !nodeSet.has(e.source) && !nodeSet.has(e.target)
+    );
+
+    const nextData = { nodes: nextNodes, edges: nextEdges };
+    setData(nextData);
+    syncGraphToText(nextData, settings);
+
+    setSelectedNodeIds([]);
+    setSelectedEdgeIds([]);
+    if (selectedNodeId && nodeSet.has(selectedNodeId)) setSelectedNodeId(null);
+    if (selectedEdgeId && edgeSet.has(selectedEdgeId)) setSelectedEdgeId(null);
+    setIsInspectorOpen(false);
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, selectedNodeId, selectedEdgeId]);
+
+  // Batch Color: Color all selected nodes and edges together
+  const handleBatchColor = useCallback((color: string) => {
+    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return;
+
+    const nodeSet = new Set(selectedNodeIds);
+    const edgeSet = new Set(selectedEdgeIds);
+
+    const nextNodes = data.nodes.map(n => (nodeSet.has(n.id) ? { ...n, color } : n));
+    const nextEdges = data.edges.map(e => (edgeSet.has(e.id) ? { ...e, color } : e));
+
+    const nextData = { nodes: nextNodes, edges: nextEdges };
+    setData(nextData);
+    syncGraphToText(nextData, settings);
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText]);
+
+  // Batch Add Value: Set weight/value for all selected nodes and edges together
+  const handleBatchAddValue = useCallback((val: string | number | undefined) => {
+    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return;
+
+    const nodeSet = new Set(selectedNodeIds);
+    const edgeSet = new Set(selectedEdgeIds);
+
+    const nextNodes = data.nodes.map(n => {
+      if (nodeSet.has(n.id)) {
+        return {
+          ...n,
+          weight: val,
+          value: val,
+        };
+      }
+      return n;
+    });
+
+    const nextEdges = data.edges.map(e => {
+      if (edgeSet.has(e.id)) {
+        let edgeWeight: number | undefined = undefined;
+        if (typeof val === 'number') {
+          edgeWeight = val;
+        } else if (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) {
+          edgeWeight = Number(val);
+        }
+        return { ...e, weight: edgeWeight };
+      }
+      return e;
+    });
+
+    const nextData = { nodes: nextNodes, edges: nextEdges };
+    setData(nextData);
+    syncGraphToText(nextData, settings);
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText]);
+
+  // Batch Pin: Fix or unpin all selected nodes together
+  const handleBatchPin = useCallback((pinned: boolean) => {
+    if (selectedNodeIds.length === 0) return;
+    const nodeSet = new Set(selectedNodeIds);
+
+    const nextNodes = data.nodes.map(n => {
+      if (nodeSet.has(n.id)) {
+        return {
+          ...n,
+          isPinned: pinned,
+          fx: pinned ? n.x : null,
+          fy: pinned ? n.y : null,
+          vx: 0,
+          vy: 0,
+        };
+      }
+      return n;
+    });
+
+    const nextData = { ...data, nodes: nextNodes };
+    setData(nextData);
+    syncGraphToText(nextData, settings);
+  }, [selectedNodeIds, data, settings, syncGraphToText]);
+
   // Change indexing mode (0-based vs 1-based)
   const handleToggleIndexMode = () => {
     const nextZero = !settings.isZeroIndexed;
@@ -525,9 +637,11 @@ export function App() {
       document.activeElement.blur();
     }
 
-    // 2. Clear selections (both node and edge)
+    // 2. Clear selections (both node, edge and batch)
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
+    setSelectedNodeIds([]);
+    setSelectedEdgeIds([]);
 
     // 3. Reset active tool to default select/move mode
     setActiveTool('select');
@@ -567,6 +681,8 @@ export function App() {
 
       if (key === 'v' || key === 's') {
         setActiveTool('select');
+      } else if (key === 'l') {
+        setActiveTool('lasso');
       } else if (key === 'n') {
         setActiveTool('node');
       } else if (key === 'e') {
@@ -591,7 +707,9 @@ export function App() {
       } else if (key === 'f') {
         canvasRef.current?.fitView();
       } else if (key === 'delete' || key === 'backspace') {
-        if (selectedNodeId) {
+        if (selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) {
+          handleBatchDelete();
+        } else if (selectedNodeId) {
           handleDeleteNode(selectedNodeId);
         } else if (selectedEdgeId) {
           handleDeleteEdge(selectedEdgeId);
@@ -601,7 +719,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCancelAllActions, selectedNodeId, selectedEdgeId, data, settings]);
+  }, [handleCancelAllActions, selectedNodeId, selectedEdgeId, selectedNodeIds, selectedEdgeIds, handleBatchDelete, data, settings]);
 
   const selectedNode = useMemo(() => data.nodes.find(n => n.id === selectedNodeId) || null, [data.nodes, selectedNodeId]);
   const selectedEdge = useMemo(() => data.edges.find(e => e.id === selectedEdgeId) || null, [data.edges, selectedEdgeId]);
@@ -679,8 +797,11 @@ export function App() {
               activeTool={activeTool}
               selectedNodeId={selectedNodeId}
               selectedEdgeId={selectedEdgeId}
+              selectedNodeIds={selectedNodeIds}
+              selectedEdgeIds={selectedEdgeIds}
               onSelectNode={handleSelectNode}
               onSelectEdge={setSelectedEdgeId}
+              onBatchSelect={handleBatchSelect}
               onAddNode={handleAddNode}
               onAddEdge={handleAddEdge}
               onUpdateNodePosition={handleUpdateNodePosition}
@@ -690,6 +811,17 @@ export function App() {
               currentStep={algorithmSteps ? algorithmSteps[currentStepIndex] : undefined}
               isPhysicsActive={isPhysicsActive}
               onZoomChange={setZoomScale}
+            />
+
+            {/* Batch Action Toolbar: Floats over canvas when nodes/edges are lasso/multi-selected */}
+            <BatchActionToolbar
+              selectedNodeIds={selectedNodeIds}
+              selectedEdgeIds={selectedEdgeIds}
+              onBatchDelete={handleBatchDelete}
+              onBatchColor={handleBatchColor}
+              onBatchAddValue={handleBatchAddValue}
+              onBatchPin={handleBatchPin}
+              onClearSelection={handleClearBatchSelection}
             />
 
             {/* Algorithm Controls Card: Floating at BOTTOM CENTER matching user screenshot */}

@@ -16,7 +16,7 @@ import {
 
 interface BottomStatusBarProps {
   stats: GraphStats;
-  activeTool: 'select' | 'node' | 'edge';
+  activeTool: 'select' | 'lasso' | 'node' | 'edge';
   zoomScale: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
