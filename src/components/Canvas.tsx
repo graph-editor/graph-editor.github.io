@@ -145,6 +145,8 @@ interface CanvasProps {
   theme?: 'dark' | 'light';
 }
 
+const CANVAS_MONO_FONT = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace";
+
 export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   data,
   settings,
@@ -902,7 +904,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
               <rect x="-14" y="-9" width="28" height="18" rx="4" fill="#0f172a" stroke={effectiveEdgeColor} strokeWidth="1" />
-              <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontFamily="Fira Code, monospace" fontWeight="600">
+              <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontFamily={CANVAS_MONO_FONT} fontWeight="600">
                 {edge.weight}
               </text>
             </g>
@@ -1013,7 +1015,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               dy="4"
               fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#f8fafc'}
               fontSize="11"
-              fontFamily="Fira Code, monospace"
+              fontFamily={CANVAS_MONO_FONT}
               fontWeight="600"
             >
               {edge.weight}
@@ -1085,7 +1087,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           dy={fontSize * 0.35}
           fill="#ffffff"
           fontSize={fontSize}
-          fontFamily="Fira Code, monospace"
+          fontFamily={CANVAS_MONO_FONT}
           fontWeight="700"
           pointerEvents="none"
         >
@@ -1126,7 +1128,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 dy="3.5"
                 fill={isSelected ? '#38bdf8' : isLight ? '#0f172a' : '#c7d2fe'}
                 fontSize="9.5"
-                fontFamily="Fira Code, monospace"
+                fontFamily={CANVAS_MONO_FONT}
                 fontWeight="700"
               >
                 {`w:${wStr}`}
@@ -1158,7 +1160,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 dy="3.5"
                 fill="#38bdf8"
                 fontSize="10"
-                fontFamily="Fira Code, monospace"
+                fontFamily={CANVAS_MONO_FONT}
                 fontWeight="600"
               >
                 {annotation}
