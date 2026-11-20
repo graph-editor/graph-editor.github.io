@@ -53,6 +53,68 @@ function doesEdgeIntersectPolygon(u: { x: number; y: number }, v: { x: number; y
   return false;
 }
 
+// 2D Convex Hull (Monotone Chain) for selection lasso enclosure
+function computeConvexHull(points: { x: number; y: number }[]): { x: number; y: number }[] {
+  if (points.length <= 2) return points;
+  const sorted = [...points].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+
+  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+  const lower: { x: number; y: number }[] = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+
+  const upper: { x: number; y: number }[] = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
+// Compute smooth lasso perimeter around any set of selected nodes
+function computeSelectionLassoPolygon(
+  selectedNodes: GraphNode[],
+  getNodeRadius: (n?: GraphNode) => number
+): { x: number; y: number }[] {
+  if (selectedNodes.length === 0) return [];
+
+  if (selectedNodes.length === 1) {
+    const n = selectedNodes[0];
+    const r = getNodeRadius(n) + 16;
+    const pts: { x: number; y: number }[] = [];
+    const count = 16;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      pts.push({ x: n.x + r * Math.cos(angle), y: n.y + r * Math.sin(angle) });
+    }
+    return pts;
+  }
+
+  const samples: { x: number; y: number }[] = [];
+  selectedNodes.forEach(n => {
+    const r = getNodeRadius(n) + 18;
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      samples.push({ x: n.x + r * Math.cos(angle), y: n.y + r * Math.sin(angle) });
+    }
+  });
+
+  return computeConvexHull(samples);
+}
+
 export interface CanvasHandle {
   fitView: () => void;
   zoomIn: () => void;
@@ -76,7 +138,6 @@ interface CanvasProps {
   onAddEdge: (sourceId: string, targetId: string) => void;
   onUpdateNodePosition: (id: string, x: number, y: number, isFixed?: boolean) => void;
   onFinishDragNode: (id: string) => void;
-  onTogglePinNode: (id: string) => void;
   onUpdateGraphData: (newData: GraphData) => void;
   currentStep?: AlgorithmStep;
   isPhysicsActive: boolean;
@@ -98,7 +159,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   onAddEdge,
   onUpdateNodePosition,
   onFinishDragNode,
-  onTogglePinNode,
   onUpdateGraphData,
   currentStep,
   isPhysicsActive,
@@ -127,9 +187,23 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
-  // Lasso Multi-selection state
-  const [lassoPoints, setLassoPoints] = useState<{ x: number; y: number }[]>([]);
+  // Lasso Multi-selection states
+  const [activeLassoPoints, setActiveLassoPoints] = useState<{ x: number; y: number }[]>([]);
+  const [persistedLassoPoints, setPersistedLassoPoints] = useState<{ x: number; y: number }[]>([]);
   const isLassoingRef = useRef(false);
+  const activeLassoPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const lassoDragStartPointsRef = useRef<{ x: number; y: number }[]>([]);
+
+  // Persistent reference to latest selectedNodeIds to avoid stale closures
+  const selectedNodeIdsRef = useRef(selectedNodeIds);
+  useEffect(() => {
+    selectedNodeIdsRef.current = selectedNodeIds;
+  }, [selectedNodeIds]);
+
+  const pointsToSvgPath = useCallback((pts: { x: number; y: number }[]): string => {
+    if (pts.length === 0) return '';
+    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z';
+  }, []);
 
   // Floating Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -241,7 +315,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
     setIsPanning(false);
     isLassoingRef.current = false;
-    setLassoPoints([]);
+    activeLassoPointsRef.current = [];
+    setActiveLassoPoints([]);
+    setPersistedLassoPoints([]);
     onBatchSelect?.([], []);
     setHoveredNodeId(null);
     setHoveredEdgeId(null);
@@ -339,7 +415,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (e.button === 0 && (activeTool === 'lasso' || e.shiftKey)) {
       isLassoingRef.current = true;
       const world = screenToWorld(e.clientX, e.clientY);
-      setLassoPoints([world]);
+      activeLassoPointsRef.current = [world];
+      setActiveLassoPoints([world]);
+      setPersistedLassoPoints([]);
       return;
     }
 
@@ -351,6 +429,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         onSelectNode(null);
         onSelectEdge(null);
         onBatchSelect?.([], []);
+        setPersistedLassoPoints([]);
       }
       setConnectSourceId(null);
       return;
@@ -402,6 +481,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     onSelectEdge(null);
     if (!selectedNodeIds.includes(node.id)) {
       onBatchSelect?.([], []);
+      setPersistedLassoPoints([]);
     }
 
     // Always initiate drag - user can drag and move any node freely
@@ -411,6 +491,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       y: node.y - world.y,
     };
     dragNodeStartPosRef.current = { x: node.x, y: node.y };
+
+    if (persistedLassoPoints.length >= 3) {
+      lassoDragStartPointsRef.current = [...persistedLassoPoints];
+    } else {
+      lassoDragStartPointsRef.current = [];
+    }
 
     if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
       const posMap = new Map<string, { x: number; y: number }>();
@@ -458,15 +544,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setDraggingNodeId(node.id);
   };
 
-  // Node Double Click: TOGGLE FIXED / PINNED STATE
+  // Node Double Click
   const handleNodeDoubleClick = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
-    onTogglePinNode(node.id);
-    if (!node.isPinned) {
-      showToast(`📌 Node ${node.label} is now fixed (won't move). Double-click to unpin.`);
-    } else {
-      showToast(`🔓 Node ${node.label} is unpinned and can move freely.`);
-    }
+    onSelectNode(node.id);
   };
 
   // Canvas Double Click: Add new node
@@ -484,15 +565,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
       // Handle active Lasso path tracing
       if (isLassoingRef.current) {
-        setLassoPoints(prev => {
-          if (prev.length === 0) return [world];
-          const last = prev[prev.length - 1];
+        const pts = activeLassoPointsRef.current;
+        if (pts.length === 0) {
+          activeLassoPointsRef.current = [world];
+          setActiveLassoPoints([world]);
+        } else {
+          const last = pts[pts.length - 1];
           const dist = Math.hypot(world.x - last.x, world.y - last.y);
-          if (dist >= 4) {
-            return [...prev, world];
+          if (dist >= 3) {
+            activeLassoPointsRef.current.push(world);
+            setActiveLassoPoints([...activeLassoPointsRef.current]);
           }
-          return prev;
-        });
+        }
         return;
       }
 
@@ -508,9 +592,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       if (draggingNodeId) {
         const newX = world.x + dragOffsetRef.current.x;
         const newY = world.y + dragOffsetRef.current.y;
-        if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
-          const dx = newX - (dragNodeStartPosRef.current?.x ?? newX);
-          const dy = newY - (dragNodeStartPosRef.current?.y ?? newY);
+        const dx = newX - (dragNodeStartPosRef.current?.x ?? newX);
+        const dy = newY - (dragNodeStartPosRef.current?.y ?? newY);
+
+        if (lassoDragStartPointsRef.current.length >= 3) {
+          setPersistedLassoPoints(lassoDragStartPointsRef.current.map(p => ({ x: p.x + dx, y: p.y + dy })));
+        }
+
+        if (selectedNodeIdsRef.current.includes(draggingNodeId) && selectedNodeIdsRef.current.length > 1 && batchDragStartPositionsRef.current.size > 0) {
           batchDragStartPositionsRef.current.forEach((initialPos, id) => {
             onUpdateNodePosition(id, initialPos.x + dx, initialPos.y + dy, false);
           });
@@ -524,50 +613,56 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       // Finalize Lasso selection
       if (isLassoingRef.current) {
         isLassoingRef.current = false;
-        setLassoPoints(currentPts => {
-          if (currentPts.length >= 3) {
-            const newlySelectedNodeIds: string[] = [];
-            const newlySelectedEdgeIds: string[] = [];
+        const currentPts = [...activeLassoPointsRef.current];
+        activeLassoPointsRef.current = [];
+        setActiveLassoPoints([]);
 
-            // Detect enclosed or intersected nodes
-            data.nodes.forEach(node => {
-              const r = getNodeRadius(node);
-              if (isPointOrCircleInPolygon(node, r, currentPts)) {
-                newlySelectedNodeIds.push(node.id);
-              }
-            });
+        if (currentPts.length >= 3) {
+          const newlySelectedNodeIds: string[] = [];
+          const newlySelectedEdgeIds: string[] = [];
 
-            // Detect edges whose nodes or segments are intersected/enclosed
-            const nodeMap = new Map<string, GraphNode>();
-            data.nodes.forEach(n => nodeMap.set(n.id, n));
-
-            data.edges.forEach(edge => {
-              const u = nodeMap.get(edge.source);
-              const v = nodeMap.get(edge.target);
-              if (u && v) {
-                const uIn = newlySelectedNodeIds.includes(u.id);
-                const vIn = newlySelectedNodeIds.includes(v.id);
-                if ((uIn && vIn) || doesEdgeIntersectPolygon(u, v, currentPts)) {
-                  newlySelectedEdgeIds.push(edge.id);
-                }
-              }
-            });
-
-            onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
-
-            if (newlySelectedNodeIds.length > 0 || newlySelectedEdgeIds.length > 0) {
-              showToast(`Lasso selected ${newlySelectedNodeIds.length} nodes, ${newlySelectedEdgeIds.length} edges`);
+          // Detect enclosed or intersected nodes
+          dataRef.current.nodes.forEach(node => {
+            const r = getNodeRadius(node);
+            if (isPointOrCircleInPolygon(node, r, currentPts)) {
+              newlySelectedNodeIds.push(node.id);
             }
+          });
+
+          // Detect edges whose nodes or segments are intersected/enclosed
+          const nodeMapLocal = new Map<string, GraphNode>();
+          dataRef.current.nodes.forEach(n => nodeMapLocal.set(n.id, n));
+
+          dataRef.current.edges.forEach(edge => {
+            const u = nodeMapLocal.get(edge.source);
+            const v = nodeMapLocal.get(edge.target);
+            if (u && v) {
+              const uIn = newlySelectedNodeIds.includes(u.id);
+              const vIn = newlySelectedNodeIds.includes(v.id);
+              if ((uIn && vIn) || doesEdgeIntersectPolygon(u, v, currentPts)) {
+                newlySelectedEdgeIds.push(edge.id);
+              }
+            }
+          });
+
+          onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
+
+          if (newlySelectedNodeIds.length > 0 || newlySelectedEdgeIds.length > 0) {
+            setPersistedLassoPoints(currentPts);
+            showToast(`Lasso selected ${newlySelectedNodeIds.length} nodes, ${newlySelectedEdgeIds.length} edges`);
+          } else {
+            setPersistedLassoPoints([]);
           }
-          return [];
-        });
+        } else {
+          setPersistedLassoPoints([]);
+        }
       }
 
       if (isPanning) {
         setIsPanning(false);
       }
       if (draggingNodeId) {
-        if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
+        if (selectedNodeIdsRef.current.includes(draggingNodeId) && selectedNodeIdsRef.current.length > 1 && batchDragStartPositionsRef.current.size > 0) {
           batchDragStartPositionsRef.current.forEach((_, id) => {
             onFinishDragNode(id);
           });
@@ -687,6 +782,52 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return map;
   }, [data.edges]);
 
+  // Nodes involved in selection for lasso enclosure
+  const allSelectedNodesForLasso = useMemo(() => {
+    const set = new Set<string>();
+    if (selectedNodeIds.length > 0) {
+      selectedNodeIds.forEach(id => set.add(id));
+    } else if (selectedNodeId) {
+      set.add(selectedNodeId);
+    }
+
+    if (selectedEdgeIds.length > 0) {
+      selectedEdgeIds.forEach(edgeId => {
+        const edge = data.edges.find(e => e.id === edgeId);
+        if (edge) {
+          set.add(edge.source);
+          set.add(edge.target);
+        }
+      });
+    } else if (selectedEdgeId) {
+      const edge = data.edges.find(e => e.id === selectedEdgeId);
+      if (edge) {
+        set.add(edge.source);
+        set.add(edge.target);
+      }
+    }
+
+    return Array.from(set)
+      .map(id => nodeMap.get(id))
+      .filter((n): n is GraphNode => Boolean(n));
+  }, [selectedNodeIds, selectedNodeId, selectedEdgeIds, selectedEdgeId, data.edges, nodeMap]);
+
+  // Clean up persisted points when nothing is selected
+  useEffect(() => {
+    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0 && !selectedNodeId && !selectedEdgeId) {
+      if (persistedLassoPoints.length > 0) {
+        setPersistedLassoPoints([]);
+      }
+    }
+  }, [selectedNodeIds, selectedEdgeIds, selectedNodeId, selectedEdgeId, persistedLassoPoints.length]);
+
+  // Displayed lasso points for the persistent selection enclosure
+  const displayLassoPoints = useMemo(() => {
+    if (persistedLassoPoints.length >= 3) return persistedLassoPoints;
+    if (allSelectedNodesForLasso.length === 0) return [];
+    return computeSelectionLassoPolygon(allSelectedNodesForLasso, getNodeRadius);
+  }, [persistedLassoPoints, allSelectedNodesForLasso, getNodeRadius]);
+
   // Render edge path (Straight, Curved for multi-edges, or Looped for self-loops)
   const renderEdge = (edge: GraphEdge) => {
     const sourceNode = nodeMap.get(edge.source);
@@ -715,6 +856,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       onSelectNode(null);
       if (!selectedEdgeIds.includes(edge.id)) {
         onBatchSelect?.([], []);
+        setPersistedLassoPoints([]);
       }
     };
 
@@ -884,7 +1026,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const isHovered = hoveredNodeId === node.id;
     const isConnectSource = connectSourceId === node.id;
     const isDragging = draggingNodeId === node.id;
-    const isPinned = !!node.isPinned;
 
     // Algorithm state overrides
     const isActiveAlgo = currentStep?.activeNodes.includes(node.id);
@@ -896,12 +1037,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const r = getNodeRadius(node);
     const fontSize = getNodeFontSize(node);
 
-    // Cursor styling: Pinned nodes indicate fixed status; free nodes show grab
-    const cursorClass = isPinned
-      ? 'cursor-pointer'
-      : isDragging
-      ? 'cursor-grabbing'
-      : 'cursor-grab';
+    // Cursor styling: Clean grab/grabbing indicator
+    const cursorClass = isDragging ? 'cursor-grabbing' : 'cursor-grab';
 
     return (
       <g
@@ -914,18 +1051,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         onMouseEnter={() => setHoveredNodeId(node.id)}
         onMouseLeave={() => setHoveredNodeId(null)}
       >
-        {/* Pinned / Fixed visual anchor ring */}
-        {isPinned && (
-          <circle
-            r={r + 4}
-            fill="none"
-            stroke="#f59e0b"
-            strokeWidth="2"
-            strokeDasharray="3,3"
-            opacity="0.85"
-          />
-        )}
-
         {/* Outer Halo on Selection or Algorithm Focus */}
         {(isSelected || isActiveAlgo || isConnectSource) && (
           <circle
@@ -946,8 +1071,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <circle
           r={r}
           fill={baseColor}
-          stroke={isSelected ? '#ffffff' : isPinned ? '#f59e0b' : '#0f172a'}
-          strokeWidth={isSelected ? '2.5' : isPinned ? '2.5' : '2'}
+          stroke={isSelected ? '#ffffff' : '#0f172a'}
+          strokeWidth={isSelected ? '2.5' : '2'}
         />
 
         {/* Node Index / Label */}
@@ -962,19 +1087,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         >
           {node.label}
         </text>
-
-        {/* Pinned / Fixed Badge Icon (TOP RIGHT) */}
-        {isPinned && (
-          <g transform={`translate(${r - 4}, ${-r + 4})`} className="pointer-events-none">
-            <circle r="7.5" fill="#f59e0b" stroke="#0a0e17" strokeWidth="1.5" />
-            <path
-              d="M -3 3 L 3 -3 M 0 -3 L 3 0 M -2 2 L -4 4"
-              stroke="#0a0e17"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </g>
-        )}
 
         {/* Badge (e.g. Root, Hub, Cut) */}
         {node.badge && (
@@ -1129,6 +1241,28 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           {/* Edges Layer */}
           <g className="edges-layer">{data.edges.map(renderEdge)}</g>
 
+          {/* Persistent Selection Lasso Enclosure (between edges and nodes) */}
+          {activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (
+            <g className="selection-lasso pointer-events-none">
+              <path
+                d={pointsToSvgPath(displayLassoPoints)}
+                fill="rgba(56, 189, 248, 0.10)"
+                stroke="rgba(56, 189, 248, 0.35)"
+                strokeWidth="4"
+                strokeLinejoin="round"
+              />
+              <path
+                d={pointsToSvgPath(displayLassoPoints)}
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="2"
+                strokeDasharray="6,4"
+                strokeLinejoin="round"
+                filter="drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))"
+              />
+            </g>
+          )}
+
           {/* Temporary Connecting Edge when dragging in connect mode */}
           {connectSourceId && mousePos && nodeMap.get(connectSourceId) && (
             <line
@@ -1145,6 +1279,48 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
           {/* Nodes Layer */}
           <g className="nodes-layer">{data.nodes.map(renderNode)}</g>
+
+          {/* Active Real-Time Lasso Path (Rendered on top of everything while tracking) */}
+          {activeLassoPoints.length > 1 && (
+            <g className="active-lasso pointer-events-none">
+              {/* Semi-transparent closed preview */}
+              <path
+                d={pointsToSvgPath(activeLassoPoints)}
+                fill="rgba(56, 189, 248, 0.14)"
+                stroke="none"
+              />
+              {/* Active drawn path line */}
+              <path
+                d={activeLassoPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')}
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                filter="drop-shadow(0 0 5px rgba(56, 189, 248, 0.7))"
+              />
+              {/* Dashed closing line back to loop origin */}
+              <line
+                x1={activeLassoPoints[activeLassoPoints.length - 1].x}
+                y1={activeLassoPoints[activeLassoPoints.length - 1].y}
+                x2={activeLassoPoints[0].x}
+                y2={activeLassoPoints[0].y}
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+                strokeDasharray="4,4"
+                opacity="0.8"
+              />
+              {/* Anchor point at origin */}
+              <circle
+                cx={activeLassoPoints[0].x}
+                cy={activeLassoPoints[0].y}
+                r="4.5"
+                fill="#38bdf8"
+                stroke="#090d16"
+                strokeWidth="2"
+              />
+            </g>
+          )}
         </g>
       </svg>
 

@@ -24,8 +24,6 @@ interface BottomStatusBarProps {
   onFitView: () => void;
   isPhysicsActive: boolean;
   onTogglePhysics: () => void;
-  pinnedCount: number;
-  onUnpinAll: () => void;
 }
 
 export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
@@ -38,8 +36,6 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
   onFitView,
   isPhysicsActive,
   onTogglePhysics,
-  pinnedCount,
-  onUnpinAll,
 }) => {
   return (
     <footer className="h-8 border-t border-slate-800/80 bg-slate-950 px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0 overflow-x-auto scrollbar-none gap-2">
@@ -119,21 +115,8 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         )}
       </div>
 
-      {/* Right: Fixed node count, Zoom, Fit & Physics */}
+      {/* Right: Zoom, Fit & Physics */}
       <div className="flex items-center gap-2">
-        {pinnedCount > 0 && (
-          <button
-            onClick={onUnpinAll}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 hover:bg-amber-900/50 transition-colors"
-            title="Click to unpin all fixed nodes"
-          >
-            <Pin size={11} className="rotate-45" />
-            <span>{pinnedCount} Fixed</span>
-            <span className="text-[9.5px] text-amber-400/70 underline ml-0.5">Unpin</span>
-          </button>
-        )}
-
-        <div className="w-[1px] h-3 bg-slate-800" />
 
         {/* Zoom Controls */}
         <div className="flex items-center gap-1 bg-slate-900 px-1 py-0.5 rounded border border-slate-800">

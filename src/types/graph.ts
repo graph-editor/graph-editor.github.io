@@ -11,7 +11,6 @@ export interface GraphNode {
   vy?: number;
   fx?: number | null;
   fy?: number | null;
-  isPinned?: boolean; // When true, node is fixed in place and won't move with physics or layouts
   color: string;
   weight?: string | number; // Node weight (value, char, or string)
   value?: string | number; // Backward-compatible alias for weight
