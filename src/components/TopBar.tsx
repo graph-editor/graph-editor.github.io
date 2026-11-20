@@ -14,6 +14,7 @@ import {
   Sliders,
   PanelBottom,
   PanelRight,
+  ChevronDown,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -166,36 +167,27 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
 
         {/* Layout dropdown */}
-        <div className="flex items-center bg-slate-900 rounded-lg border border-slate-800 px-1.5 sm:px-2 py-0.5">
-          <LayoutGrid size={12} className="text-slate-400 mr-1 sm:mr-1.5" />
+        <div className="relative flex items-center bg-slate-900 rounded-lg border border-slate-800 px-2 py-0.5 hover:border-slate-700 transition-colors">
+          <LayoutGrid size={12} className="text-blue-400 mr-1.5 shrink-0 pointer-events-none" />
           <select
             value={settings.layout}
             onChange={e => onApplyLayout(e.target.value as LayoutMode)}
-            className="bg-transparent text-xs text-slate-300 focus:outline-none cursor-pointer py-0.5 max-w-[90px] sm:max-w-none"
+            className="appearance-none bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer pr-4 py-0.5 font-medium max-w-[105px] sm:max-w-none"
+            style={{ backgroundColor: 'transparent', color: '#e2e8f0' }}
           >
-            <option value="force" className="bg-slate-900 text-white">Organic Force</option>
-            <option value="tree" className="bg-slate-900 text-white">Hierarchical Tree</option>
-            <option value="dag" className="bg-slate-900 text-white">Topological DAG</option>
-            <option value="bipartite" className="bg-slate-900 text-white">Bipartite Columns</option>
-            <option value="circular" className="bg-slate-900 text-white">Circular Ring</option>
-            <option value="grid" className="bg-slate-900 text-white">Grid Lattice</option>
+            <option value="force" className="bg-[#0f172a] text-white">Organic Force</option>
+            <option value="tree" className="bg-[#0f172a] text-white">Hierarchical Tree</option>
+            <option value="dag" className="bg-[#0f172a] text-white">Topological DAG</option>
+            <option value="bipartite" className="bg-[#0f172a] text-white">Bipartite Columns</option>
+            <option value="circular" className="bg-[#0f172a] text-white">Circular Ring</option>
+            <option value="grid" className="bg-[#0f172a] text-white">Grid Lattice</option>
           </select>
+          <ChevronDown size={11} className="text-slate-400 pointer-events-none absolute right-1.5" />
         </div>
 
         <div className="w-[1px] h-4 bg-slate-800 my-auto hidden sm:block" />
 
         {/* Export & Actions */}
-        {onOpenDownloadModal && (
-          <button
-            onClick={onOpenDownloadModal}
-            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/20 text-xs font-medium rounded-lg transition-all"
-            title="Download Desktop App (Win, Mac, Linux)"
-          >
-            <Download size={13} />
-            <span>Desktop</span>
-          </button>
-        )}
-
         <button
           onClick={onOpenExportModal}
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg shadow-sm transition-all"

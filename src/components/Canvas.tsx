@@ -720,7 +720,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             stroke={isActiveAlgo ? '#f59e0b' : '#38bdf8'}
             strokeWidth="2.5"
             strokeDasharray={isActiveAlgo ? '4,4' : undefined}
-            className="animate-pulse"
           />
         )}
 
@@ -860,6 +859,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       className={`relative w-full h-full overflow-hidden bg-[#090d16] select-none flex-1 touch-none ${
         isPanning ? 'cursor-grabbing' : 'cursor-default'
       }`}
+      style={{ backgroundColor: '#090d16', isolation: 'isolate' }}
       onContextMenu={e => e.preventDefault()}
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
@@ -883,8 +883,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         }
       }}
     >
-      <svg ref={svgRef} className="w-full h-full">
-        {/* Solid Canvas Background rect to guarantee clean frame clears without WebKit dirty-rect trails */}
+      <svg
+        ref={svgRef}
+        className="w-full h-full block"
+        style={{ backgroundColor: '#090d16', contain: 'strict' }}
+      >
+        {/* Solid Canvas Background rect to guarantee clean frame clears without WebKit/Chromium dirty-rect trails */}
         <rect width="100%" height="100%" fill="#090d16" />
 
         <defs>
@@ -920,7 +924,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               stroke="#38bdf8"
               strokeWidth="2.5"
               strokeDasharray="4,4"
-              className="animate-pulse pointer-events-none"
+              className="pointer-events-none"
             />
           )}
 
