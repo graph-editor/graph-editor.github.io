@@ -1,7 +1,26 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode } from './types/graph';
 import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing, detectNodeType } from './utils/parser';
-import { computeGraphStats, runBFS, runDFS, runDijkstra, runTopologicalSort, runTarjanSCC, runBridgesAndCutVertices, runKruskalMST, runBipartiteCheck } from './utils/algorithms';
+import {
+  computeGraphStats,
+  runBFS,
+  runDFS,
+  runDijkstra,
+  runTopologicalSort,
+  runTarjanSCC,
+  runBridgesAndCutVertices,
+  runKruskalMST,
+  runBipartiteCheck,
+  runBellmanFord,
+  runPrimMST,
+  runEulerianPath,
+  runMaxBipartiteMatching,
+  runTreeDiameter,
+  runTreeLCA,
+  runTreeSubtreeDP,
+  runTreeMISDP,
+  runTreeCentroid,
+} from './utils/algorithms';
 import { applyLayout } from './utils/layout';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/LeftPanel';
@@ -575,8 +594,35 @@ export function App() {
       case 'kruskal_mst':
         steps = runKruskalMST(data);
         break;
+      case 'prim_mst':
+        steps = runPrimMST(data, startNodeId, settings.isDirected);
+        break;
       case 'bipartite_check':
         steps = runBipartiteCheck(data);
+        break;
+      case 'bellman_ford':
+        steps = runBellmanFord(data, startNodeId, settings.isDirected);
+        break;
+      case 'eulerian_path':
+        steps = runEulerianPath(data, settings.isDirected);
+        break;
+      case 'max_bipartite_matching':
+        steps = runMaxBipartiteMatching(data);
+        break;
+      case 'tree_diameter':
+        steps = runTreeDiameter(data);
+        break;
+      case 'tree_lca':
+        steps = runTreeLCA(data, startNodeId);
+        break;
+      case 'tree_subtree_dp':
+        steps = runTreeSubtreeDP(data, startNodeId);
+        break;
+      case 'tree_mis_dp':
+        steps = runTreeMISDP(data, startNodeId);
+        break;
+      case 'tree_centroid':
+        steps = runTreeCentroid(data);
         break;
     }
 

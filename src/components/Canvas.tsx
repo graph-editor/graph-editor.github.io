@@ -237,6 +237,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }, 2500);
   }, []);
 
+  // Double click detection on canvas refs
+  const lastCanvasClickRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const lastAddedNodeTimeRef = useRef<number>(0);
+
   const NODE_RADIUS = 20;
 
   const getNodeRadius = useCallback((node?: GraphNode): number => {
@@ -249,12 +253,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   }, []);
 
   const getNodeFontSize = useCallback((node?: GraphNode): number => {
-    if (!node) return 13;
+    if (!node) return 14;
     const len = String(node.label ?? node.id).length;
-    if (len <= 2) return 13;
-    if (len <= 4) return 11;
-    if (len <= 6) return 10;
-    return Math.max(9, Math.floor(12 - len * 0.35));
+    if (len <= 2) return 15;
+    if (len <= 4) return 13;
+    if (len <= 6) return 11.5;
+    return Math.max(10, Math.floor(13 - len * 0.35));
   }, []);
 
   // Notify parent of zoom changes
@@ -431,6 +435,26 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
   // Canvas Mouse Down: Starts Lasso selection, Panning, or Node Creation
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // If we were in connect mode, clear on canvas click
+    if (connectSourceId) {
+      setConnectSourceId(null);
+    }
+
+    // Rapid double click on empty canvas detection
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'lasso') {
+      const now = performance.now();
+      const last = lastCanvasClickRef.current;
+      if (last && now - last.time < 350 && Math.hypot(e.clientX - last.x, e.clientY - last.y) < 20) {
+        lastCanvasClickRef.current = null;
+        lastAddedNodeTimeRef.current = now;
+        const { x, y } = screenToWorld(e.clientX, e.clientY);
+        onAddNode(x, y);
+        showToast('Added new node');
+        return;
+      }
+      lastCanvasClickRef.current = { time: now, x: e.clientX, y: e.clientY };
+    }
+
     // 1. Lasso Tool or Shift + Left-click: starts drawing Lasso loop
     if (e.button === 0 && (activeTool === 'lasso' || e.shiftKey)) {
       isLassoingRef.current = true;
@@ -451,7 +475,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         onBatchSelect?.([], []);
         setPersistedLassoPoints([]);
       }
-      setConnectSourceId(null);
       return;
     }
 
@@ -462,9 +485,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
   };
 
-  // Node Mouse Down: Handles selection and initiates node dragging (always movable)
+  // Node Mouse Down: Handles selection, edge connection, and initiates node dragging
   const handleNodeMouseDown = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
+
+    // If already in connect mode (e.g. from double-clicking a node or using edge tool)
+    if (connectSourceId) {
+      if (connectSourceId !== node.id || settings.isDirected) {
+        onAddEdge(connectSourceId, node.id);
+        showToast(`Connected node ${connectSourceId} → ${node.id}`);
+      }
+      setConnectSourceId(null);
+      return;
+    }
 
     // Right click on a node pans canvas
     if (e.button === 2) {
@@ -484,15 +517,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
 
     if (activeTool === 'edge') {
-      if (!connectSourceId) {
-        setConnectSourceId(node.id);
-      } else {
-        if (connectSourceId !== node.id || settings.isDirected) {
-          onAddEdge(connectSourceId, node.id);
-          showToast(`Connected node ${connectSourceId} → ${node.id}`);
-        }
-        setConnectSourceId(null);
-      }
+      setConnectSourceId(node.id);
       return;
     }
 
@@ -539,16 +564,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (e.touches.length !== 1) return;
     const touch = e.touches[0];
 
-    if (activeTool === 'edge') {
-      if (!connectSourceId) {
-        setConnectSourceId(node.id);
-      } else {
-        if (connectSourceId !== node.id || settings.isDirected) {
-          onAddEdge(connectSourceId, node.id);
-          showToast(`Connected node ${connectSourceId} → ${node.id}`);
-        }
-        setConnectSourceId(null);
+    if (connectSourceId) {
+      if (connectSourceId !== node.id || settings.isDirected) {
+        onAddEdge(connectSourceId, node.id);
+        showToast(`Connected node ${connectSourceId} → ${node.id}`);
       }
+      setConnectSourceId(null);
+      return;
+    }
+
+    if (activeTool === 'edge') {
+      setConnectSourceId(node.id);
       return;
     }
 
@@ -564,14 +590,21 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setDraggingNodeId(node.id);
   };
 
-  // Node Double Click
+  // Node Double Click: Enter edge connection mode to connect to another node
   const handleNodeDoubleClick = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
     onSelectNode(node.id);
+    setConnectSourceId(node.id);
+    showToast(`Connecting from Node ${node.label || node.id}... Click another node to connect`);
   };
 
   // Canvas Double Click: Add new node
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    const now = performance.now();
+    if (now - lastAddedNodeTimeRef.current < 450) {
+      return;
+    }
+    lastAddedNodeTimeRef.current = now;
     const { x, y } = screenToWorld(e.clientX, e.clientY);
     onAddNode(x, y);
     showToast('Added new node');
@@ -861,7 +894,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
     const defaultColor = isLight ? '#334155' : '#52525b';
     const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? (isLight ? '#0f172a' : '#a1a1aa') : (edge.color === '#64748b' ? defaultColor : edge.color));
-    const strokeWidth = isSelected || algoEdgeHighlight ? 3.5 : isHovered ? 2.5 : 2;
+    const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
 
     const handleEdgeClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -919,23 +952,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
               <rect
-                x="-14"
-                y="-9"
-                width="28"
-                height="18"
-                rx="4"
-                fill={isLight ? '#ffffff' : '#0f172a'}
-                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : effectiveEdgeColor}
-                strokeWidth={isLight ? '1.5' : '1'}
+                x="-16"
+                y="-10"
+                width="32"
+                height="20"
+                rx="5"
+                fill={isLight ? '#ffffff' : '#0a0a0a'}
+                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
+                strokeWidth="2"
                 filter={isLight ? 'url(#badge-shadow)' : undefined}
               />
               <text
                 textAnchor="middle"
-                dy="4"
+                dy="4.5"
                 fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
-                fontSize="11"
+                fontSize="12"
                 fontFamily={CANVAS_MONO_FONT}
-                fontWeight="700"
+                fontWeight="900"
+                style={{ fontWeight: 900 }}
               >
                 {edge.weight}
               </text>
@@ -1033,23 +1067,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         {settings.isWeighted && edge.weight !== undefined && (
           <g transform={`translate(${labelX}, ${labelY})`}>
             <rect
-              x="-14"
-              y="-9"
-              width="28"
-              height="18"
-              rx="4"
+              x="-16"
+              y="-10"
+              width="32"
+              height="20"
+              rx="5"
               fill={isLight ? '#ffffff' : '#0a0a0a'}
-              stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : '#262626'}
-              strokeWidth={isLight ? '1.5' : '1'}
+              stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
+              strokeWidth="2"
               filter={isLight ? 'url(#badge-shadow)' : undefined}
             />
             <text
               textAnchor="middle"
-              dy="4"
+              dy="4.5"
               fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
-              fontSize="11"
+              fontSize="12"
               fontFamily={CANVAS_MONO_FONT}
-              fontWeight="700"
+              fontWeight="900"
+              style={{ fontWeight: 900 }}
             >
               {edge.weight}
             </text>
@@ -1111,18 +1146,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           r={r}
           fill={baseColor}
           stroke={isSelected ? (isLight ? '#1d4ed8' : '#ffffff') : isLight ? '#0f172a' : '#000000'}
-          strokeWidth={isSelected ? '2.8' : isLight ? '2.2' : '2'}
+          strokeWidth={isSelected ? '3.5' : isLight ? '2.8' : '2.4'}
           filter={isLight ? 'url(#node-shadow)' : undefined}
         />
 
-        {/* Node Index / Label with high-contrast luminance text */}
+        {/* Node Index / Label with high-contrast luminance text and fat font */}
         <text
           textAnchor="middle"
           dy={fontSize * 0.35}
           fill={getContrastTextColor(baseColor, isLight)}
           fontSize={fontSize}
           fontFamily={CANVAS_MONO_FONT}
-          fontWeight="700"
+          fontWeight="900"
+          style={{ fontWeight: 900 }}
           pointerEvents="none"
         >
           {node.label}
@@ -1143,28 +1179,29 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           const rawW = node.weight ?? node.value;
           if (rawW === undefined || rawW === null || String(rawW).trim() === '') return null;
           const wStr = String(rawW);
-          const badgeWidth = Math.max(30, wStr.length * 7 + 18);
-          const yOffset = r + 13;
+          const badgeWidth = Math.max(34, wStr.length * 8 + 18);
+          const yOffset = r + 14;
           return (
             <g transform={`translate(0, ${yOffset})`} className="pointer-events-none">
               <rect
                 x={-badgeWidth / 2}
-                y="-8"
+                y="-9"
                 width={badgeWidth}
-                height="16"
-                rx="8"
+                height="18"
+                rx="9"
                 fill={isLight ? '#ffffff' : '#0a0a0a'}
-                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#475569' : '#334155'}
-                strokeWidth={isLight ? '1.5' : '1.2'}
+                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
+                strokeWidth="2"
                 filter={isLight ? 'url(#badge-shadow)' : undefined}
               />
               <text
                 textAnchor="middle"
-                dy="3.5"
-                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#c7d2fe'}
-                fontSize="9.5"
+                dy="4"
+                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#e0e7ff'}
+                fontSize="10.5"
                 fontFamily={CANVAS_MONO_FONT}
-                fontWeight="700"
+                fontWeight="900"
+                style={{ fontWeight: 900 }}
               >
                 {`w:${wStr}`}
               </text>
@@ -1177,27 +1214,28 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           const hasNodeWeight =
             (node.weight !== undefined && node.weight !== null && String(node.weight).trim() !== '') ||
             (node.value !== undefined && node.value !== null && String(node.value).trim() !== '');
-          const annotY = hasNodeWeight ? r + 33 : r + 14;
+          const annotY = hasNodeWeight ? r + 34 : r + 14;
           return (
             <g transform={`translate(0, ${annotY})`}>
               <rect
-                x={-Math.max(22, annotation.length * 4)}
-                y="-8"
-                width={Math.max(44, annotation.length * 8)}
-                height="16"
-                rx="4"
+                x={-Math.max(24, annotation.length * 4.5)}
+                y="-9"
+                width={Math.max(48, annotation.length * 9)}
+                height="18"
+                rx="5"
                 fill={isLight ? '#ffffff' : '#0f172a'}
-                stroke={isLight ? '#2563eb' : '#334155'}
-                strokeWidth={isLight ? '1.5' : '1'}
+                stroke={isLight ? '#2563eb' : '#38bdf8'}
+                strokeWidth="2"
                 filter={isLight ? 'url(#badge-shadow)' : undefined}
               />
               <text
                 textAnchor="middle"
-                dy="3.5"
+                dy="4"
                 fill={isLight ? '#1d4ed8' : '#38bdf8'}
-                fontSize="10"
+                fontSize="10.5"
                 fontFamily={CANVAS_MONO_FONT}
-                fontWeight="700"
+                fontWeight="900"
+                style={{ fontWeight: 900 }}
               >
                 {annotation}
               </text>
@@ -1289,8 +1327,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="7"
-              markerHeight="7"
+              markerWidth="8.5"
+              markerHeight="8.5"
               orient="auto-start-reverse"
             >
               <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={c} />
@@ -1336,8 +1374,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               x2={mousePos.x}
               y2={mousePos.y}
               stroke={isLight ? "#2563eb" : "#38bdf8"}
-              strokeWidth="2.5"
-              strokeDasharray="4,4"
+              strokeWidth="3.2"
+              strokeDasharray="5,5"
               className="pointer-events-none"
             />
           )}

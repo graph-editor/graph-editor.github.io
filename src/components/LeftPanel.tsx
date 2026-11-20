@@ -482,6 +482,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               </optgroup>
               <optgroup label="Shortest Paths">
                 <option value="dijkstra">Dijkstra Shortest Path</option>
+                <option value="bellman_ford">Bellman-Ford (Negative Cycles)</option>
               </optgroup>
               <optgroup label="DAG & Order">
                 <option value="toposort">Topological Sort (Kahn's)</option>
@@ -490,19 +491,31 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 <option value="tarjan_scc">Tarjan's SCC (Strongly Connected)</option>
                 <option value="bridges_articulations">Bridges & Articulation Points</option>
               </optgroup>
-              <optgroup label="Spanning Trees & Coloring">
-                <option value="kruskal_mst">Kruskal's MST (Spanning Tree)</option>
+              <optgroup label="Spanning Trees">
+                <option value="kruskal_mst">Kruskal's MST (DSU)</option>
+                <option value="prim_mst">Prim's MST (Cut Property)</option>
+              </optgroup>
+              <optgroup label="Eulerian & Matching">
                 <option value="bipartite_check">Bipartite 2-Coloring Check</option>
+                <option value="max_bipartite_matching">Max Bipartite Matching (Kuhn's)</option>
+                <option value="eulerian_path">Eulerian Path/Circuit (Hierholzer)</option>
+              </optgroup>
+              <optgroup label="Tree Algorithms & Tree DP">
+                <option value="tree_diameter">Tree Diameter & Center</option>
+                <option value="tree_lca">Tree LCA (Binary Lifting)</option>
+                <option value="tree_subtree_dp">Subtree DP (Size & Depth)</option>
+                <option value="tree_mis_dp">Tree DP: Max Independent Set</option>
+                <option value="tree_centroid">Tree Centroid Finding</option>
               </optgroup>
             </select>
           </div>
 
-          {['bfs', 'dfs', 'dijkstra'].includes(selectedAlgo) && (
+          {['bfs', 'dfs', 'dijkstra', 'bellman_ford', 'prim_mst', 'tree_lca', 'tree_subtree_dp', 'tree_mis_dp'].includes(selectedAlgo) && (
             <div>
               <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-1.5 ${
                 isLight ? 'text-slate-600' : 'text-neutral-400'
               }`}>
-                Starting Vertex
+                {['tree_lca', 'tree_subtree_dp', 'tree_mis_dp'].includes(selectedAlgo) ? 'Root Node' : 'Starting Vertex'}
               </label>
               <select
                 value={startNodeId}
@@ -540,6 +553,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 Greedy shortest paths for weighted graphs. Simulates priority queue relaxations and builds shortest path tree.
               </p>
             )}
+            {selectedAlgo === 'bellman_ford' && (
+              <p className="text-[11px] leading-relaxed">
+                Performs V-1 edge relaxation passes to find shortest paths with negative weights and detects negative cycles.
+              </p>
+            )}
             {selectedAlgo === 'toposort' && (
               <p className="text-[11px] leading-relaxed">
                 Linear ordering of vertices in a DAG using in-degree array. Immediately flags if a directed cycle exists.
@@ -560,9 +578,49 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 Sorts edges by weight and uses Disjoint Set Union (DSU) to build the minimum spanning tree without cycles.
               </p>
             )}
+            {selectedAlgo === 'prim_mst' && (
+              <p className="text-[11px] leading-relaxed">
+                Grows spanning tree from root by picking the minimum cut edge crossing visited to unvisited vertices.
+              </p>
+            )}
             {selectedAlgo === 'bipartite_check' && (
               <p className="text-[11px] leading-relaxed">
                 Attempts 2-coloring. Confirms bipartite graph partition (Set A / Set B) or highlights the odd-length cycle conflict.
+              </p>
+            )}
+            {selectedAlgo === 'max_bipartite_matching' && (
+              <p className="text-[11px] leading-relaxed">
+                Kuhn's algorithm for Maximum Bipartite Matching. Discovers alternating augmenting paths to match disjoint sets.
+              </p>
+            )}
+            {selectedAlgo === 'eulerian_path' && (
+              <p className="text-[11px] leading-relaxed">
+                Hierholzer's algorithm tracing an Eulerian trail or circuit visiting every edge exactly once.
+              </p>
+            )}
+            {selectedAlgo === 'tree_diameter' && (
+              <p className="text-[11px] leading-relaxed">
+                Computes tree diameter using double-BFS/DFS. Highlights the longest simple path and pinpoints tree center(s).
+              </p>
+            )}
+            {selectedAlgo === 'tree_lca' && (
+              <p className="text-[11px] leading-relaxed">
+                Binary Lifting preprocessing ($2^k$ ancestors table). Equalizes depths and simultaneous binary lifts to find LCA.
+              </p>
+            )}
+            {selectedAlgo === 'tree_subtree_dp' && (
+              <p className="text-[11px] leading-relaxed">
+                Classic postorder bottom-up Tree DP: calculates subtree sizes $sz[u] = 1 + \sum sz[v]$ and node depths.
+              </p>
+            )}
+            {selectedAlgo === 'tree_mis_dp' && (
+              <p className="text-[11px] leading-relaxed">
+                Maximum Independent Set on Tree via DP: $dp[u][0]$ (exclude $u$) and $dp[u][1]$ (include $u$), then reconstructs optimal set.
+              </p>
+            )}
+            {selectedAlgo === 'tree_centroid' && (
+              <p className="text-[11px] leading-relaxed">
+                Finds the centroid vertex whose removal splits the tree into subtrees of size $\le N/2$. Foundation of Centroid Decomposition.
               </p>
             )}
           </div>
