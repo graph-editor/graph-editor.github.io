@@ -242,16 +242,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                   </defs>
                   {/* Edges */}
                   <line x1="120" y1="150" x2="250" y2="70" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="175" y="100" fill="#93c5fd" fontSize="11" fontFamily="monospace">w=5</text>
+                  <text x="175" y="100" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=5</text>
 
                   <line x1="120" y1="150" x2="250" y2="230" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="175" y="200" fill="#93c5fd" fontSize="11" fontFamily="monospace">w=2</text>
+                  <text x="175" y="200" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=2</text>
 
                   <line x1="250" y1="70" x2="380" y2="150" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="325" y="100" fill="#93c5fd" fontSize="11" fontFamily="monospace">w=1</text>
+                  <text x="325" y="100" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=1</text>
 
                   <line x1="250" y1="230" x2="380" y2="150" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="325" y="200" fill="#93c5fd" fontSize="11" fontFamily="monospace">w=8</text>
+                  <text x="325" y="200" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=8</text>
 
                   {/* Nodes */}
                   <g className="cursor-pointer">
