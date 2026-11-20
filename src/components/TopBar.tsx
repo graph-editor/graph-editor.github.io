@@ -150,7 +150,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div 
           onClick={onGoHome}
           className={`flex items-center gap-1.5 ${onGoHome ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
-          title={onGoHome ? 'Return to Home & Landing Page' : 'CP Graph Editor'}
+          title={onGoHome ? 'About CP Graph & Desktop Downloads' : 'CP Graph Editor'}
         >
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
             <Share2 size={16} />
