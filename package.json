@@ -8,7 +8,7 @@
     "name": "CP Graph Team",
     "email": "dev@cpgraph.local"
   },
-  "homepage": "https://github.com/cpgraph/cp-graph-editor",
+  "homepage": "https://graph-editor.github.io/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

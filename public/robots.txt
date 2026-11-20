@@ -1,6 +1,4 @@
-# Allow all search engine crawlers
 User-agent: *
 Allow: /
 
-# Sitemap location
-Sitemap: https://mostafa-cse.github.io/Graph-visualization/sitemap.xml
+Sitemap: https://graph-editor.github.io/sitemap.xml

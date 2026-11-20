@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # CP Graph Editor — Universal 1-Click Installer for Linux & macOS
-# Usage: curl -fsSL https://raw.githubusercontent.com/mostafa-cse/Graph-visualization/master/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/graph-editor/graph-editor.github.io/master/install.sh | bash
 
 set -e
 
-REPO="mostafa-cse/Graph-visualization"
-TAG="v2.0.0"
+REPO="graph-editor/graph-editor.github.io"
+TAG="v2.1.0"
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 

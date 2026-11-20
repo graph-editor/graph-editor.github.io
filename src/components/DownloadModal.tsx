@@ -7,13 +7,13 @@ interface DownloadModalProps {
   theme?: 'dark' | 'light';
 }
 
-const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
-const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
-const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
-const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
-const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
-const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
+const RELEASES_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases';
+const WIN_EXE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
+const WIN_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
+const MAC_DMG_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
+const MAC_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
+const LINUX_APPIMAGE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
+const LINUX_DEB_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, theme = 'dark' }) => {
   if (!isOpen) return null;
@@ -198,7 +198,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, t
           <div className={`p-2 rounded border font-mono text-[11px] select-all overflow-x-auto ${
             isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-black border-neutral-800 text-neutral-300'
           }`}>
-            curl -fsSL https://raw.githubusercontent.com/mostafa-cse/Graph-visualization/master/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/graph-editor/graph-editor.github.io/master/install.sh | bash
           </div>
         </div>
 
