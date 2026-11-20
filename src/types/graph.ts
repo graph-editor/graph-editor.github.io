@@ -85,12 +85,19 @@ export type AlgorithmType =
   | 'bfs'
   | 'dfs'
   | 'dijkstra'
+  | 'bellman_ford'
   | 'toposort'
   | 'tarjan_scc'
   | 'bridges_articulations'
   | 'kruskal_mst'
+  | 'prim_mst'
   | 'bipartite_check'
+  | 'max_bipartite_matching'
+  | 'eulerian_path'
   | 'tree_diameter'
-  | 'tree_lca';
+  | 'tree_lca'
+  | 'tree_subtree_dp'
+  | 'tree_mis_dp'
+  | 'tree_centroid';
 
 export type InputFormat = 'edge_list' | 'parent_array' | 'adj_matrix' | 'adj_list';
