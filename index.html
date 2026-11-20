@@ -7,8 +7,8 @@
     <!-- Primary SEO Metadata -->
     <title>CP Graph Visualizer &amp; Editor | Best Online Graph Editor &amp; Drawing Tool</title>
     <meta name="title" content="CP Graph Visualizer &amp; Editor | Best Online Graph Editor &amp; Drawing Tool" />
-    <meta name="description" content="Free, open-source online graph editor &amp; visualizer built for Competitive Programming (Codeforces, CSES, LeetCode) and computer science students. Draw, edit, and simulate graphs with weighted nodes, mixed types (Char, String, Bool, Int), BFS, DFS, Dijkstra, Tree &amp; DAG layouts. Download native apps for Windows, macOS, and Linux." />
-    <meta name="keywords" content="graph editor, graph visualize, graph visualizer, online graph editor, weighted node graph, graph drawing tool, competitive programming graph editor, cses graph visualizer, codeforces graph, directed graph visualizer, tree visualizer, dijkstra visualizer, bfs dfs visualization, graph theory simulator, free graph maker, graph editor download, responsive graph editor" />
+    <meta name="description" content="Free, open-source online graph visualizer &amp; editor tailored for Competitive Programming (Codeforces, CSES, LeetCode, AtCoder) and CS students. Features multi-element lasso selection, live Dark Black &amp; Clean White themes, weighted nodes, mixed types (Char, String, Bool, Int), professional JetBrains Mono typography, mobile responsive layout, and interactive BFS, DFS, Dijkstra, Tree &amp; DAG layouts. Download native desktop apps for Windows, macOS, and Linux." />
+    <meta name="keywords" content="graph editor, graph visualize, graph visualizer, online graph editor, lasso graph editor, dark mode graph visualizer, weighted node graph, graph drawing tool, competitive programming graph editor, cses graph visualizer, codeforces graph, directed graph visualizer, tree visualizer, dijkstra visualizer, bfs dfs visualization, graph theory simulator, free graph maker, graph editor download, responsive graph editor, jetbrains mono graph visualizer" />
     <meta name="author" content="mostafa-cse" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://mostafa-cse.github.io/Graph-visualization/" />
@@ -17,7 +17,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://mostafa-cse.github.io/Graph-visualization/" />
     <meta property="og:title" content="CP Graph Visualizer &amp; Editor | Best Online Graph Editor &amp; Drawing Tool" />
-    <meta property="og:description" content="Draw, edit, and simulate graphs with continuous force physics, BFS, DFS, Dijkstra, and automatic edge-list detection. Free &amp; Open Source." />
+    <meta property="og:description" content="Draw, edit, and simulate graphs with continuous force physics, lasso multi-select, pitch dark &amp; clean white themes, BFS, DFS, Dijkstra, and automatic edge-list detection. Free &amp; Open Source." />
     <meta property="og:image" content="https://mostafa-cse.github.io/Graph-visualization/icon.png" />
     <meta property="og:site_name" content="CP Graph Editor" />
     <meta property="og:locale" content="en_US" />
@@ -33,7 +33,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='18' cy='5' r='3'/><circle cx='6' cy='12' r='3'/><circle cx='18' cy='19' r='3'/><line x1='8.59' y1='13.51' x2='15.42' y2='17.49'/><line x1='15.41' y1='6.51' x2='8.59' y2='10.49'/></svg>" />
     <link rel="apple-touch-icon" href="icon.png" />
     <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#090d16" />
+    <meta name="theme-color" content="#000000" />
 
     <!-- Fonts Prioritization: Google Sans (local TTF + CDN), Plus Jakarta Sans, Inter, JetBrains Mono, Fira Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -46,14 +46,25 @@
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "CP Graph Visualizer & Editor",
-      "operatingSystem": "Windows, macOS, Linux, Web Browser",
+      "softwareVersion": "2.1.0",
+      "operatingSystem": "Windows, macOS, Linux, Web Browser, Android, iOS",
       "applicationCategory": "DeveloperApplication",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
       },
-      "description": "Ultra-clean Graph Visualizer & Editor tailored for Competitive Programming (Codeforces, CSES, LeetCode) and Algorithm Visualization with BFS, DFS, Dijkstra, Tree & DAG layouts.",
+      "description": "Ultra-clean Graph Visualizer & Editor tailored for Competitive Programming (Codeforces, CSES, LeetCode) and Algorithm Visualization with lasso selection, dark/light themes, JetBrains Mono typography, BFS, DFS, Dijkstra, Tree & DAG layouts.",
+      "featureList": [
+        "Freehand Lasso multi-element selection and batch operations",
+        "Pitch Dark Black and Clean White high-contrast themes",
+        "Developer typography with JetBrains Mono and Google Sans",
+        "Adaptive mobile layout with slide-over drawers and touch gestures",
+        "Smart Edge List & Adjacency Matrix real-time detection",
+        "Weighted nodes with mixed types (Char, String, Bool, Int)",
+        "Step-by-step interactive algorithms: BFS, DFS, Dijkstra, Topological Sort, Tarjan, Bridges, Kruskal",
+        "Offline desktop apps for Windows, macOS, and Linux"
+      ],
       "url": "https://mostafa-cse.github.io/Graph-visualization/",
       "downloadUrl": "https://github.com/mostafa-cse/Graph-visualization/releases",
       "author": {
@@ -91,6 +102,22 @@
         },
         {
           "@type": "Question",
+          "name": "How does the Lasso Multi-Selection tool work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The Lasso tool allows you to draw a freehand loop around any group of nodes and across edges. All selected elements can be dragged, recolored with CP palette swatches, deleted, or assigned custom values simultaneously."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does CP Graph Editor support Dark Black and Clean White themes?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, CP Graph Editor features an instant 1-click theme switcher in the top bar offering an OLED Pitch Dark Black theme (#000000) and a daylight Clean White theme (#ffffff)."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "How do I visualize a graph from an edge list?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -120,15 +147,18 @@
   <body class="dark-theme">
     <!-- Search Crawler Fallback Content (Guarantees Instant Google Indexing) -->
     <noscript>
-      <main style="padding: 2rem; font-family: sans-serif; color: #fff; background: #090d16; max-width: 800px; margin: 0 auto;">
+      <main style="padding: 2rem; font-family: sans-serif; color: #fff; background: #000000; max-width: 800px; margin: 0 auto;">
         <h1>CP Graph Visualizer &amp; Editor — Online Graph Drawing Tool</h1>
         <p>The modern, ultra-clean graph visualizer and editor tailored for competitive programming (Codeforces, CSES, LeetCode, AtCoder) and algorithm visualization.</p>
         <h2>Key Features</h2>
         <ul>
+          <li><strong>Freehand Lasso Multi-Select</strong>: Draw a lasso around nodes and edges to move, recolor, delete, or re-weight in bulk.</li>
+          <li><strong>Pitch Dark Black &amp; Clean White Themes</strong>: Ultra-high contrast OLED dark theme and crisp daylight white theme.</li>
+          <li><strong>Developer Typography</strong>: JetBrains Mono and Google Sans typography with programming ligatures.</li>
           <li><strong>Smart Edge List Auto-Detection</strong>: Parse raw edges without typing N and M manually.</li>
           <li><strong>Weighted Nodes &amp; Mixed Types</strong>: Support arbitrary values, integers, characters, strings, and booleans with custom node weights.</li>
           <li><strong>0-Indexed and 1-Indexed Live Toggle</strong>: 1-click live index translation.</li>
-          <li><strong>Interactive Physics &amp; Node Pinning</strong>: Double-click to pin nodes permanently in place.</li>
+          <li><strong>Adaptive Mobile View</strong>: Fully responsive drawers and touch gestures for tablets and smartphones.</li>
           <li><strong>Step-by-Step Graph Algorithms</strong>: BFS, DFS, Dijkstra, Topological Sort, Tarjan's SCC, Bridges, Kruskal's MST, Bipartite check.</li>
           <li><strong>Desktop Installers</strong>: Available for Windows (.exe), macOS (.dmg), and Linux (.AppImage, .deb).</li>
         </ul>
