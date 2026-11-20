@@ -24,6 +24,7 @@ interface BottomStatusBarProps {
   onFitView: () => void;
   isPhysicsActive: boolean;
   onTogglePhysics: () => void;
+  theme?: 'dark' | 'light';
 }
 
 export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
@@ -36,17 +37,21 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
   onFitView,
   isPhysicsActive,
   onTogglePhysics,
+  theme = 'dark',
 }) => {
+  const isLight = theme === 'light';
   return (
-    <footer className="h-8 border-t border-slate-800/80 bg-slate-950 px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono text-slate-400 select-none z-20 shrink-0 overflow-x-auto scrollbar-none gap-2">
+    <footer className={`h-8 border-t px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono select-none z-20 shrink-0 overflow-x-auto scrollbar-none gap-2 transition-colors ${
+      isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-black border-neutral-800 text-neutral-400'
+    }`}>
       {/* Left: Live Graph Statistics */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span>V: <strong className="text-blue-400 font-semibold">{stats.nodeCount}</strong></span>
-          <span className="text-slate-700">|</span>
-          <span>E: <strong className="text-indigo-400 font-semibold">{stats.edgeCount}</strong></span>
-          <span className="text-slate-700">|</span>
-          <span>Comp: <strong className="text-emerald-400 font-semibold">{stats.componentCount}</strong></span>
+          <span>V: <strong className="text-blue-500 font-semibold">{stats.nodeCount}</strong></span>
+          <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
+          <span>E: <strong className="text-indigo-500 font-semibold">{stats.edgeCount}</strong></span>
+          <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
+          <span>Comp: <strong className="text-emerald-500 font-semibold">{stats.componentCount}</strong></span>
         </div>
 
         {/* Status badges */}
@@ -88,29 +93,37 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
       </div>
 
       {/* Center: Active Tool & Mode Hint */}
-      <div className="hidden md:flex items-center gap-2 text-slate-400 font-sans">
+      <div className={`hidden md:flex items-center gap-2 font-sans ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
         {activeTool === 'select' && (
           <span className="flex items-center gap-1.5">
-            <MousePointer size={12} className="text-blue-400" />
+            <MousePointer size={12} className="text-blue-500" />
             <span>Move Mode</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10.5px]">Drag to reposition • Double-click node to fix/unpin</span>
+            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
+            <span className="text-[10.5px]">Drag to reposition freely</span>
+          </span>
+        )}
+        {activeTool === 'lasso' && (
+          <span className="flex items-center gap-1.5">
+            <Share2 size={12} className="text-blue-500" />
+            <span>Lasso Mode</span>
+            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
+            <span className="text-[10.5px]">Draw freehand loop to multi-select</span>
           </span>
         )}
         {activeTool === 'node' && (
           <span className="flex items-center gap-1.5">
-            <CircleDot size={12} className="text-blue-400" />
+            <CircleDot size={12} className="text-blue-500" />
             <span>Add Node Mode</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10.5px]">Click canvas to drop node • Press Esc to cancel</span>
+            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
+            <span className="text-[10.5px]">Click canvas to drop node • Press Esc to cancel</span>
           </span>
         )}
         {activeTool === 'edge' && (
           <span className="flex items-center gap-1.5">
-            <Share2 size={12} className="text-blue-400" />
+            <Share2 size={12} className="text-blue-500" />
             <span>Connect Mode</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-400 text-[10.5px]">Click source node, then click target node • Press Esc to cancel</span>
+            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
+            <span className="text-[10.5px]">Click source node, then click target node • Press Esc to cancel</span>
           </span>
         )}
       </div>
@@ -119,24 +132,26 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
       <div className="flex items-center gap-2">
 
         {/* Zoom Controls */}
-        <div className="flex items-center gap-1 bg-slate-900 px-1 py-0.5 rounded border border-slate-800">
+        <div className={`flex items-center gap-1 px-1 py-0.5 rounded border ${
+          isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-neutral-900 border-neutral-800 text-neutral-300'
+        }`}>
           <button
             onClick={onZoomOut}
-            className="p-1 hover:text-white rounded hover:bg-slate-800 transition-colors"
+            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-200' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom Out (-)"
           >
             <ZoomOut size={12} />
           </button>
           <button
             onClick={onResetZoom}
-            className="px-1 text-[10px] hover:text-white font-mono"
+            className={`px-1 text-[10px] font-mono cursor-pointer ${isLight ? 'hover:text-slate-900' : 'hover:text-white'}`}
             title="Reset Zoom to 100%"
           >
             {Math.round(zoomScale * 100)}%
           </button>
           <button
             onClick={onZoomIn}
-            className="p-1 hover:text-white rounded hover:bg-slate-800 transition-colors"
+            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-200' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom In (+)"
           >
             <ZoomIn size={12} />
@@ -145,25 +160,29 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 
         <button
           onClick={onFitView}
-          className="p-1 hover:text-white hover:bg-slate-800 rounded transition-colors"
+          className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-900 hover:bg-slate-100' : 'hover:text-white hover:bg-neutral-800'}`}
           title="Fit Graph to View (F)"
         >
           <Maximize2 size={13} />
         </button>
 
-        <div className="w-[1px] h-3 bg-slate-800" />
+        <div className={`w-[1px] h-3 ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
 
         {/* Physics Simulation Toggle */}
         <button
           onClick={onTogglePhysics}
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
             isPhysicsActive
-              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-              : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              ? isLight
+                ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
+                : 'bg-blue-600/20 text-blue-400 border border-blue-500/30 font-semibold'
+              : isLight
+              ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
+              : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
           }`}
           title="Toggle Organic Physics Simulation (Space)"
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${isPhysicsActive ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${isPhysicsActive ? 'bg-blue-500 animate-pulse' : isLight ? 'bg-slate-400' : 'bg-neutral-600'}`} />
           <span>Physics</span>
         </button>
       </div>

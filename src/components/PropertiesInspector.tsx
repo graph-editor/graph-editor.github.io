@@ -37,6 +37,7 @@ export interface PropertiesInspectorProps {
   onRunAlgorithm?: (algo: AlgorithmType, startNodeId: string) => void;
   onSelectNode?: (nodeId: string | null) => void;
   onClose: () => void;
+  theme?: 'dark' | 'light';
 }
 
 export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
@@ -54,7 +55,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   onRunAlgorithm,
   onSelectNode,
   onClose,
+  theme = 'dark',
 }) => {
+  const isLight = theme === 'light';
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -209,14 +212,14 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   // Common Header Content
   const renderHeader = () => (
     <div
-      className={`border-b border-slate-800/90 px-3.5 flex items-center justify-between bg-slate-950/70 shrink-0 ${
-        isBottom ? 'h-10' : 'h-11'
-      }`}
+      className={`border-b px-3.5 flex items-center justify-between shrink-0 transition-colors ${
+        isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+      } ${isBottom ? 'h-10' : 'h-11'}`}
     >
       {/* Title & Badges */}
       <div className="flex items-center gap-2 min-w-0">
-        <Sliders size={13} className="text-blue-400 shrink-0" />
-        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider truncate">
+        <Sliders size={13} className="text-blue-500 shrink-0" />
+        <h4 className={`text-xs font-bold uppercase tracking-wider truncate ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>
           {headerTitle}
         </h4>
         {selectedNode && (
@@ -231,14 +234,18 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       {/* Action Controls */}
       <div className="flex items-center gap-1.5 shrink-0">
         {/* Dock position switcher */}
-        <div className="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+        <div className={`flex items-center p-0.5 rounded-lg border text-[11px] ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-neutral-900 border-neutral-800'
+        }`}>
           <button
             type="button"
             onClick={() => onPositionChange?.('bottom')}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer ${
               position === 'bottom'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
             }`}
             title="Dock Tracer to Bottom"
           >
@@ -248,10 +255,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           <button
             type="button"
             onClick={() => onPositionChange?.('right')}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all cursor-pointer ${
               position === 'right'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                : isLight
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
             }`}
             title="Dock Tracer to Right Side"
           >
@@ -362,26 +371,34 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         style={isBottom ? { height: `${bottomHeight}px` } : undefined}
         className={`${
           isBottom
-            ? 'w-full border-t border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up'
-            : 'w-80 border-l border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left'
+            ? `w-full border-t flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+              }`
+            : `w-80 border-l flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left ${
+                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+              }`
         }`}
       >
         {isBottom && (
           <div
             onMouseDown={handleResizeMouseDown}
-            className="h-1.5 w-full bg-slate-800/60 hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center"
+            className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
+              isLight ? 'bg-slate-200' : 'bg-neutral-800'
+            }`}
             title="Drag to resize bottom tracer height"
           >
-            <div className="w-12 h-0.5 bg-slate-600 group-hover:bg-blue-300 rounded-full" />
+            <div className={`w-12 h-0.5 rounded-full group-hover:bg-blue-300 ${isLight ? 'bg-slate-400' : 'bg-neutral-600'}`} />
           </div>
         )}
         {renderHeader()}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
-          <div className="w-9 h-9 rounded-full bg-slate-800/70 flex items-center justify-center text-blue-400 mb-2">
+        <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-blue-500 mb-2 ${
+            isLight ? 'bg-slate-100' : 'bg-neutral-900'
+          }`}>
             <Sliders size={16} />
           </div>
-          <p className="text-xs font-semibold text-slate-200 mb-1">Node Tracer is Ready</p>
-          <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+          <p className={`text-xs font-semibold mb-1 ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>Node Tracer is Ready</p>
+          <p className={`text-[11px] max-w-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-neutral-500'}`}>
             Click on any vertex in the canvas to trace its connections, inspect value weights, and run step-by-step algorithms.
           </p>
         </div>
@@ -396,15 +413,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     return (
       <aside
         style={{ height: `${bottomHeight}px` }}
-        className="w-full border-t border-slate-800/80 bg-[#0a0f1d] flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up"
+        className={`w-full border-t flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+          isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+        }`}
       >
         {/* Top Resize Handle */}
         <div
           onMouseDown={handleResizeMouseDown}
-          className="h-1.5 w-full bg-slate-800/60 hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center"
+          className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
+            isLight ? 'bg-slate-200' : 'bg-neutral-800'
+          }`}
           title="Drag to resize bottom tracer height"
         >
-          <div className="w-12 h-0.5 bg-slate-600 group-hover:bg-blue-300 rounded-full" />
+          <div className={`w-12 h-0.5 rounded-full group-hover:bg-blue-300 ${isLight ? 'bg-slate-400' : 'bg-neutral-600'}`} />
         </div>
 
         {renderHeader()}
@@ -774,7 +795,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   // RIGHT SIDE DOCKED VIEW: Structured Cards
   // -------------------------------------------------------------
   return (
-    <aside className="w-80 border-l border-slate-800/80 bg-[#0a0f1d] flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left">
+    <aside className={`w-80 border-l flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left ${
+      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+    }`}>
       {renderHeader()}
 
       {/* Docked Body: Scrollable Cards */}

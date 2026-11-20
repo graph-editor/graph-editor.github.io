@@ -18,6 +18,7 @@ export interface BatchActionToolbarProps {
   onBatchColor: (color: string) => void;
   onBatchAddValue: (value: string | number | undefined) => void;
   onClearSelection: () => void;
+  theme?: 'dark' | 'light';
 }
 
 export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
@@ -27,7 +28,9 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
   onBatchColor,
   onBatchAddValue,
   onClearSelection,
+  theme = 'dark',
 }) => {
+  const isLight = theme === 'light';
   const [valInput, setValInput] = useState<string>('');
   const [isColorPickerOpen, setIsColorPickerOpen] = useState<boolean>(false);
   const [isValueModalOpen, setIsValueModalOpen] = useState<boolean>(false);
@@ -50,7 +53,9 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
 
   return (
     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] sm:max-w-3xl pointer-events-none animate-slide-up">
-      <div className="pointer-events-auto bg-slate-950/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-2 sm:p-2.5 shadow-2xl shadow-cyan-950/30 flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+      <div className={`pointer-events-auto backdrop-blur-md rounded-2xl p-2 sm:p-2.5 shadow-2xl flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap border ${
+        isLight ? 'bg-white/95 border-slate-300 text-slate-900 shadow-xl' : 'bg-black/95 border-cyan-500/40 text-white shadow-cyan-950/30'
+      }`}>
         {/* Selection Count Pill */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-950/70 border border-cyan-500/30 text-xs font-semibold text-cyan-300 shrink-0">
           <LassoSelect size={14} className="text-cyan-400" />
