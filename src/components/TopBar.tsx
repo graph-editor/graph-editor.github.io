@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   MousePointer,
   CircleDot,
@@ -16,8 +16,22 @@ import {
   PanelRight,
   ChevronDown,
   LassoSelect,
+  Sparkles,
+  Workflow,
+  Columns,
+  Circle,
+  Check,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
+
+const LAYOUT_OPTIONS: { id: LayoutMode; label: string; icon: React.ReactNode; desc: string }[] = [
+  { id: 'force', label: 'Organic Force', icon: <Sparkles size={13} className="text-blue-400 shrink-0" />, desc: 'Physics simulation' },
+  { id: 'tree', label: 'Hierarchical Tree', icon: <GitBranch size={13} className="text-emerald-400 shrink-0" />, desc: 'Rooted tree layers' },
+  { id: 'dag', label: 'Topological DAG', icon: <Workflow size={13} className="text-indigo-400 shrink-0" />, desc: 'Dependency hierarchy' },
+  { id: 'bipartite', label: 'Bipartite Columns', icon: <Columns size={13} className="text-amber-400 shrink-0" />, desc: 'Two partitioned sets' },
+  { id: 'circular', label: 'Circular Ring', icon: <Circle size={13} className="text-purple-400 shrink-0" />, desc: 'Radial chord ring' },
+  { id: 'grid', label: 'Grid Lattice', icon: <LayoutGrid size={13} className="text-cyan-400 shrink-0" />, desc: 'Row-column matrix' },
+];
 
 interface TopBarProps {
   activeTool: 'select' | 'lasso' | 'node' | 'edge';
@@ -54,6 +68,21 @@ export const TopBar: React.FC<TopBarProps> = ({
   onGoHome,
   onOpenDownloadModal,
 }) => {
+  const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
+  const layoutDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLayoutDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (layoutDropdownRef.current && !layoutDropdownRef.current.contains(e.target as Node)) {
+        setIsLayoutDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isLayoutDropdownOpen]);
+
+  const activeLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layout) || LAYOUT_OPTIONS[0];
   return (
     <header className="h-13 border-b border-slate-800 bg-slate-950 px-2 sm:px-4 flex items-center justify-between z-20 select-none shrink-0 overflow-x-auto scrollbar-none gap-2">
       {/* Left: Brand / Logo + Main Editing Tools Group */}
@@ -180,23 +209,56 @@ export const TopBar: React.FC<TopBarProps> = ({
           <span className="lg:hidden">{settings.isWeighted ? 'W' : 'Unw'}</span>
         </button>
 
-        {/* Layout dropdown */}
-        <div className="relative flex items-center bg-slate-900 rounded-lg border border-slate-800 px-2 py-0.5 hover:border-slate-700 transition-colors">
-          <LayoutGrid size={12} className="text-blue-400 mr-1.5 shrink-0 pointer-events-none" />
-          <select
-            value={settings.layout}
-            onChange={e => onApplyLayout(e.target.value as LayoutMode)}
-            className="appearance-none bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer pr-4 py-0.5 font-medium max-w-[105px] sm:max-w-none"
-            style={{ backgroundColor: 'transparent', color: '#e2e8f0' }}
+        {/* Custom Sleek Layout Dropdown Popover */}
+        <div ref={layoutDropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setIsLayoutDropdownOpen(!isLayoutDropdownOpen)}
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 hover:border-slate-700 px-2.5 py-1 transition-all shadow-sm"
+            title="Auto-organize graph layout"
           >
-            <option value="force" className="bg-[#0f172a] text-white">Organic Force</option>
-            <option value="tree" className="bg-[#0f172a] text-white">Hierarchical Tree</option>
-            <option value="dag" className="bg-[#0f172a] text-white">Topological DAG</option>
-            <option value="bipartite" className="bg-[#0f172a] text-white">Bipartite Columns</option>
-            <option value="circular" className="bg-[#0f172a] text-white">Circular Ring</option>
-            <option value="grid" className="bg-[#0f172a] text-white">Grid Lattice</option>
-          </select>
-          <ChevronDown size={11} className="text-slate-400 pointer-events-none absolute right-1.5" />
+            {activeLayout.icon}
+            <span className="max-w-[95px] sm:max-w-none truncate">{activeLayout.label}</span>
+            <ChevronDown
+              size={11}
+              className={`text-slate-400 transition-transform ${isLayoutDropdownOpen ? 'rotate-180 text-blue-400' : ''}`}
+            />
+          </button>
+
+          {isLayoutDropdownOpen && (
+            <div className="absolute top-full mt-1.5 left-0 w-52 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-1 z-50 space-y-0.5 animate-in fade-in zoom-in-95">
+              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-1">
+                Graph Layouts
+              </div>
+              {LAYOUT_OPTIONS.map(opt => {
+                const isSelected = settings.layout === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      onApplyLayout(opt.id);
+                      setIsLayoutDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600/20 text-blue-300 font-semibold border border-blue-500/30'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {opt.icon}
+                      <div className="text-left">
+                        <div className="leading-tight">{opt.label}</div>
+                        <div className="text-[9.5px] text-slate-500">{opt.desc}</div>
+                      </div>
+                    </div>
+                    {isSelected && <Check size={13} className="text-blue-400 shrink-0 ml-1" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="w-[1px] h-4 bg-slate-800 my-auto hidden sm:block" />
