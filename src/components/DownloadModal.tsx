@@ -7,12 +7,12 @@ interface DownloadModalProps {
 }
 
 const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor.Setup.2.0.0.exe';
-const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-win.zip';
-const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.dmg';
-const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0-mac.zip';
-const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor-2.0.0.AppImage';
-const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/cp-graph-editor_2.0.0_amd64.deb';
+const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64-setup.exe';
+const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_x64_en-US.msi';
+const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_universal.dmg';
+const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_universal.app.tar.gz';
+const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.AppImage';
+const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.0.0/CP.Graph.Editor_2.0.0_amd64.deb';
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
