@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MousePointer,
   CircleDot,
@@ -69,22 +70,71 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenDownloadModal,
 }) => {
   const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
-  const layoutDropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownMenuRef = useRef<HTMLDivElement>(null);
+
+  const updateDropdownPos = useCallback(() => {
+    if (triggerButtonRef.current) {
+      const rect = triggerButtonRef.current.getBoundingClientRect();
+      const menuWidth = 216;
+      let left = rect.left;
+      if (left + menuWidth > window.innerWidth - 8) {
+        left = window.innerWidth - menuWidth - 8;
+      }
+      if (left < 8) left = 8;
+      setDropdownPos({
+        top: rect.bottom + 6,
+        left,
+      });
+    }
+  }, []);
+
+  const toggleDropdown = () => {
+    if (!isLayoutDropdownOpen) {
+      updateDropdownPos();
+      setIsLayoutDropdownOpen(true);
+    } else {
+      setIsLayoutDropdownOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLayoutDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (layoutDropdownRef.current && !layoutDropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        triggerButtonRef.current &&
+        !triggerButtonRef.current.contains(target) &&
+        dropdownMenuRef.current &&
+        !dropdownMenuRef.current.contains(target)
+      ) {
+        setIsLayoutDropdownOpen(false);
+      }
+    };
+    const handleWindowEvents = () => {
+      setIsLayoutDropdownOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setIsLayoutDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleWindowEvents);
+    window.addEventListener('scroll', handleWindowEvents, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleWindowEvents);
+      window.removeEventListener('scroll', handleWindowEvents, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isLayoutDropdownOpen]);
 
   const activeLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layout) || LAYOUT_OPTIONS[0];
   return (
-    <header className="h-13 border-b border-slate-800 bg-slate-950 px-2 sm:px-4 flex items-center justify-between z-20 select-none shrink-0 overflow-x-auto scrollbar-none gap-2">
+    <header className="h-13 border-b border-slate-800 bg-slate-950 px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative">
       {/* Left: Brand / Logo + Main Editing Tools Group */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Brand */}
@@ -210,11 +260,12 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
 
         {/* Custom Sleek Layout Dropdown Popover */}
-        <div ref={layoutDropdownRef} className="relative">
+        <div className="relative">
           <button
+            ref={triggerButtonRef}
             type="button"
-            onClick={() => setIsLayoutDropdownOpen(!isLayoutDropdownOpen)}
-            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 hover:border-slate-700 px-2.5 py-1 transition-all shadow-sm"
+            onClick={toggleDropdown}
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium rounded-lg border border-slate-800 hover:border-slate-700 px-2.5 py-1 transition-all shadow-sm cursor-pointer"
             title="Auto-organize graph layout"
           >
             {activeLayout.icon}
@@ -225,10 +276,21 @@ export const TopBar: React.FC<TopBarProps> = ({
             />
           </button>
 
-          {isLayoutDropdownOpen && (
-            <div className="absolute top-full mt-1.5 left-0 w-52 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-1 z-50 space-y-0.5 animate-in fade-in zoom-in-95">
-              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-1">
-                Graph Layouts
+          {isLayoutDropdownOpen && dropdownPos && createPortal(
+            <div
+              ref={dropdownMenuRef}
+              style={{
+                position: 'fixed',
+                top: `${dropdownPos.top}px`,
+                left: `${dropdownPos.left}px`,
+                width: '216px',
+                zIndex: 9999,
+              }}
+              className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 pointer-events-auto"
+            >
+              <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                <span>Graph Layouts</span>
+                <span className="text-[9px] text-slate-500 font-normal">Auto-arrange</span>
               </div>
               {LAYOUT_OPTIONS.map(opt => {
                 const isSelected = settings.layout === opt.id;
@@ -240,7 +302,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                       onApplyLayout(opt.id);
                       setIsLayoutDropdownOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-blue-600/20 text-blue-300 font-semibold border border-blue-500/30'
                         : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-transparent'
@@ -257,7 +319,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                   </button>
                 );
               })}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
