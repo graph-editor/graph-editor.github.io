@@ -260,9 +260,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setViewTransform({ x: newX, y: newY, scale: newScale });
   };
 
-  // Canvas Mouse Down: Starts panning if clicking background or middle button
+  // Canvas Mouse Down: Starts panning if clicking background, middle button, right button, or modifier keys
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || e.altKey || (e.button === 0 && activeTool === 'select')) {
+    // Middle click (1), Right click (2), Alt/Shift key, or Left click (0) in select mode
+    if (e.button === 1 || e.button === 2 || e.altKey || e.shiftKey || (e.button === 0 && activeTool === 'select')) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
       onSelectNode(null);
@@ -278,9 +279,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
   };
 
-  // Node Mouse Down: Handles selection and initiates node dragging if unpinned
+  // Node Mouse Down: Handles selection and initiates node dragging (always movable)
   const handleNodeMouseDown = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
+
+    // Right click on a node pans canvas
+    if (e.button === 2) {
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
+      return;
+    }
 
     if (activeTool === 'edge') {
       if (!connectSourceId) {
@@ -295,17 +303,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
-    // Select mode
+    // Select mode or any mode: select and initiate drag
     onSelectNode(node.id);
     onSelectEdge(null);
 
-    // If node is fixed/pinned, user cannot drag it!
-    if (node.isPinned) {
-      showToast(`📌 Node ${node.label} is fixed. Double-click to unpin.`);
-      return;
-    }
-
-    // Initiate drag
+    // Always initiate drag - user can drag and move any node freely
     const world = screenToWorld(e.clientX, e.clientY);
     dragOffsetRef.current = {
       x: node.x - world.x,
@@ -314,7 +316,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setDraggingNodeId(node.id);
   };
 
-  // Node Touch Start: Handles selection and initiates touch dragging
+  // Node Touch Start: Handles selection and initiates touch dragging (always movable)
   const handleNodeTouchStart = (e: React.TouchEvent, node: GraphNode) => {
     e.stopPropagation();
     if (e.touches.length !== 1) return;
@@ -336,11 +338,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     onSelectNode(node.id);
     onSelectEdge(null);
 
-    if (node.isPinned) {
-      showToast(`📌 Node ${node.label} is fixed. Double-click or use Inspector to unpin.`);
-      return;
-    }
-
+    // Always initiate touch drag
     const world = screenToWorld(touch.clientX, touch.clientY);
     dragOffsetRef.current = {
       x: node.x - world.x,
@@ -862,6 +860,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       className={`relative w-full h-full overflow-hidden bg-[#090d16] select-none flex-1 touch-none ${
         isPanning ? 'cursor-grabbing' : 'cursor-default'
       }`}
+      onContextMenu={e => e.preventDefault()}
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
       onDoubleClick={handleCanvasDoubleClick}

@@ -291,7 +291,7 @@ export function App() {
     setSelectedEdgeId(newEdge.id);
   };
 
-  // Update Node Position (from dragging)
+  // Update Node Position (from dragging - always updates coordinates directly)
   const handleUpdateNodePosition = (id: string, x: number, y: number, isFixed?: boolean) => {
     setData(prev => ({
       ...prev,
@@ -301,8 +301,8 @@ export function App() {
             ...n,
             x,
             y,
-            fx: n.isPinned || isFixed ? x : null,
-            fy: n.isPinned || isFixed ? y : null,
+            fx: x,
+            fy: y,
             vx: 0,
             vy: 0,
           };
@@ -312,15 +312,16 @@ export function App() {
     }));
   };
 
-  // Finish dragging: sync text and reset fx/fy if not pinned
+  // Finish dragging: keep node fixed at its exact dropped position so it never jumps or moves away
   const handleFinishDragNode = (id: string) => {
     setData(prev => {
       const nextNodes = prev.nodes.map(n => {
         if (n.id === id) {
           return {
             ...n,
-            fx: n.isPinned ? n.x : null,
-            fy: n.isPinned ? n.y : null,
+            isPinned: true, // Locks to the dropped position so physics never drifts it
+            fx: n.x,
+            fy: n.y,
             vx: 0,
             vy: 0,
           };
