@@ -13,6 +13,13 @@ import {
   Play,
   Check,
   Network,
+  GitBranch,
+  Palette,
+  Tag,
+  Scale,
+  ArrowRight,
+  ArrowLeft,
+  CircleDot,
 } from 'lucide-react';
 
 export interface PropertiesInspectorProps {
@@ -120,7 +127,6 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
     data.edges.forEach(edge => {
       if (edge.source === selectedNode.id && edge.target === selectedNode.id) {
-        // Self loop
         inDegree++;
         outDegree++;
         neighbors.push({
@@ -189,46 +195,57 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       }[weightType] || 'bg-slate-800 border-slate-700 text-slate-300'
     : '';
 
+  // Header Title formatter (avoids truncation in side dock)
+  const headerTitle = useMemo(() => {
+    if (selectedNode) {
+      return isBottom ? `Node Tracer • ${selectedNode.label}` : `Node ${selectedNode.label}`;
+    }
+    if (selectedEdge) {
+      return isBottom
+        ? `Edge Tracer • ${selectedEdge.source} → ${selectedEdge.target}`
+        : `Edge ${selectedEdge.source}→${selectedEdge.target}`;
+    }
+    return isBottom ? 'Node Tracer' : 'Tracer';
+  }, [selectedNode, selectedEdge, isBottom]);
+
   // Common Header Content
   const renderHeader = () => (
     <div
-      className={`border-b border-slate-800 px-4 flex items-center justify-between bg-slate-950/50 shrink-0 ${
-        isBottom ? 'h-10' : 'h-12'
+      className={`border-b border-slate-800/90 px-3.5 flex items-center justify-between bg-slate-950/70 shrink-0 ${
+        isBottom ? 'h-10' : 'h-11'
       }`}
     >
+      {/* Title & Badges */}
       <div className="flex items-center gap-2 min-w-0">
-        <Sliders size={14} className="text-blue-400 shrink-0" />
-        <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider truncate">
-          {selectedNode
-            ? `Node Tracer • ${selectedNode.label}`
-            : selectedEdge
-            ? 'Edge Tracer'
-            : 'Node Tracer'}
+        <Sliders size={13} className="text-blue-400 shrink-0" />
+        <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider truncate">
+          {headerTitle}
         </h4>
         {selectedNode && (
           <span
-            className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider shrink-0 ${typeBadgeStyles}`}
+            className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase font-bold tracking-wider shrink-0 ${typeBadgeStyles}`}
           >
             {nodeType}
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {/* Choice buttons: Bottom or Side */}
-        <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+      {/* Action Controls */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Dock position switcher */}
+        <div className="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-[11px]">
           <button
             type="button"
             onClick={() => onPositionChange?.('bottom')}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all ${
               position === 'bottom'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
             title="Dock Tracer to Bottom"
           >
             <PanelBottom size={12} />
-            <span className="hidden sm:inline">Bottom</span>
+            {isBottom && <span>Bottom</span>}
           </button>
           <button
             type="button"
@@ -236,12 +253,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-medium transition-all ${
               position === 'right'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
             title="Dock Tracer to Right Side"
           >
             <PanelRight size={12} />
-            <span className="hidden sm:inline">Side</span>
+            {!isBottom && <span>Side</span>}
           </button>
         </div>
 
@@ -255,15 +272,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800 border-transparent'
             }`}
-            title="Tracer Position Settings"
+            title="Tracer Position Preferences"
           >
-            <Settings size={14} />
+            <Settings size={13} />
           </button>
 
           {isSettingsOpen && (
             <div
               className={`absolute right-0 ${
-                isBottom ? 'top-full mt-1.5' : 'top-full mt-2'
+                isBottom ? 'bottom-full mb-2' : 'top-full mt-2'
               } w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl p-3 z-50 text-xs text-slate-200 space-y-2.5 animate-in fade-in zoom-in-95`}
             >
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
@@ -281,7 +298,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
               <div>
                 <label className="text-[11px] font-medium text-slate-400 block mb-1.5">
-                  Open Node Tracer On:
+                  Default Dock Position:
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   <button
@@ -321,7 +338,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
 
               <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 leading-normal">
-                When you press on any node in the graph, this tracer will automatically open at your preferred position (<strong className="text-slate-200">{position === 'bottom' ? 'Bottom' : 'Right Side'}</strong>).
+                Clicking any node on the canvas opens this tracer at your chosen position (<strong className="text-slate-200">{position === 'bottom' ? 'Bottom' : 'Right Side'}</strong>).
               </div>
             </div>
           )}
@@ -331,10 +348,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
           title="Close Tracer (Esc)"
         >
-          <X size={15} />
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -362,12 +379,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         )}
         {renderHeader()}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
-          <div className="w-10 h-10 rounded-full bg-slate-800/70 flex items-center justify-center text-blue-400 mb-2.5">
-            <Sliders size={18} />
+          <div className="w-9 h-9 rounded-full bg-slate-800/70 flex items-center justify-center text-blue-400 mb-2">
+            <Sliders size={16} />
           </div>
           <p className="text-xs font-semibold text-slate-200 mb-1">Node Tracer is Ready</p>
           <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
-            Click on any node in the canvas to trace its properties, adjacent vertices, and launch algorithm traversals.
+            Click on any vertex in the canvas to trace its connections, inspect value weights, and run step-by-step algorithms.
           </p>
         </div>
       </aside>
@@ -375,13 +392,13 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   }
 
   // -------------------------------------------------------------
-  // BOTTOM DOCKED VIEW (Horizontal multi-column layout)
+  // BOTTOM DOCKED VIEW: Clean 4-Card Responsive Grid
   // -------------------------------------------------------------
   if (isBottom) {
     return (
       <aside
         style={{ height: `${bottomHeight}px` }}
-        className="w-full border-t border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up"
+        className="w-full border-t border-slate-800/80 bg-[#0a0f1d] flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up"
       >
         {/* Top Resize Handle */}
         <div
@@ -394,80 +411,87 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
         {renderHeader()}
 
-        {/* Horizontal Body Content (Responsive wrapping on medium screens) */}
-        <div className="flex-1 p-3.5 px-4 overflow-x-auto overflow-y-auto flex flex-wrap xl:flex-nowrap gap-5 items-start divide-y xl:divide-y-0 xl:divide-x divide-slate-800/60">
-          {/* NODE VIEW - Responsive columns */}
+        {/* 4-Card Grid Container */}
+        <div className="flex-1 p-3 overflow-y-auto">
           {selectedNode && (
-            <>
-              {/* Column 1: Node Identifier & Type Presets */}
-              <div className="w-56 shrink-0 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-medium text-slate-400">Node Identifier</label>
-                  <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
-                    {nodeType}
-                  </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 h-full items-stretch">
+              {/* Card 1: Identity & Pinning */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Tag size={12} className="text-blue-400" />
+                      <span>Node Identifier</span>
+                    </span>
+                    <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
+                      {nodeType}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={selectedNode.label}
+                    onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-2"
+                    placeholder="e.g. 1, A, true, Root"
+                  />
+                  <div className="flex items-center gap-1 flex-wrap mb-2">
+                    <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    >
+                      Int ('1')
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                    >
+                      Char ('A')
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                    >
+                      Bool
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                    >
+                      String
+                    </button>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={selectedNode.label}
-                  onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-                  placeholder="e.g. A, true, 42, Alice"
-                />
-                <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
-                  >
-                    Char ('A')
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
-                  >
-                    Bool
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
-                  >
-                    Int ('1')
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
-                  >
-                    String
-                  </button>
-                </div>
-              </div>
 
-              {/* Column 2: Pin State & Weighted Node Value & Tree Root */}
-              <div className="w-64 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
+                {/* Fixed/Pin Action */}
                 <button
                   type="button"
                   onClick={() => onTogglePinNode(selectedNode.id)}
-                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all ${
+                  className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all mt-2 ${
                     selectedNode.isPinned
                       ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/60 shadow-inner'
-                      : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
+                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <Pin size={13} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
-                  <span>{selectedNode.isPinned ? 'Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
+                  <Pin size={12} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
+                  <span>{selectedNode.isPinned ? 'Position Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
                 </button>
+              </div>
 
-                {/* Weighted Node Input: Number, Char, or String */}
+              {/* Card 2: Value & Hierarchy */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-medium text-slate-400">Node Weight / Value</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Scale size={12} className="text-indigo-400" />
+                      <span>Node Weight / Value</span>
+                    </span>
                     {weightType && (
-                      <span className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}>
                         {weightType}
                       </span>
                     )}
@@ -475,7 +499,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   <input
                     type="text"
                     value={selectedNode.weight ?? selectedNode.value ?? ''}
-                    placeholder="e.g. 10, A, val, true"
+                    placeholder="e.g. 12, 'A', score, true"
                     onChange={e => {
                       const val = e.target.value;
                       const trimmed = val.trim();
@@ -486,10 +510,10 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         value: resolved,
                       });
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-2"
                   />
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
+                  <div className="flex items-center gap-1 flex-wrap mb-2">
+                    <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
                     <button
                       type="button"
                       onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
@@ -509,7 +533,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
                       className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
                     >
-                      String
+                      Text
                     </button>
                     {(selectedNode.weight !== undefined || selectedNode.value !== undefined) && (
                       <button
@@ -523,100 +547,86 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   </div>
                 </div>
 
+                {/* Tree Root Action */}
                 <button
                   type="button"
                   onClick={() => onSetTreeRoot(selectedNode.id)}
-                  className="w-full py-1 px-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs rounded-lg transition-colors text-center font-medium"
+                  className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium mt-2"
                 >
-                  Set as Tree Root
+                  <GitBranch size={12} className="text-emerald-400" />
+                  <span>Set as Tree Root</span>
                 </button>
               </div>
 
-              {/* Column 3: Color Selection */}
-              <div className="w-56 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
-                <label className="text-[11px] font-medium text-slate-400 block">Node Color</label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {CP_PALETTE.map(p => (
-                    <button
-                      type="button"
-                      key={p.color}
-                      onClick={() => onUpdateNode(selectedNode.id, { color: p.color })}
-                      className={`w-6 h-6 rounded-lg transition-transform border ${
-                        selectedNode.color === p.color
-                          ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                          : 'border-slate-800 hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: p.color }}
-                      title={p.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Column 4: Node Tracer Details (Neighbors & Quick Trace) */}
-              <div className="w-72 shrink-0 xl:pl-5 space-y-2 pt-3 xl:pt-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-300">
-                    <Network size={13} className="text-blue-400" />
-                    <span>Connections ({nodeConnections.totalDegree})</span>
+              {/* Card 3: Connections & Algorithm Traversal */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Network size={12} className="text-cyan-400" />
+                      <span>Connections</span>
+                    </span>
+                    {settings.isDirected ? (
+                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                        In: {nodeConnections.inDegree} | Out: {nodeConnections.outDegree}
+                      </span>
+                    ) : (
+                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                        Degree: {nodeConnections.totalDegree}
+                      </span>
+                    )}
                   </div>
-                  {settings.isDirected ? (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      In: {nodeConnections.inDegree} | Out: {nodeConnections.outDegree}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Degree: {nodeConnections.totalDegree}
-                    </span>
-                  )}
-                </div>
 
-                {/* Neighbor chips */}
-                <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
-                  {nodeConnections.neighbors.length === 0 ? (
-                    <span className="text-[10px] text-slate-500 italic">No connected edges (Isolated)</span>
-                  ) : (
-                    nodeConnections.neighbors.map((n, idx) => (
-                      <button
-                        type="button"
-                        key={`${n.edgeId}-${idx}`}
-                        onClick={() => onSelectNode?.(n.id)}
-                        className="px-2 py-0.5 rounded text-[10px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 text-slate-300 flex items-center gap-1 font-mono transition-colors"
-                        title={`Click to trace Node ${n.label}`}
-                      >
-                        <span className="text-blue-400">
-                          {n.dir === 'outgoing' ? '→' : n.dir === 'incoming' ? '←' : '—'}
-                        </span>
-                        <span>{n.label}</span>
-                        {n.weight !== undefined && (
-                          <span className="text-slate-500 text-[9px]">w:{n.weight}</span>
-                        )}
-                      </button>
-                    ))
-                  )}
+                  {/* Adjacent Vertices chips with clear directional cues */}
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto mb-2">
+                    {nodeConnections.neighbors.length === 0 ? (
+                      <span className="text-[10px] text-slate-500 italic py-1">Isolated vertex (0 edges)</span>
+                    ) : (
+                      nodeConnections.neighbors.map((n, idx) => (
+                        <button
+                          type="button"
+                          key={`${n.edgeId}-${idx}`}
+                          onClick={() => onSelectNode?.(n.id)}
+                          className="px-2 py-0.5 rounded text-[10.5px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 text-slate-200 flex items-center gap-1 font-mono transition-colors group"
+                          title={`Click to trace Node ${n.label}`}
+                        >
+                          {n.dir === 'outgoing' ? (
+                            <ArrowRight size={10} className="text-blue-400" />
+                          ) : n.dir === 'incoming' ? (
+                            <ArrowLeft size={10} className="text-purple-400" />
+                          ) : (
+                            <CircleDot size={9} className="text-cyan-400" />
+                          )}
+                          <span className="font-semibold text-white">{n.label}</span>
+                          {n.weight !== undefined && (
+                            <span className="text-slate-500 text-[9px]">w:{n.weight}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 {/* Quick Algorithm Trace Launcher */}
                 {onRunAlgorithm && (
-                  <div className="pt-1.5 border-t border-slate-800/60">
-                    <span className="text-[10px] text-slate-400 block mb-1">Quick Algorithm Trace:</span>
+                  <div className="pt-2 border-t border-slate-800/80">
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => onRunAlgorithm('bfs', selectedNode.id)}
-                        className="flex-1 py-1 px-2 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors"
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                         title="Run BFS traversal starting from this node"
                       >
-                        <Play size={10} className="fill-blue-300" />
+                        <Play size={11} className="fill-blue-300" />
                         <span>Trace BFS</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => onRunAlgorithm('dfs', selectedNode.id)}
-                        className="flex-1 py-1 px-2 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors"
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                         title="Run DFS traversal starting from this node"
                       >
-                        <Play size={10} className="fill-indigo-300" />
+                        <Play size={11} className="fill-indigo-300" />
                         <span>Trace DFS</span>
                       </button>
                     </div>
@@ -624,30 +634,60 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 )}
               </div>
 
-              {/* Column 5: Delete Node Action */}
-              <div className="w-28 shrink-0 xl:pl-5 flex flex-col justify-start pt-3 xl:pt-0">
+              {/* Card 4: Appearance & Actions */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-slate-700/80 transition-colors">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Palette size={12} className="text-pink-400" />
+                      <span>Node Color</span>
+                    </span>
+                    <span className="text-[9.5px] text-slate-500 font-mono">10 Themes</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5 mb-2">
+                    {CP_PALETTE.map(p => (
+                      <button
+                        type="button"
+                        key={p.color}
+                        onClick={() => onUpdateNode(selectedNode.id, { color: p.color })}
+                        className={`h-6 rounded-lg transition-transform border ${
+                          selectedNode.color === p.color
+                            ? 'scale-110 border-white ring-2 ring-blue-500/50'
+                            : 'border-slate-800 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: p.color }}
+                        title={p.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delete Node Action */}
                 <button
                   type="button"
                   onClick={() => onDeleteNode(selectedNode.id)}
-                  className="w-full py-2 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/20 flex items-center justify-center gap-1.5 text-xs"
+                  className="w-full py-1.5 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/25 flex items-center justify-center gap-1.5 text-xs font-medium mt-2"
                   title="Delete Node (Del)"
                 >
-                  <Trash2 size={14} />
-                  <span>Delete</span>
+                  <Trash2 size={13} />
+                  <span>Delete Vertex (Del)</span>
                 </button>
               </div>
-            </>
+            </div>
           )}
 
-          {/* EDGE VIEW - Horizontal columns */}
+          {/* EDGE VIEW IN BOTTOM DOCK */}
           {selectedEdge && (
-            <>
-              <div className="w-48 shrink-0 space-y-2">
-                <div className="text-[11px] font-medium text-slate-400">Edge Direction</div>
-                <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-300 font-mono flex items-center justify-between">
-                  <strong className="text-blue-400">{selectedEdge.source}</strong>
-                  <span>{selectedEdge.directed ? '→' : '—'}</span>
-                  <strong className="text-blue-400">{selectedEdge.target}</strong>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-full items-stretch max-w-4xl">
+              {/* Edge Direction */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Connection</span>
+                  <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-200 font-mono flex items-center justify-between mb-2">
+                    <strong className="text-blue-400">{selectedEdge.source}</strong>
+                    <span className="text-slate-500">{selectedEdge.directed ? '→' : '—'}</span>
+                    <strong className="text-blue-400">{selectedEdge.target}</strong>
+                  </div>
                 </div>
                 {settings.isDirected && (
                   <button
@@ -658,61 +698,64 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         target: selectedEdge.source,
                       })
                     }
-                    className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <ArrowLeftRight size={13} />
-                    <span>Reverse</span>
+                    <ArrowLeftRight size={12} />
+                    <span>Reverse Direction</span>
                   </button>
                 )}
               </div>
 
-              <div className="w-44 shrink-0 pl-5 space-y-2">
-                <label className="text-[11px] font-medium text-slate-400 block">Edge Weight</label>
-                <input
-                  type="number"
-                  value={selectedEdge.weight ?? ''}
-                  placeholder="e.g. 5"
-                  onChange={e =>
-                    onUpdateEdge(selectedEdge.id, {
-                      weight: e.target.value === '' ? undefined : Number(e.target.value),
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
-                />
-              </div>
-
-              <div className="w-56 shrink-0 pl-5 space-y-2">
-                <label className="text-[11px] font-medium text-slate-400 block">Edge Color</label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {CP_PALETTE.map(p => (
-                    <button
-                      type="button"
-                      key={p.color}
-                      onClick={() => onUpdateEdge(selectedEdge.id, { color: p.color })}
-                      className={`w-6 h-6 rounded-lg transition-transform border ${
-                        selectedEdge.color === p.color
-                          ? 'scale-110 border-white ring-2 ring-blue-500/50'
-                          : 'border-slate-800 hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: p.color }}
-                      title={p.name}
-                    />
-                  ))}
+              {/* Edge Weight */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Weight</span>
+                  <input
+                    type="number"
+                    value={selectedEdge.weight ?? ''}
+                    placeholder="e.g. 5"
+                    onChange={e =>
+                      onUpdateEdge(selectedEdge.id, {
+                        weight: e.target.value === '' ? undefined : Number(e.target.value),
+                      })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                  />
                 </div>
               </div>
 
-              <div className="w-28 shrink-0 pl-5 flex flex-col justify-start">
+              {/* Edge Color & Delete */}
+              <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-300 block mb-2">Edge Color</span>
+                  <div className="grid grid-cols-5 gap-1.5 mb-2">
+                    {CP_PALETTE.map(p => (
+                      <button
+                        type="button"
+                        key={p.color}
+                        onClick={() => onUpdateEdge(selectedEdge.id, { color: p.color })}
+                        className={`h-6 rounded-lg transition-transform border ${
+                          selectedEdge.color === p.color
+                            ? 'scale-110 border-white ring-2 ring-blue-500/50'
+                            : 'border-slate-800 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: p.color }}
+                        title={p.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => onDeleteEdge(selectedEdge.id)}
-                  className="w-full py-2 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/20 flex items-center justify-center gap-1.5 text-xs"
-                  title="Delete Edge (Del)"
+                  className="w-full py-1.5 px-2 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/25 flex items-center justify-center gap-1.5 text-xs"
                 >
-                  <Trash2 size={14} />
-                  <span>Delete</span>
+                  <Trash2 size={13} />
+                  <span>Delete Edge (Del)</span>
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </aside>
@@ -720,172 +763,161 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   }
 
   // -------------------------------------------------------------
-  // RIGHT SIDE DOCKED VIEW (Vertical stacked column layout)
+  // RIGHT SIDE DOCKED VIEW: Structured Cards
   // -------------------------------------------------------------
   return (
-    <aside className="w-80 border-l border-slate-800/80 bg-slate-900/95 flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left">
+    <aside className="w-80 border-l border-slate-800/80 bg-[#0a0f1d] flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left">
       {renderHeader()}
 
-      {/* Docked Body: Scrollable */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      {/* Docked Body: Scrollable Cards */}
+      <div className="flex-1 p-3.5 overflow-y-auto space-y-3">
         {/* NODE PROPERTIES */}
         {selectedNode && (
-          <div className="space-y-4">
-            {/* Label / Name with Type Badge */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[11px] font-medium text-slate-400">Node Identifier</label>
-                <span
-                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full border uppercase font-bold tracking-wider ${typeBadgeStyles}`}
-                >
-                  {nodeType}
-                </span>
+          <>
+            {/* Card 1: Identity & Value */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Tag size={12} className="text-blue-400" />
+                    <span>Node Identifier</span>
+                  </span>
+                  <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${typeBadgeStyles}`}>
+                    {nodeType}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={selectedNode.label}
+                  onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-1.5"
+                  placeholder="e.g. 1, A, true, Root"
+                />
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                  >
+                    Int ('1')
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                  >
+                    Char ('A')
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: selectedNode.label === 'true' ? 'false' : 'true' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
+                  >
+                    Bool
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                  >
+                    String
+                  </button>
+                </div>
               </div>
-              <input
-                type="text"
-                value={selectedNode.label}
-                onChange={e => onUpdateNode(selectedNode.id, { label: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 font-mono mb-1.5"
-                placeholder="e.g. A, true, 42, Alice"
-              />
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { label: 'A' })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
-                >
-                  Char ('A')
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onUpdateNode(selectedNode.id, {
-                      label: selectedNode.label === 'true' ? 'false' : 'true',
-                    })
-                  }
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-amber-950/40 border border-amber-800/40 text-amber-300 hover:bg-amber-900/50 transition-colors"
-                >
-                  Bool ({selectedNode.label === 'true' ? 'false' : 'true'})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { label: '1' })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
-                >
-                  Int ('1')
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { label: 'Node' })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
-                >
-                  String
-                </button>
-              </div>
-            </div>
 
-            {/* Fixed / Pin Position Toggle */}
-            <div>
+              {/* Pin Toggle */}
               <button
                 type="button"
                 onClick={() => onTogglePinNode(selectedNode.id)}
-                className={`w-full py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 border transition-all ${
+                className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all ${
                   selectedNode.isPinned
                     ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/60 shadow-inner'
-                    : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <Pin size={14} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
-                <span>
-                  {selectedNode.isPinned ? 'Fixed (Double-click to unpin)' : 'Fix Position (Pin node)'}
-                </span>
+                <Pin size={12} className={selectedNode.isPinned ? 'rotate-45 text-amber-400' : ''} />
+                <span>{selectedNode.isPinned ? 'Fixed (Pinned)' : 'Fix Position (Pin)'}</span>
               </button>
-              <p className="text-[10px] text-slate-500 mt-1 text-center">
-                {selectedNode.isPinned
-                  ? 'Position is locked and immune to movement'
-                  : 'Double-click node anytime on canvas to fix it'}
-              </p>
-            </div>
 
-            {/* Node Weight (Int, Char, or String) */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[11px] font-medium text-slate-400">
-                  Node Weight / Value
-                </label>
-                {weightType && (
-                  <span
-                    className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}
-                  >
-                    {weightType}
+              {/* Node Weight */}
+              <div className="pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Scale size={12} className="text-indigo-400" />
+                    <span>Weight / Value</span>
                   </span>
-                )}
-              </div>
-              <input
-                type="text"
-                value={selectedNode.weight ?? selectedNode.value ?? ''}
-                placeholder="e.g. 10, A, val, true"
-                onChange={e => {
-                  const val = e.target.value;
-                  const trimmed = val.trim();
-                  const num = Number(trimmed);
-                  const resolved = trimmed === '' ? undefined : !isNaN(num) ? num : trimmed;
-                  onUpdateNode(selectedNode.id, {
-                    weight: resolved,
-                    value: resolved,
-                  });
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1.5"
-              />
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] text-slate-500 mr-0.5">Preset:</span>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
-                >
-                  Int (10)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
-                >
-                  Char ('A')
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
-                  className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
-                >
-                  String
-                </button>
-                {(selectedNode.weight !== undefined || selectedNode.value !== undefined) && (
+                  {weightType && (
+                    <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold tracking-wider ${weightBadgeStyles}`}>
+                      {weightType}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={selectedNode.weight ?? selectedNode.value ?? ''}
+                  placeholder="e.g. 10, A, val, true"
+                  onChange={e => {
+                    const val = e.target.value;
+                    const trimmed = val.trim();
+                    const num = Number(trimmed);
+                    const resolved = trimmed === '' ? undefined : !isNaN(num) ? num : trimmed;
+                    onUpdateNode(selectedNode.id, {
+                      weight: resolved,
+                      value: resolved,
+                    });
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono mb-1.5"
+                />
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="text-[10px] text-slate-500 mr-0.5">Presets:</span>
                   <button
                     type="button"
-                    onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                    onClick={() => onUpdateNode(selectedNode.id, { weight: 10, value: 10 })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950/40 border border-blue-800/40 text-blue-300 hover:bg-blue-900/50 transition-colors"
                   >
-                    Clear
+                    Int (10)
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { weight: 'A', value: 'A' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-purple-950/40 border border-purple-800/40 text-purple-300 hover:bg-purple-900/50 transition-colors"
+                  >
+                    Char ('A')
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateNode(selectedNode.id, { weight: 'val', value: 'val' })}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50 transition-colors"
+                  >
+                    Text
+                  </button>
+                  {(selectedNode.weight !== undefined || selectedNode.value !== undefined) && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateNode(selectedNode.id, { weight: undefined, value: undefined })}
+                      className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/40 border border-red-800/40 text-red-300 hover:bg-red-900/50 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Node Connections & Tracing */}
-            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2.5">
+            {/* Card 2: Graph Connections & Traversal */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-                  <Network size={14} className="text-blue-400" />
-                  <span>Connections & Degree</span>
-                </div>
+                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Network size={12} className="text-cyan-400" />
+                  <span>Connections &amp; Degree</span>
+                </span>
                 {settings.isDirected ? (
-                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                  <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
                     In: {nodeConnections.inDegree} | Out: {nodeConnections.outDegree}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                  <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
                     Deg: {nodeConnections.totalDegree}
                   </span>
                 )}
@@ -893,25 +925,29 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
               {/* Neighbor Chips */}
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-400 block">Adjacent Vertices:</span>
-                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                <span className="text-[10px] text-slate-500 block">Adjacent Vertices:</span>
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                   {nodeConnections.neighbors.length === 0 ? (
-                    <span className="text-[10px] text-slate-500 italic">No connected edges (Isolated)</span>
+                    <span className="text-[10px] text-slate-500 italic py-1">No connected edges (Isolated)</span>
                   ) : (
                     nodeConnections.neighbors.map((n, idx) => (
                       <button
                         type="button"
                         key={`${n.edgeId}-${idx}`}
                         onClick={() => onSelectNode?.(n.id)}
-                        className="px-2 py-1 rounded text-[11px] bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/60 text-slate-300 flex items-center gap-1.5 font-mono transition-colors"
+                        className="px-2 py-0.5 rounded text-[10.5px] bg-slate-950 border border-slate-800 hover:border-blue-500/60 text-slate-200 flex items-center gap-1 font-mono transition-colors"
                         title={`Click to trace Node ${n.label}`}
                       >
-                        <span className="text-blue-400">
-                          {n.dir === 'outgoing' ? '→' : n.dir === 'incoming' ? '←' : '—'}
-                        </span>
-                        <span>{n.label}</span>
+                        {n.dir === 'outgoing' ? (
+                          <ArrowRight size={10} className="text-blue-400" />
+                        ) : n.dir === 'incoming' ? (
+                          <ArrowLeft size={10} className="text-purple-400" />
+                        ) : (
+                          <CircleDot size={9} className="text-cyan-400" />
+                        )}
+                        <span className="font-semibold text-white">{n.label}</span>
                         {n.weight !== undefined && (
-                          <span className="text-slate-500 text-[10px]">w:{n.weight}</span>
+                          <span className="text-slate-500 text-[9px]">w:{n.weight}</span>
                         )}
                       </button>
                     ))
@@ -921,8 +957,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
               {/* Quick Algorithm Trace */}
               {onRunAlgorithm && (
-                <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
-                  <span className="text-[10px] text-slate-400 block">Launch Algorithm from this Vertex:</span>
+                <div className="pt-2 border-t border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block mb-1.5">Launch Traversal from this Node:</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
@@ -947,16 +983,21 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               )}
             </div>
 
-            {/* Color Picker Palette */}
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1.5">Node Color</label>
-              <div className="grid grid-cols-5 gap-1.5 mb-2.5">
+            {/* Card 3: Color & Hierarchy */}
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Palette size={12} className="text-pink-400" />
+                  <span>Node Color</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
                 {CP_PALETTE.map(p => (
                   <button
                     type="button"
                     key={p.color}
                     onClick={() => onUpdateNode(selectedNode.id, { color: p.color })}
-                    className={`w-7 h-7 rounded-lg transition-transform border ${
+                    className={`h-6 rounded-lg transition-transform border ${
                       selectedNode.color === p.color
                         ? 'scale-110 border-white ring-2 ring-blue-500/50'
                         : 'border-slate-800 hover:scale-105'
@@ -967,45 +1008,58 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 ))}
               </div>
 
-              {/* Predefined palette */}
-            </div>
-
-            {/* Actions */}
-            <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => onSetTreeRoot(selectedNode.id)}
-                className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors text-center font-medium"
+                className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium"
               >
-                Set as Tree Root
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteNode(selectedNode.id)}
-                className="p-1.5 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/20"
-                title="Delete Node (Del)"
-              >
-                <Trash2 size={16} />
+                <GitBranch size={12} className="text-emerald-400" />
+                <span>Set as Tree Root</span>
               </button>
             </div>
-          </div>
+
+            {/* Delete Button */}
+            <button
+              type="button"
+              onClick={() => onDeleteNode(selectedNode.id)}
+              className="w-full py-2 px-3 text-red-400 hover:bg-red-950/40 rounded-xl transition-colors border border-red-500/25 flex items-center justify-center gap-2 text-xs font-medium"
+              title="Delete Node (Del)"
+            >
+              <Trash2 size={14} />
+              <span>Delete Node (Del)</span>
+            </button>
+          </>
         )}
 
         {/* EDGE PROPERTIES */}
         {selectedEdge && (
-          <div className="space-y-4">
-            <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-300 font-mono flex items-center justify-between">
-              <span>Edge:</span>
-              <span>
-                <strong className="text-blue-400">{selectedEdge.source}</strong>{' '}
-                {selectedEdge.directed ? '→' : '—'}{' '}
+          <div className="space-y-3">
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2.5">
+              <span className="text-[11px] font-semibold text-slate-300 block">Edge Connection</span>
+              <div className="p-2 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-200 font-mono flex items-center justify-between">
+                <strong className="text-blue-400">{selectedEdge.source}</strong>
+                <span className="text-slate-500">{selectedEdge.directed ? '→' : '—'}</span>
                 <strong className="text-blue-400">{selectedEdge.target}</strong>
-              </span>
+              </div>
+              {settings.isDirected && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateEdge(selectedEdge.id, {
+                      source: selectedEdge.target,
+                      target: selectedEdge.source,
+                    })
+                  }
+                  className="w-full py-1.5 px-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ArrowLeftRight size={12} />
+                  <span>Reverse Direction</span>
+                </button>
+              )}
             </div>
 
-            {/* Edge Weight */}
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">Edge Weight</label>
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-300 block">Edge Weight</span>
               <input
                 type="number"
                 value={selectedEdge.weight ?? ''}
@@ -1019,16 +1073,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               />
             </div>
 
-            {/* Edge Color */}
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1.5">Edge Color</label>
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 space-y-2">
+              <span className="text-[11px] font-semibold text-slate-300 block">Edge Color</span>
               <div className="grid grid-cols-5 gap-1.5">
                 {CP_PALETTE.map(p => (
                   <button
                     type="button"
                     key={p.color}
                     onClick={() => onUpdateEdge(selectedEdge.id, { color: p.color })}
-                    className={`w-7 h-7 rounded-lg transition-transform border ${
+                    className={`h-6 rounded-lg transition-transform border ${
                       selectedEdge.color === p.color
                         ? 'scale-110 border-white ring-2 ring-blue-500/50'
                         : 'border-slate-800 hover:scale-105'
@@ -1040,32 +1093,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
-              {settings.isDirected && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onUpdateEdge(selectedEdge.id, {
-                      source: selectedEdge.target,
-                      target: selectedEdge.source,
-                    })
-                  }
-                  className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <ArrowLeftRight size={13} />
-                  <span>Reverse Direction</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onDeleteEdge(selectedEdge.id)}
-                className="p-1.5 text-red-400 hover:bg-red-950/40 rounded-lg transition-colors border border-red-500/20"
-                title="Delete Edge (Del)"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => onDeleteEdge(selectedEdge.id)}
+              className="w-full py-2 px-3 text-red-400 hover:bg-red-950/40 rounded-xl transition-colors border border-red-500/25 flex items-center justify-center gap-2 text-xs font-medium"
+              title="Delete Edge (Del)"
+            >
+              <Trash2 size={14} />
+              <span>Delete Edge (Del)</span>
+            </button>
           </div>
         )}
       </div>

@@ -202,18 +202,46 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cancelAction]);
 
-  // Continuous Force Physics loop
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  // Continuous Force Physics loop with requestAnimationFrame and equilibrium detection
   useEffect(() => {
     if (!isPhysicsActive || draggingNodeId !== null || data.nodes.length === 0) return;
 
-    const interval = setInterval(() => {
-      if (!svgRef.current) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      onUpdateGraphData(applyForceLayoutStep(data, rect.width || 800, rect.height || 600, 1));
-    }, 25);
+    let animId: number;
+    let lastTime = performance.now();
 
-    return () => clearInterval(interval);
-  }, [isPhysicsActive, draggingNodeId, data, onUpdateGraphData]);
+    const loop = (time: number) => {
+      // Throttle to ~35-40 FPS to avoid high CPU and ensure clean WebKit paint cycles
+      if (time - lastTime >= 26) {
+        lastTime = time;
+        if (svgRef.current && dataRef.current.nodes.length > 0) {
+          const rect = svgRef.current.getBoundingClientRect();
+          const nextData = applyForceLayoutStep(dataRef.current, rect.width || 800, rect.height || 600, 1);
+
+          // Check if there was actual movement; if settled into equilibrium, skip state update
+          let maxDelta = 0;
+          for (let i = 0; i < nextData.nodes.length; i++) {
+            const prev = dataRef.current.nodes[i];
+            const curr = nextData.nodes[i];
+            if (prev && curr) {
+              const d = Math.abs(curr.x - prev.x) + Math.abs(curr.y - prev.y);
+              if (d > maxDelta) maxDelta = d;
+            }
+          }
+
+          if (maxDelta > 0.08) {
+            onUpdateGraphData(nextData);
+          }
+        }
+      }
+      animId = requestAnimationFrame(loop);
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [isPhysicsActive, draggingNodeId, onUpdateGraphData]);
 
   // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
@@ -607,7 +635,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           strokeWidth={strokeWidth}
           strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
           markerEnd={settings.isDirected ? `url(#${markerId})` : undefined}
-          className="transition-colors duration-150"
         />
 
         {/* Edge weight badge */}
@@ -708,9 +735,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <circle
           r={r}
           fill={baseColor}
-          stroke={isSelected ? '#ffffff' : isPinned ? '#f59e0b' : '#0a0e17'}
-          strokeWidth={isPinned ? '2.5' : '2'}
-          className="transition-transform duration-100 filter drop-shadow-lg"
+          stroke={isSelected ? '#ffffff' : isPinned ? '#f59e0b' : '#0f172a'}
+          strokeWidth={isSelected ? '2.5' : isPinned ? '2.5' : '2'}
         />
 
         {/* Node Index / Label */}
@@ -767,7 +793,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 fill="#0b101b"
                 stroke={isSelected ? '#38bdf8' : '#818cf8'}
                 strokeWidth="1.2"
-                className="filter drop-shadow-md"
               />
               <text
                 textAnchor="middle"
@@ -860,6 +885,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }}
     >
       <svg ref={svgRef} className="w-full h-full">
+        {/* Solid Canvas Background rect to guarantee clean frame clears without WebKit dirty-rect trails */}
+        <rect width="100%" height="100%" fill="#090d16" />
+
         <defs>
           {/* Dynamic Arrowheads for each color */}
           {arrowheadColors.map(c => (
