@@ -41,17 +41,17 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 }) => {
   const isLight = theme === 'light';
   return (
-    <footer className={`h-8 border-t px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono select-none z-20 shrink-0 overflow-x-auto scrollbar-none gap-2 transition-colors ${
+    <footer className={`h-8 sm:h-9 border-t px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono select-none z-20 shrink-0 overflow-x-auto no-scrollbar gap-2 transition-colors ${
       isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-black border-neutral-800 text-neutral-400'
     }`}>
       {/* Left: Live Graph Statistics */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <span>V: <strong className="text-blue-500 font-semibold">{stats.nodeCount}</strong></span>
           <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
           <span>E: <strong className="text-indigo-500 font-semibold">{stats.edgeCount}</strong></span>
-          <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
-          <span>Comp: <strong className="text-emerald-500 font-semibold">{stats.componentCount}</strong></span>
+          <span className={`hidden xs:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>|</span>
+          <span className="hidden xs:inline">Comp: <strong className="text-emerald-500 font-semibold">{stats.componentCount}</strong></span>
         </div>
 
         {/* Status badges */}

@@ -698,7 +698,7 @@ export function App() {
   }
 
   return (
-    <div className={`flex flex-col w-screen h-screen overflow-hidden font-sans transition-colors duration-150 ${
+    <div className={`flex flex-col w-full h-dvh max-h-dvh max-w-full overflow-hidden font-sans transition-colors duration-150 ${
       theme === 'light' ? 'bg-white text-slate-900' : 'bg-black text-white'
     }`}>
       {/* Top Navigation Bar */}

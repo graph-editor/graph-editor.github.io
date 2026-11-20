@@ -367,42 +367,51 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   // Fallback if neither node nor edge is selected
   if (!selectedNode && !selectedEdge) {
     return (
-      <aside
-        style={isBottom ? { height: `${bottomHeight}px` } : undefined}
-        className={`${
-          isBottom
-            ? `w-full border-t flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
-                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-              }`
-            : `w-80 border-l flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left ${
-                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-              }`
-        }`}
-      >
-        {isBottom && (
+      <>
+        {!isBottom && (
           <div
-            onMouseDown={handleResizeMouseDown}
-            className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
-              isLight ? 'bg-slate-200' : 'bg-neutral-800'
-            }`}
-            title="Drag to resize bottom tracer height"
-          >
-            <div className={`w-12 h-0.5 rounded-full group-hover:bg-blue-300 ${isLight ? 'bg-slate-400' : 'bg-neutral-600'}`} />
-          </div>
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+            onClick={onClose}
+            aria-hidden="true"
+          />
         )}
-        {renderHeader()}
-        <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-blue-500 mb-2 ${
-            isLight ? 'bg-slate-100' : 'bg-neutral-900'
-          }`}>
-            <Sliders size={16} />
+        <aside
+          style={isBottom ? { height: `${bottomHeight}px` } : undefined}
+          className={`${
+            isBottom
+              ? `w-full max-h-[50vh] sm:max-h-[60vh] border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+                  isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+                }`
+              : `fixed inset-y-0 right-0 z-40 w-[88vw] max-w-sm md:relative md:inset-auto md:w-80 md:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-left ${
+                  isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+                }`
+          }`}
+        >
+          {isBottom && (
+            <div
+              onMouseDown={handleResizeMouseDown}
+              className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
+                isLight ? 'bg-slate-200' : 'bg-neutral-800'
+              }`}
+              title="Drag to resize bottom tracer height"
+            >
+              <div className={`w-12 h-0.5 rounded-full group-hover:bg-blue-300 ${isLight ? 'bg-slate-400' : 'bg-neutral-600'}`} />
+            </div>
+          )}
+          {renderHeader()}
+          <div className={`flex-1 flex flex-col items-center justify-center p-6 text-center ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-blue-500 mb-2 ${
+              isLight ? 'bg-slate-100' : 'bg-neutral-900'
+            }`}>
+              <Sliders size={16} />
+            </div>
+            <p className={`text-xs font-semibold mb-1 ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>Node Tracer is Ready</p>
+            <p className={`text-[11px] max-w-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-neutral-500'}`}>
+              Click on any vertex in the canvas to trace its connections, inspect value weights, and run step-by-step algorithms.
+            </p>
           </div>
-          <p className={`text-xs font-semibold mb-1 ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>Node Tracer is Ready</p>
-          <p className={`text-[11px] max-w-xs leading-relaxed ${isLight ? 'text-slate-500' : 'text-neutral-500'}`}>
-            Click on any vertex in the canvas to trace its connections, inspect value weights, and run step-by-step algorithms.
-          </p>
-        </div>
-      </aside>
+        </aside>
+      </>
     );
   }
 
@@ -413,7 +422,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     return (
       <aside
         style={{ height: `${bottomHeight}px` }}
-        className={`w-full border-t flex flex-col z-10 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+        className={`w-full max-h-[50vh] sm:max-h-[60vh] border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
           isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
         }`}
       >
@@ -795,9 +804,17 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   // RIGHT SIDE DOCKED VIEW: Structured Cards
   // -------------------------------------------------------------
   return (
-    <aside className={`w-80 border-l flex flex-col z-10 select-none shrink-0 h-full overflow-hidden shadow-2xl animate-slide-left ${
-      isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-    }`}>
+    <>
+      {/* Mobile Backdrop for Right Sheet */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside className={`fixed inset-y-0 right-0 z-40 w-[88vw] max-w-sm md:relative md:inset-auto md:w-80 md:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-left transition-colors ${
+        isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+      }`}>
       {renderHeader()}
 
       {/* Docked Body: Scrollable Cards */}
@@ -1147,6 +1164,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           </div>
         )}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };

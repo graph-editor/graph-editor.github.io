@@ -75,7 +75,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
         </div>
 
         {/* Tab Selector */}
-        <div className={`flex items-center gap-2 px-5 pt-3 border-b ${
+        <div className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-5 pt-2 sm:pt-3 border-b overflow-x-auto no-scrollbar whitespace-nowrap shrink-0 ${
           isLight ? 'border-slate-200 bg-slate-50/50' : 'border-neutral-800 bg-neutral-950/40'
         }`}>
           <button
@@ -201,7 +201,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
           )}
 
           {activeTab === 'image' && (
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 py-4">
               <button
                 onClick={handleDownloadPng}
                 className={`flex flex-col items-center justify-center p-6 border rounded-xl transition-all group cursor-pointer ${
