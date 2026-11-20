@@ -3,6 +3,13 @@ const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+// Disable GPU hardware acceleration on Linux to prevent Wayland/Mesa buffer damage ghost trails
+if (process.platform === 'linux') {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+}
+
 // Low-memory & lightweight Chromium optimization flags
 app.commandLine.appendSwitch('disable-breakpad');
 app.commandLine.appendSwitch('disable-component-update');
