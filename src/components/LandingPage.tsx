@@ -43,14 +43,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  const GITHUB_REPO = 'https://github.com/mostafa-cse/Graph-visualization';
-  const RELEASES_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases';
-  const WIN_EXE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
-  const WIN_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
-  const MAC_DMG_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
-  const MAC_ZIP_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
-  const LINUX_APPIMAGE_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
-  const LINUX_DEB_URL = 'https://github.com/mostafa-cse/Graph-visualization/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
+  const GITHUB_REPO = 'https://github.com/graph-editor/graph-editor.github.io';
+  const RELEASES_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases';
+  const WIN_EXE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
+  const WIN_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
+  const MAC_DMG_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
+  const MAC_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
+  const LINUX_APPIMAGE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
+  const LINUX_DEB_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
 
   const faqs = [
     {
@@ -610,7 +610,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
               <span className="text-[10px] text-gray-400 font-mono">Auto-installs desktop icons &amp; launches</span>
             </div>
             <div className="bg-black/60 p-2.5 rounded-lg border border-gray-800 font-mono text-xs text-blue-300 select-all overflow-x-auto">
-              curl -fsSL https://raw.githubusercontent.com/mostafa-cse/Graph-visualization/master/install.sh | bash
+              curl -fsSL https://raw.githubusercontent.com/graph-editor/graph-editor.github.io/master/install.sh | bash
             </div>
           </div>
 
