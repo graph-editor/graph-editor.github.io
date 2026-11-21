@@ -329,8 +329,8 @@ export function App() {
   const handleAddTab = () => {
     const nextIdx = tabs.length + 1;
     const newId = 'g' + Date.now().toString(36);
-    // Starter tree / graph for the new component
-    const newText = `1 2\n2 3`;
+    // Open new tab with a completely empty edges list
+    const newText = '';
     const newTab: GraphTab = {
       id: newId,
       name: `Graph ${nextIdx}`,

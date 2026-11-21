@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   MousePointer,
-  CircleDot,
   GitBranch,
   ArrowRight,
   Minus,
@@ -210,36 +209,6 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <LassoSelect size={14} />
             <span className="hidden md:inline">Lasso</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTool('node')}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              activeTool === 'node'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-            }`}
-            title="Add Node (N)"
-          >
-            <CircleDot size={14} />
-            <span className="hidden md:inline">Add Node</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTool('edge')}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-              activeTool === 'edge'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : isLight
-                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-            }`}
-            title="Connect Edges (E)"
-          >
-            <Share2 size={14} />
-            <span className="hidden md:inline">Connect</span>
           </button>
         </div>
 

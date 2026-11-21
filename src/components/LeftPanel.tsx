@@ -466,57 +466,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-1 mb-2">
-            <button
-              type="button"
-              onClick={() => insertTemplate('single')}
-              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
-                isLight
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                  : 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300 hover:border-emerald-500/40'
-              }`}
-              title="Single node (e.g. A)"
-            >
-              Single
-            </button>
-            <button
-              type="button"
-              onClick={() => insertTemplate('mixed')}
-              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
-                isLight
-                  ? 'bg-purple-50 border-purple-200 text-purple-800 hover:bg-purple-100'
-                  : 'bg-purple-950/30 border-purple-800/40 text-purple-300 hover:border-purple-500/40'
-              }`}
-              title="Mixed types (Char, String, Bool, Int)"
-            >
-              Mixed
-            </button>
-            <button
-              type="button"
-              onClick={() => insertTemplate('edge_list')}
-              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
-                isLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                  : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-blue-500/40'
-              }`}
-              title="Sample tree / edge list"
-            >
-              Sample
-            </button>
-            <button
-              type="button"
-              onClick={() => insertTemplate('weighted')}
-              className={`py-1 px-1 rounded text-[10px] font-medium border text-center transition-colors truncate cursor-pointer ${
-                isLight
-                  ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                  : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-blue-500/40'
-              }`}
-              title="Weighted graph & nodes"
-            >
-              Weighted
-            </button>
-          </div>
-
           {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
           <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden focus-within:border-blue-500 ${
             isLight ? 'bg-white border-slate-300 shadow-inner' : 'bg-neutral-950 border-neutral-800'
