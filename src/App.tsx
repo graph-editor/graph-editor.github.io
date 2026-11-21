@@ -21,7 +21,7 @@ import {
   runTreeMISDP,
   runTreeCentroid,
 } from './utils/algorithms';
-import { applyLayout } from './utils/layout';
+import { applyLayout, positionNewNodesPreservingExisting } from './utils/layout';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/LeftPanel';
 import { Canvas, CanvasHandle } from './components/Canvas';
@@ -246,18 +246,13 @@ export function App() {
     setRawText(text);
   }, []);
 
-  // Handle changes in the text editor
+  // Handle changes in the text editor - strictly preserves existing node positions without jumping
   const handleRawTextChange = (text: string) => {
     const existingNodeMap = new Map<string, GraphNode>();
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const parsed = parseGraphInput(text, settings, existingNodeMap);
-    let finalData = parsed.data;
-
-    // Apply layout if brand new nodes without positions
-    if (parsed.data.nodes.some(n => !existingNodeMap.has(n.id))) {
-      finalData = applyLayout(parsed.data, settings.layout);
-    }
+    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, settings);
 
     setData(finalData);
 
@@ -286,10 +281,7 @@ export function App() {
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
-    let finalData = parsed.data;
-    if (parsed.data.nodes.some(n => !existingNodeMap.has(n.id))) {
-      finalData = applyLayout(parsed.data, settings.layout);
-    }
+    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings);
     setData(finalData);
     pushState({ data: finalData, settings: newSettings, rawText });
   };
@@ -303,10 +295,7 @@ export function App() {
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
-    let finalData = parsed.data;
-    if (parsed.data.nodes.some(n => !existingNodeMap.has(n.id))) {
-      finalData = applyLayout(parsed.data, settings.layout);
-    }
+    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings);
     setData(finalData);
     pushState({ data: finalData, settings: newSettings, rawText });
   };

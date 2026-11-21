@@ -1,4 +1,4 @@
-import { GraphData, GraphNode, LayoutMode } from '../types/graph';
+import { GraphData, GraphNode, GraphSettings, LayoutMode } from '../types/graph';
 
 export function applyLayout(
   data: GraphData,
@@ -433,4 +433,178 @@ export function applyForceLayoutStep(
   }
 
   return { ...data, nodes };
+}
+
+/**
+ * Places new nodes incrementally and non-destructively while keeping all
+ * existing nodes 100% stable, fixed, and un-shifted at their exact positions.
+ */
+export function positionNewNodesPreservingExisting(
+  parsed: GraphData,
+  existingNodeMap: Map<string, GraphNode>,
+  settings: GraphSettings
+): GraphData {
+  // If no existing nodes in canvas, lay out the new graph from scratch
+  if (existingNodeMap.size === 0) {
+    return applyLayout(parsed, settings.layout);
+  }
+
+  // Position map initialized with all existing nodes (their positions are strictly fixed)
+  const posMap = new Map<string, { x: number; y: number }>();
+  existingNodeMap.forEach((node, id) => {
+    posMap.set(id, { x: node.x, y: node.y });
+  });
+
+  // Identify nodes that are brand new (not in existingNodeMap)
+  const unpositionedNodes = parsed.nodes.filter(n => !existingNodeMap.has(n.id));
+  if (unpositionedNodes.length === 0) {
+    // All nodes already existed; preserve their coordinates exactly
+    return {
+      ...parsed,
+      nodes: parsed.nodes.map(n => {
+        const exist = existingNodeMap.get(n.id);
+        return exist ? { ...n, x: exist.x, y: exist.y, fx: exist.fx, fy: exist.fy } : n;
+      }),
+    };
+  }
+
+  // Calculate bounding box and center of existing graph
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  let sumX = 0, sumY = 0;
+  existingNodeMap.forEach(n => {
+    minX = Math.min(minX, n.x);
+    maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y);
+    maxY = Math.max(maxY, n.y);
+    sumX += n.x;
+    sumY += n.y;
+  });
+  const countExist = existingNodeMap.size;
+  const graphCenterX = countExist > 0 ? sumX / countExist : 450;
+  const graphCenterY = countExist > 0 ? sumY / countExist : 325;
+
+  // Build undirected adjacency list from parsed.edges to find connected neighbors
+  const adj = new Map<string, string[]>();
+  parsed.edges.forEach(e => {
+    if (!adj.has(e.source)) adj.set(e.source, []);
+    if (!adj.has(e.target)) adj.set(e.target, []);
+    adj.get(e.source)!.push(e.target);
+    adj.get(e.target)!.push(e.source);
+  });
+
+  // Track children counts per parent to fan out multiple new children neatly
+  const neighborNewChildIndex = new Map<string, number>();
+
+  // Collision detector: ensures at least 60px distance between any two nodes
+  const isColliding = (candX: number, candY: number): boolean => {
+    for (const pos of posMap.values()) {
+      if (Math.hypot(pos.x - candX, pos.y - candY) < 60) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Find a non-colliding spot near target position
+  const findClearSpot = (targetX: number, targetY: number, preferredAngle?: number): { x: number; y: number } => {
+    if (!isColliding(targetX, targetY)) {
+      return { x: targetX, y: targetY };
+    }
+    for (let r = 70; r <= 350; r += 35) {
+      const stepCount = 12;
+      const baseAngle = preferredAngle ?? 0;
+      for (let s = 0; s < stepCount; s++) {
+        const a = baseAngle + (s * 2 * Math.PI) / stepCount;
+        const testX = targetX + r * Math.cos(a);
+        const testY = targetY + r * Math.sin(a);
+        if (!isColliding(testX, testY)) {
+          return { x: testX, y: testY };
+        }
+      }
+    }
+    return { x: targetX + 70, y: targetY + 70 };
+  };
+
+  // Iteratively position new nodes: those connected to already positioned nodes first
+  const remaining = [...unpositionedNodes];
+  let progress = true;
+
+  while (remaining.length > 0 && progress) {
+    progress = false;
+    for (let i = 0; i < remaining.length; i++) {
+      const node = remaining[i];
+      const neighbors = (adj.get(node.id) || []).filter(nbr => posMap.has(nbr));
+
+      if (neighbors.length > 0) {
+        progress = true;
+        remaining.splice(i, 1);
+        i--;
+
+        const primaryId = neighbors[0];
+        const primaryPos = posMap.get(primaryId)!;
+        const childIdx = neighborNewChildIndex.get(primaryId) || 0;
+        neighborNewChildIndex.set(primaryId, childIdx + 1);
+
+        const isTreeLike = settings.layout === 'tree' || settings.layout === 'dag';
+        let candX: number;
+        let candY: number;
+        let preferredAngle: number;
+
+        if (isTreeLike) {
+          // Children fan out downwards: dy = +100
+          const xOffset = childIdx === 0 ? 0 : (childIdx % 2 === 1 ? 1 : -1) * Math.ceil(childIdx / 2) * 85;
+          candX = primaryPos.x + xOffset;
+          candY = primaryPos.y + 100;
+          preferredAngle = Math.PI / 2;
+        } else {
+          // General layout: place radially outward from graph center
+          const angleFromCenter = Math.atan2(primaryPos.y - graphCenterY, primaryPos.x - graphCenterX);
+          const fanOffset = (childIdx - 0.5 * (neighbors.length - 1)) * (Math.PI / 4);
+          preferredAngle = angleFromCenter + fanOffset;
+          const dist = 100;
+          candX = primaryPos.x + dist * Math.cos(preferredAngle);
+          candY = primaryPos.y + dist * Math.sin(preferredAngle);
+        }
+
+        const spot = findClearSpot(candX, candY, preferredAngle);
+        posMap.set(node.id, spot);
+      }
+    }
+  }
+
+  // Any remaining new nodes are isolated (or in a new disconnected component)
+  let isolatedIndex = 0;
+  for (const node of remaining) {
+    const candX = maxX + 90 + (isolatedIndex % 3) * 80;
+    const candY = minY + Math.floor(isolatedIndex / 3) * 85;
+    isolatedIndex++;
+    const spot = findClearSpot(candX, candY);
+    posMap.set(node.id, spot);
+  }
+
+  // Return parsed data where existing nodes strictly keep their original positions
+  // and new nodes receive their resolved non-colliding positions.
+  return {
+    ...parsed,
+    nodes: parsed.nodes.map(n => {
+      const pos = posMap.get(n.id);
+      if (existingNodeMap.has(n.id)) {
+        const exist = existingNodeMap.get(n.id)!;
+        return {
+          ...n,
+          ...exist,
+          weight: n.weight !== undefined ? n.weight : exist.weight,
+          value: n.value !== undefined ? n.value : exist.value,
+          label: n.label || exist.label,
+          x: exist.x,
+          y: exist.y,
+        };
+      }
+      return {
+        ...n,
+        x: pos?.x ?? 450,
+        y: pos?.y ?? 325,
+      };
+    }),
+  };
 }
