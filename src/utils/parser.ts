@@ -1,4 +1,5 @@
 import { GraphData, GraphNode, GraphEdge, GraphSettings, NodeType, GraphTab } from '../types/graph';
+import { parseLeetCode2DArray, parseParentArrayFormat, parseParentChildArrays } from './contestParser';
 
 // Standard colors
 export const DEFAULT_NODE_COLOR = '#3b82f6'; // Bright blue
@@ -130,6 +131,42 @@ export function parseGraphInput(
   currentSettings: GraphSettings,
   existingNodes?: Map<string, GraphNode>
 ): ParseResult {
+  // 1. LeetCode 2D array representation: e.g. `[[0,1],[1,2],[2,0]]` or `edges = [[0,1,5],[1,2,10]]`
+  const leetcode = parseLeetCode2DArray(rawText);
+  if (leetcode) {
+    const lines = leetcode.edgesText.split('\n');
+    const parsed = parseEdgeList(lines, {
+      ...currentSettings,
+      isWeighted: leetcode.isWeighted || currentSettings.isWeighted,
+    }, existingNodes);
+    return {
+      ...parsed,
+      settings: {
+        ...parsed.settings,
+        isWeighted: leetcode.isWeighted || parsed.settings.isWeighted,
+      },
+    };
+  }
+
+  // 2. 1D Parent Array format: e.g. `parent = [-1, 0, 0, 1, 1, 2]` or `[-1, 0, 0, 1, 1, 2]`
+  const parentArr = parseParentArrayFormat(rawText);
+  if (parentArr) {
+    const lines = parentArr.edgesText.split('\n');
+    return parseEdgeList(lines, {
+      ...currentSettings,
+      isZeroIndexed: parentArr.isZeroIndexed || currentSettings.isZeroIndexed,
+      nodeCountPreserved: parentArr.nodeCount,
+      treeRootId: parentArr.root ?? currentSettings.treeRootId,
+    }, existingNodes);
+  }
+
+  // 3. Two-line Parent & Child format: parent = [1, 1, 2]\nchild = [2, 3, 4]
+  const parentChild = parseParentChildArrays(rawText);
+  if (parentChild) {
+    const lines = parentChild.edgesText.split('\n');
+    return parseEdgeList(lines, currentSettings, existingNodes);
+  }
+
   const cleanLines = rawText
     .split('\n')
     .map(line => line.trim())

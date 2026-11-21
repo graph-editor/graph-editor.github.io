@@ -448,6 +448,27 @@ export function App() {
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  // Split multiple detected test cases into individual graph tabs
+  const handleSplitMultiTestcases = useCallback((cases: { name: string; text: string }[]) => {
+    const newTabs: GraphTab[] = cases.map((c, idx) => ({
+      id: `g${Date.now().toString(36)}_${idx}`,
+      name: c.name,
+      text: c.text,
+    }));
+    setTabs(newTabs);
+    setActiveTabId(newTabs[0].id);
+    setRawText(newTabs[0].text);
+
+    const existingNodeMap = new Map<string, GraphNode>();
+    const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(newTabs, settings, existingNodeMap);
+    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings);
+
+    setData(finalData);
+    pushState({ data: finalData, settings, rawText: newTabs[0].text, tabs: newTabs, activeTabId: newTabs[0].id });
+    setToastMessage(`Split into ${cases.length} graph tabs`);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [settings, pushState]);
+
   // Toggle explicit N M Header mode
   const handleToggleHeaderMode = (hasHeader: boolean) => {
     const newSettings = { ...settings, hasHeader };
@@ -1232,6 +1253,7 @@ export function App() {
           onSelectTab={handleSelectTab}
           onAddTab={handleAddTab}
           onCloseTab={handleCloseTab}
+          onSplitMultiTestcases={handleSplitMultiTestcases}
         />
 
         {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}

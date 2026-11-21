@@ -8,6 +8,7 @@ import {
   exportPngFromSvg,
 } from '../utils/export';
 import { serializeGraphToCPInput } from '../utils/parser';
+import { serializeToLeetCode } from '../utils/contestParser';
 import { buildShareUrl } from '../utils/share';
 
 interface ExportModalProps {
@@ -15,12 +16,12 @@ interface ExportModalProps {
   settings: GraphSettings;
   onClose: () => void;
   theme?: 'dark' | 'light';
-  initialTab?: 'cpp' | 'python' | 'text' | 'image' | 'share';
+  initialTab?: 'cpp' | 'python' | 'text' | 'leetcode' | 'image' | 'share';
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClose, theme = 'dark', initialTab = 'cpp' }) => {
   const isLight = theme === 'light';
-  const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'image' | 'share'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'leetcode' | 'image' | 'share'>(initialTab);
   const [includeHeader, setIncludeHeader] = useState(true);
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
@@ -33,6 +34,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
   const cppCode = generateCppAdjacencyList(data, settings);
   const pythonCode = generatePythonAdjacencyList(data, settings);
   const cpText = serializeGraphToCPInput(data, settings, includeHeader);
+  const leetcodeText = serializeToLeetCode(data, settings);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -118,6 +120,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
           >
             <Terminal size={14} />
             <span>CP Input Text</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('leetcode')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all cursor-pointer ${
+              activeTab === 'leetcode'
+                ? 'border-blue-500 text-blue-500 font-semibold'
+                : isLight ? 'border-transparent text-slate-600 hover:text-slate-900' : 'border-transparent text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <FileCode2 size={14} />
+            <span>LeetCode Array</span>
           </button>
           <button
             onClick={() => setActiveTab('image')}
@@ -215,6 +228,32 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
                 isLight ? 'bg-slate-50 border-slate-200 text-blue-700' : 'bg-neutral-950 border-neutral-800 text-blue-300'
               }`}>
                 {cpText}
+              </pre>
+            </div>
+          )}
+
+          {activeTab === 'leetcode' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className={`text-[11px] font-mono ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+                  LeetCode 2D Edge List ({data.edges.length} edges)
+                </span>
+                <button
+                  onClick={() => handleCopy(leetcodeText)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                    isLight
+                      ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-2xs'
+                      : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border-neutral-700'
+                  }`}
+                >
+                  {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  <span>{copied ? 'Copied!' : 'Copy LeetCode Array'}</span>
+                </button>
+              </div>
+              <pre className={`p-4 border rounded-xl text-xs font-mono overflow-x-auto leading-relaxed max-h-80 break-all whitespace-pre-wrap ${
+                isLight ? 'bg-slate-50 border-slate-200 text-emerald-700' : 'bg-neutral-950 border-neutral-800 text-emerald-400'
+              }`}>
+                {leetcodeText}
               </pre>
             </div>
           )}

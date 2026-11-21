@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   FileCode2,
   Cpu,
@@ -18,6 +18,8 @@ import {
   X,
 } from 'lucide-react';
 import { GraphData, GraphSettings, AlgorithmType, GraphTab } from '../types/graph';
+import { detectMultiTestcases } from '../utils/contestParser';
+import { ImportModal } from './ImportModal';
 import {
   generateBamboo,
   generateStar,
@@ -46,6 +48,7 @@ interface LeftPanelProps {
   onSelectTab?: (id: string) => void;
   onAddTab?: () => void;
   onCloseTab?: (id: string) => void;
+  onSplitMultiTestcases?: (cases: { name: string; text: string }[]) => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -66,6 +69,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onSelectTab,
   onAddTab,
   onCloseTab,
+  onSplitMultiTestcases,
 }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
@@ -73,6 +77,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   const [startNodeId, setStartNodeId] = useState<string>(data.nodes[0]?.id || (settings.isZeroIndexed ? '0' : '1'));
   const [copied, setCopied] = useState(false);
   const [singleNodeInput, setSingleNodeInput] = useState('');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Auto-detect multi-testcase inputs in the current raw text
+  const multiTestcaseDetection = useMemo(() => detectMultiTestcases(rawText), [rawText]);
 
   // Generator parameters
   const [presetN, setPresetN] = useState<number>(7);
@@ -441,6 +449,19 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans flex items-center gap-1 ${
+                  isLight
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 shadow-2xs font-medium'
+                    : 'bg-blue-950/40 border-blue-500/30 text-blue-300 hover:bg-blue-900/40 font-medium'
+                }`}
+                title="Import LeetCode [[u,v]], Parent Array, or Multi-Testcase CP Input"
+              >
+                <FileCode2 size={11} />
+                <span>Import</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => onToggleHeaderMode?.(!settings.hasHeader)}
                 className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans ${
                   settings.hasHeader
@@ -465,6 +486,30 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Multi-Testcase Auto-Detection Banner */}
+          {multiTestcaseDetection && (
+            <div
+              className={`mb-2 p-2 rounded-lg border flex items-center justify-between gap-2 text-xs transition-all ${
+                isLight ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles size={13} className="text-blue-500 shrink-0 animate-pulse" />
+                <span className="text-[11px] truncate">
+                  Detected <strong>{multiTestcaseDetection.count} Test Cases</strong> (T={multiTestcaseDetection.count})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSplitMultiTestcases?.(multiTestcaseDetection.testcases)}
+                className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-[10.5px] shrink-0 transition-colors shadow-2xs cursor-pointer"
+                title="Split into separate tabs and display all testcase graphs on canvas"
+              >
+                Split into Tabs
+              </button>
+            </div>
+          )}
 
           {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
           <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden focus-within:border-blue-500 ${
@@ -775,6 +820,20 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
       )}
       </aside>
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <ImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImportSingle={text => {
+            onRawTextChange(text);
+          }}
+          onImportMulti={cases => {
+            onSplitMultiTestcases?.(cases);
+          }}
+          theme={theme}
+        />
+      )}
     </>
   );
 };
