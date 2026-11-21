@@ -884,9 +884,16 @@ export function App() {
         setSettings(s => {
           const nextDirected = !s.isDirected;
           const next = { ...s, isDirected: nextDirected };
-          syncGraphToText(data, next);
-          const text = serializeGraphToCPInput(data, next, false);
-          pushState({ data, settings: next, rawText: text });
+          setData(prev => {
+            const nextData = {
+              ...prev,
+              edges: prev.edges.map(e => ({ ...e, directed: nextDirected })),
+            };
+            syncGraphToText(nextData, next);
+            const text = serializeGraphToCPInput(nextData, next, false);
+            pushState({ data: nextData, settings: next, rawText: text });
+            return nextData;
+          });
           return next;
         });
       } else if (key === 'w') {
@@ -950,10 +957,23 @@ export function App() {
         settings={settings}
         onUpdateSettings={s => {
           const merged = { ...settings, ...s };
+          if (s.isDirected !== undefined && s.isDirected !== settings.isDirected) {
+            setData(prev => {
+              const nextData = {
+                ...prev,
+                edges: prev.edges.map(e => ({ ...e, directed: s.isDirected! })),
+              };
+              syncGraphToText(nextData, merged);
+              const text = serializeGraphToCPInput(nextData, merged, false);
+              pushState({ data: nextData, settings: merged, rawText: text });
+              return nextData;
+            });
+          } else {
+            syncGraphToText(data, merged);
+            const text = serializeGraphToCPInput(data, merged, false);
+            pushState({ data, settings: merged, rawText: text });
+          }
           setSettings(merged);
-          syncGraphToText(data, merged);
-          const text = serializeGraphToCPInput(data, merged, false);
-          pushState({ data, settings: merged, rawText: text });
         }}
         onApplyLayout={handleApplyLayout}
         onClearGraph={handleClearGraph}

@@ -920,7 +920,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     data.edges.forEach(e => {
       const u = e.source;
       const v = e.target;
-      const key = u < v ? `${u}--${v}` : `${v}--${u}`;
+      const hasOpp = data.edges.some(oe => oe.id !== e.id && oe.source === v && oe.target === u);
+      const isDir = Boolean(e.directed || settings.isDirected || hasOpp);
+      const key = isDir ? `${u}->${v}` : (u < v ? `${u}--${v}` : `${v}--${u}`);
       pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
     });
 
@@ -928,7 +930,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     data.edges.forEach(e => {
       const u = e.source;
       const v = e.target;
-      const key = u < v ? `${u}--${v}` : `${v}--${u}`;
+      const hasOpp = data.edges.some(oe => oe.id !== e.id && oe.source === v && oe.target === u);
+      const isDir = Boolean(e.directed || settings.isDirected || hasOpp);
+      const key = isDir ? `${u}->${v}` : (u < v ? `${u}--${v}` : `${v}--${u}`);
       const total = pairCounts.get(key) || 1;
       const idx = currentIndices.get(key) || 0;
       currentIndices.set(key, idx + 1);
@@ -936,7 +940,29 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     });
 
     return map;
-  }, [data.edges]);
+  }, [data.edges, settings.isDirected]);
+
+  // Edges sorted so hovered/selected/highlighted edges are rendered on top
+  const renderedEdges = useMemo(() => {
+    return [...data.edges].sort((a, b) => {
+      const aStep = currentStep?.highlightedEdges.some(h => h.edgeId === a.id);
+      const bStep = currentStep?.highlightedEdges.some(h => h.edgeId === b.id);
+      if (aStep && !bStep) return 1;
+      if (!aStep && bStep) return -1;
+
+      const aSelected = selectedEdgeId === a.id || selectedEdgeIds.includes(a.id);
+      const bSelected = selectedEdgeId === b.id || selectedEdgeIds.includes(b.id);
+      if (aSelected && !bSelected) return 1;
+      if (!aSelected && bSelected) return -1;
+
+      const aHovered = hoveredEdgeId === a.id;
+      const bHovered = hoveredEdgeId === b.id;
+      if (aHovered && !bHovered) return 1;
+      if (!aHovered && bHovered) return -1;
+
+      return 0;
+    });
+  }, [data.edges, selectedEdgeId, selectedEdgeIds, hoveredEdgeId, currentStep]);
 
   // Nodes involved in selection for lasso enclosure
   const allSelectedNodesForLasso = useMemo(() => {
@@ -995,6 +1021,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const targetNode = nodeMap.get(edge.target);
     if (!sourceNode || !targetNode) return null;
 
+    // Check if there is an opposite edge between these two nodes in data.edges
+    const oppEdge = data.edges.find(e => e.id !== edge.id && e.source === edge.target && e.target === edge.source);
+    const hasOppositeEdge = Boolean(oppEdge);
+    const isDirected = Boolean(edge.directed || settings.isDirected || hasOppositeEdge);
     const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
     const isHovered = hoveredEdgeId === edge.id;
 
@@ -1011,91 +1041,37 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     );
     const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
 
-    const handleEdgeClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (e.shiftKey || activeTool === 'lasso') {
-        const nextEdges = selectedEdgeIds.includes(edge.id)
-          ? selectedEdgeIds.filter(id => id !== edge.id)
-          : [...selectedEdgeIds, edge.id];
-        onBatchSelect?.(selectedNodeIds, nextEdges);
-        onSelectEdge(edge.id);
-        return;
-      }
-      onSelectEdge(edge.id);
-      onSelectNode(null);
-      if (!selectedEdgeIds.includes(edge.id)) {
-        onBatchSelect?.([], []);
-      }
-    };
-
-    const handleEdgeMouseDown = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (e.button !== 0) return;
-      if (e.shiftKey) return;
-
-      const isEdgeInSelection =
-        selectedEdgeId === edge.id ||
-        selectedEdgeIds.includes(edge.id) ||
-        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
-
-      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
-        const world = screenToWorld(e.clientX, e.clientY);
-        dragOffsetRef.current = { x: 0, y: 0 };
-        dragNodeStartPosRef.current = { x: world.x, y: world.y };
-
-        const posMap = new Map<string, { x: number; y: number }>();
-        allSelectedNodesForLasso.forEach(n => {
-          posMap.set(n.id, { x: n.x, y: n.y });
-        });
-        batchDragStartPositionsRef.current = posMap;
-
-        setDraggingNodeId('__lasso_batch__');
-        return;
-      }
-    };
-
-    const handleEdgeTouchStart = (e: React.TouchEvent) => {
-      e.stopPropagation();
-      if (e.touches.length !== 1) return;
-
-      const isEdgeInSelection =
-        selectedEdgeId === edge.id ||
-        selectedEdgeIds.includes(edge.id) ||
-        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
-
-      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
-        const touch = e.touches[0];
-        const world = screenToWorld(touch.clientX, touch.clientY);
-        dragOffsetRef.current = { x: 0, y: 0 };
-        dragNodeStartPosRef.current = { x: world.x, y: world.y };
-
-        const posMap = new Map<string, { x: number; y: number }>();
-        allSelectedNodesForLasso.forEach(n => {
-          posMap.set(n.id, { x: n.x, y: n.y });
-        });
-        batchDragStartPositionsRef.current = posMap;
-
-        setDraggingNodeId('__lasso_batch__');
-        return;
-      }
-    };
-
     // Self loop
     if (edge.source === edge.target) {
+      const handleLoopClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (e.shiftKey || activeTool === 'lasso') {
+          const nextEdges = selectedEdgeIds.includes(edge.id)
+            ? selectedEdgeIds.filter(id => id !== edge.id)
+            : [...selectedEdgeIds, edge.id];
+          onBatchSelect?.(selectedNodeIds, nextEdges);
+          onSelectEdge(edge.id);
+          return;
+        }
+        onSelectEdge(edge.id);
+        onSelectNode(null);
+        if (!selectedEdgeIds.includes(edge.id)) {
+          onBatchSelect?.([], []);
+        }
+      };
+
       const sourceRadius = getNodeRadius(sourceNode);
       const x = sourceNode.x;
       const y = sourceNode.y - sourceRadius;
       const loopRadius = Math.max(22, sourceRadius + 4);
-      const endY = settings.isDirected ? y - 10 : y;
+      const endY = isDirected ? y - 10 : y;
       const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${endY}`;
 
       return (
         <g
           key={edge.id}
           className="edge-group cursor-pointer"
-          onClick={handleEdgeClick}
-          onMouseDown={handleEdgeMouseDown}
-          onTouchStart={handleEdgeTouchStart}
+          onClick={handleLoopClick}
           onMouseEnter={() => setHoveredEdgeId(edge.id)}
           onMouseLeave={() => setHoveredEdgeId(null)}
         >
@@ -1116,7 +1092,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             stroke={effectiveEdgeColor}
             strokeWidth={strokeWidth}
             strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
-            markerEnd={settings.isDirected ? `url(#${getMarkerId(effectiveEdgeColor)})` : undefined}
+            markerEnd={isDirected ? `url(#${getMarkerId(effectiveEdgeColor)})` : undefined}
           />
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
@@ -1163,26 +1139,36 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Parallel edge offset
     const stats = edgePairStats.get(edge.id) || { total: 1, index: 0 };
-    const isDirectedOpposite = settings.isDirected && data.edges.some(e => e.source === edge.target && e.target === edge.source);
+    const isWeighted = Boolean(settings.isWeighted || edge.weight !== undefined || (oppEdge && oppEdge.weight !== undefined));
 
     let curvature = 0;
-    if (stats.total > 1) {
-      const offsetStep = 32;
-      const centerOffset = (stats.total - 1) / 2;
-      curvature = (stats.index - centerOffset) * offsetStep;
-    } else if (isDirectedOpposite) {
-      curvature = 24;
+    // Rule: Multiple edges curve ONLY for weighted edges (e.g. parallel weighted edges or opposite weighted edges).
+    // For simple directed unweighted edges, it shows ONLY a straight line with both-side arrow.
+    if (isWeighted) {
+      if (stats.total > 1) {
+        const offsetStep = 32;
+        const centerOffset = (stats.total - 1) / 2;
+        curvature = (stats.index - centerOffset) * offsetStep;
+      } else if (hasOppositeEdge) {
+        // Distinct non-colliding curves for weighted opposing edges
+        curvature = 28;
+      }
+    } else {
+      curvature = 0;
     }
 
     const sourceRadius = getNodeRadius(sourceNode);
     const targetRadius = getNodeRadius(targetNode);
 
     // Arrowhead geometry: forward length from refX (2.5) to tip (12.5) is 10px, with 2.5px gap to node boundary
-    const arrowOffset = settings.isDirected ? 12.5 : 0;
+    const arrowOffset = isDirected ? 12.5 : 0;
+    // For bidirectional straight edges (like in CS Academy), start at the base of the opposite arrowhead
+    // so the stroke begins cleanly at the opposite arrow's base and does not occlude either arrowhead
+    const startOffset = (isDirected && hasOppositeEdge && Math.abs(curvature) < 1) ? arrowOffset : 0;
 
     // Node boundary intersection points
-    const startX = sourceNode.x + ux * sourceRadius;
-    const startY = sourceNode.y + uy * sourceRadius;
+    const startX = sourceNode.x + ux * (sourceRadius + startOffset);
+    const startY = sourceNode.y + uy * (sourceRadius + startOffset);
     const endX = targetNode.x - ux * (targetRadius + arrowOffset);
     const endY = targetNode.y - uy * (targetRadius + arrowOffset);
 
@@ -1192,6 +1178,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     if (Math.abs(curvature) < 1) {
       pathD = `M ${startX} ${startY} L ${endX} ${endY}`;
+      if (hasOppositeEdge) {
+        // Offset weight badge along the normal vector so both weights stay cleanly visible without colliding
+        labelX += nx * 18;
+        labelY += ny * 18;
+      }
     } else {
       const midX = (startX + endX) / 2 + nx * curvature;
       const midY = (startY + endY) / 2 + ny * curvature;
@@ -1202,6 +1193,91 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     const markerId = getMarkerId(effectiveEdgeColor);
 
+    const handleEdgeClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      let targetEdge = edge;
+      if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
+        if (selectedEdgeId === edge.id) {
+          targetEdge = oppEdge;
+        } else if (selectedEdgeId === oppEdge.id) {
+          targetEdge = edge;
+        } else {
+          const world = screenToWorld(e.clientX, e.clientY);
+          const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
+          const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
+          targetEdge = distToTarget <= distToSource ? edge : oppEdge;
+        }
+      }
+
+      if (e.shiftKey || activeTool === 'lasso') {
+        const nextEdges = selectedEdgeIds.includes(targetEdge.id)
+          ? selectedEdgeIds.filter(id => id !== targetEdge.id)
+          : [...selectedEdgeIds, targetEdge.id];
+        onBatchSelect?.(selectedNodeIds, nextEdges);
+        onSelectEdge(targetEdge.id);
+        return;
+      }
+      onSelectEdge(targetEdge.id);
+      onSelectNode(null);
+      if (!selectedEdgeIds.includes(targetEdge.id)) {
+        onBatchSelect?.([], []);
+      }
+    };
+
+    const handleEdgeMouseDown = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (e.button !== 0) return;
+      if (e.shiftKey) return;
+
+      const isEdgeInSelection =
+        selectedEdgeId === edge.id ||
+        selectedEdgeIds.includes(edge.id) ||
+        (oppEdge && (selectedEdgeId === oppEdge.id || selectedEdgeIds.includes(oppEdge.id))) ||
+        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
+
+      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        dragOffsetRef.current = { x: 0, y: 0 };
+        dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+        const posMap = new Map<string, { x: number; y: number }>();
+        allSelectedNodesForLasso.forEach(n => {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        });
+        batchDragStartPositionsRef.current = posMap;
+
+        setDraggingNodeId('__lasso_batch__');
+        return;
+      }
+    };
+
+    const handleEdgeTouchStart = (e: React.TouchEvent) => {
+      e.stopPropagation();
+      if (e.touches.length !== 1) return;
+
+      const isEdgeInSelection =
+        selectedEdgeId === edge.id ||
+        selectedEdgeIds.includes(edge.id) ||
+        (oppEdge && (selectedEdgeId === oppEdge.id || selectedEdgeIds.includes(oppEdge.id))) ||
+        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
+
+      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
+        const touch = e.touches[0];
+        const world = screenToWorld(touch.clientX, touch.clientY);
+        dragOffsetRef.current = { x: 0, y: 0 };
+        dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+        const posMap = new Map<string, { x: number; y: number }>();
+        allSelectedNodesForLasso.forEach(n => {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        });
+        batchDragStartPositionsRef.current = posMap;
+
+        setDraggingNodeId('__lasso_batch__');
+        return;
+      }
+    };
+
     return (
       <g
         key={edge.id}
@@ -1209,7 +1285,27 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         onClick={handleEdgeClick}
         onMouseDown={handleEdgeMouseDown}
         onTouchStart={handleEdgeTouchStart}
-        onMouseEnter={() => setHoveredEdgeId(edge.id)}
+        onMouseEnter={(e) => {
+          if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
+            const world = screenToWorld(e.clientX, e.clientY);
+            const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
+            const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
+            setHoveredEdgeId(distToTarget <= distToSource ? edge.id : oppEdge.id);
+          } else {
+            setHoveredEdgeId(edge.id);
+          }
+        }}
+        onMouseMove={(e) => {
+          if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
+            const world = screenToWorld(e.clientX, e.clientY);
+            const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
+            const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
+            const targetId = distToTarget <= distToSource ? edge.id : oppEdge.id;
+            if (hoveredEdgeId !== targetId) {
+              setHoveredEdgeId(targetId);
+            }
+          }
+        }}
         onMouseLeave={() => setHoveredEdgeId(null)}
       >
         {/* Invisible wider stroke for easy clicking */}
@@ -1234,7 +1330,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           stroke={effectiveEdgeColor}
           strokeWidth={strokeWidth}
           strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
-          markerEnd={settings.isDirected ? `url(#${markerId})` : undefined}
+          markerEnd={isDirected ? `url(#${markerId})` : undefined}
         />
 
         {/* Edge weight badge */}
@@ -1562,7 +1658,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#canvas-grid-dots)" pointerEvents="none" />
 
           {/* Edges Layer */}
-          <g className="edges-layer">{data.edges.map(renderEdge)}</g>
+          <g className="edges-layer">{renderedEdges.map(renderEdge)}</g>
 
           {/* Selection Lasso Enclosure (visible ONLY in Lasso tool with multiple selected nodes) */}
           {activeTool === 'lasso' && activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (

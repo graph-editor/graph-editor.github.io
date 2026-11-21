@@ -335,14 +335,18 @@ function parseEdgeList(
   const edgePairIndices = new Map<string, number>();
 
   rawEdges.forEach(e => {
-    const key = settings.isDirected
+    const hasOpposite = rawEdges.some(oe => oe.u === e.v && oe.v === e.u);
+    const isDir = Boolean(settings.isDirected || hasOpposite);
+    const key = isDir
       ? `${e.u}->${e.v}`
       : `${e.u < e.v ? e.u : e.v}-${e.u < e.v ? e.v : e.u}`;
     edgePairCount.set(key, (edgePairCount.get(key) || 0) + 1);
   });
 
   const edges: GraphEdge[] = rawEdges.map((e, index) => {
-    const key = settings.isDirected
+    const hasOpposite = rawEdges.some(oe => oe.u === e.v && oe.v === e.u);
+    const isDir = Boolean(settings.isDirected || hasOpposite);
+    const key = isDir
       ? `${e.u}->${e.v}`
       : `${e.u < e.v ? e.u : e.v}-${e.u < e.v ? e.v : e.u}`;
     const total = edgePairCount.get(key) || 1;
@@ -355,7 +359,7 @@ function parseEdgeList(
       target: e.v,
       weight: e.w,
       color: DEFAULT_EDGE_COLOR,
-      directed: settings.isDirected,
+      directed: isDir,
       parallelIndex: currentIdx,
       parallelTotal: total,
     };
