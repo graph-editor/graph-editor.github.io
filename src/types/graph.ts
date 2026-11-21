@@ -47,6 +47,7 @@ export interface GraphSettings {
   layout: LayoutMode;
   treeRootId?: string;
   nodeCountPreserved?: number; // Preserves isolated nodes when specified
+  hasHeader?: boolean; // When true, line 1 is parsed as N M header; when false (default), every line is an edge
 }
 
 export interface GraphStats {

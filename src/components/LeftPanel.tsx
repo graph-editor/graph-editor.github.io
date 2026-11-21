@@ -38,6 +38,7 @@ interface LeftPanelProps {
   onToggleCollapse: () => void;
   onSetCustomNodeCount?: (count: number | null) => void;
   onAddSingleNode?: (name?: string) => void;
+  onToggleHeaderMode?: (hasHeader: boolean) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -52,6 +53,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onToggleCollapse,
   onSetCustomNodeCount,
   onAddSingleNode,
+  onToggleHeaderMode,
   theme = 'dark',
 }) => {
   const isLight = theme === 'light';
@@ -370,21 +372,35 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <span className={`text-[11px] font-medium flex items-center gap-1.5 ${
               isLight ? 'text-slate-700' : 'text-neutral-300'
             }`}>
-              <span>Input</span>
-              <span className={`text-[10px] font-mono ${isLight ? 'text-slate-400' : 'text-neutral-500'}`}>(u v [w] or u [w])</span>
+              <span>Edges List</span>
+              <span className={`text-[10px] font-mono ${isLight ? 'text-slate-400' : 'text-neutral-500'}`}>(u v [w])</span>
             </span>
-            <button
-              type="button"
-              onClick={() => insertTemplate('clear')}
-              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors whitespace-nowrap cursor-pointer ${
-                isLight
-                  ? 'text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 hover:border-red-200'
-                  : 'text-neutral-400 hover:text-red-400 bg-neutral-950 hover:bg-red-950/30 border-neutral-800 hover:border-red-500/30'
-              }`}
-              title="Clear input"
-            >
-              Clear
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onToggleHeaderMode?.(!settings.hasHeader)}
+                className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans ${
+                  settings.hasHeader
+                    ? (isLight ? 'bg-amber-100 border-amber-300 text-amber-800 font-semibold shadow-2xs' : 'bg-amber-950/70 border-amber-500/40 text-amber-300 font-semibold')
+                    : (isLight ? 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 shadow-2xs' : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200')
+                }`}
+                title={settings.hasHeader ? "Header Mode is ON: First line is treated as 'N M'. Click to switch to Edges-Only" : "Edges-Only Mode (Default): All lines are parsed as edges. Click if your input includes an 'N M' header"}
+              >
+                {settings.hasHeader ? 'N M Header: ON' : 'Edges Only'}
+              </button>
+              <button
+                type="button"
+                onClick={() => insertTemplate('clear')}
+                className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors whitespace-nowrap cursor-pointer ${
+                  isLight
+                    ? 'text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 hover:border-red-200'
+                    : 'text-neutral-400 hover:text-red-400 bg-neutral-950 hover:bg-red-950/30 border-neutral-800 hover:border-red-500/30'
+                }`}
+                title="Clear input"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-4 gap-1 mb-2">
