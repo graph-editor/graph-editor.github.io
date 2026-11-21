@@ -15,8 +15,9 @@ import {
   Sliders,
   Flame,
   Plus,
+  X,
 } from 'lucide-react';
-import { GraphData, GraphSettings, AlgorithmType } from '../types/graph';
+import { GraphData, GraphSettings, AlgorithmType, GraphTab } from '../types/graph';
 import {
   generateBamboo,
   generateStar,
@@ -40,6 +41,11 @@ interface LeftPanelProps {
   onAddSingleNode?: (name?: string) => void;
   onToggleHeaderMode?: (hasHeader: boolean) => void;
   theme?: 'dark' | 'light';
+  tabs?: GraphTab[];
+  activeTabId?: string;
+  onSelectTab?: (id: string) => void;
+  onAddTab?: () => void;
+  onCloseTab?: (id: string) => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -55,6 +61,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onAddSingleNode,
   onToggleHeaderMode,
   theme = 'dark',
+  tabs,
+  activeTabId,
+  onSelectTab,
+  onAddTab,
+  onCloseTab,
 }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
@@ -237,6 +248,58 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       {/* TAB 1: Classic CP Text Editor */}
       {activeTab === 'editor' && (
         <div className="flex-1 flex flex-col p-3 overflow-hidden">
+          {/* Multi-Graph / Test Cases Tabs */}
+          {tabs && tabs.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-2.5 shrink-0">
+              {tabs.map((tab, idx) => {
+                const isActive = activeTabId === tab.id;
+                return (
+                  <div
+                    key={tab.id}
+                    onClick={() => onSelectTab?.(tab.id)}
+                    className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border transition-all shrink-0 ${
+                      isActive
+                        ? (isLight ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-semibold' : 'bg-blue-600 text-white border-blue-500 shadow-xs font-semibold')
+                        : isLight
+                        ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                        : 'bg-neutral-900 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:text-white'
+                    }`}
+                  >
+                    <span>{tab.name || `Graph ${idx + 1}`}</span>
+                    {tabs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCloseTab?.(tab.id);
+                        }}
+                        className={`p-0.5 rounded opacity-60 hover:opacity-100 transition-opacity cursor-pointer ${
+                          isActive ? 'hover:bg-blue-700 text-white' : 'hover:bg-neutral-700/50'
+                        }`}
+                        title="Remove Graph"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={onAddTab}
+                className={`flex items-center justify-center px-2 py-1 rounded-md border text-xs font-medium cursor-pointer transition-colors shrink-0 ${
+                  isLight
+                    ? 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
+                    : 'bg-neutral-900 text-neutral-300 border-neutral-800 hover:bg-neutral-800 hover:text-white'
+                }`}
+                title="Add New Graph / Test Case"
+              >
+                <Plus size={13} className="mr-0.5" />
+                <span>New</span>
+              </button>
+            </div>
+          )}
+
           {/* Quick Format & Action Row */}
           <div className="flex items-center justify-between mb-2">
             <span className={`text-[11px] font-semibold uppercase tracking-wider ${

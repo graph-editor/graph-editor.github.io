@@ -98,27 +98,102 @@ export function applyTreeLayout(
   const nodes = data.nodes;
   if (nodes.length === 0) return data;
 
-  // Find root
-  let root = rootId ? nodes.find(n => n.id === rootId) : undefined;
-  if (!root) {
-    // If directed, find node with in-degree 0
-    const inDegree = new Map<string, number>();
-    nodes.forEach(n => inDegree.set(n.id, 0));
-    data.edges.forEach(e => inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1));
-    const zeroIn = nodes.find(n => inDegree.get(n.id) === 0);
-    root = zeroIn || nodes[0];
-  }
-
-  // Build tree hierarchy via BFS from root
   const adj = new Map<string, string[]>();
-  nodes.forEach(n => adj.set(n.id, []));
+  const inDegree = new Map<string, number>();
+  nodes.forEach(n => {
+    adj.set(n.id, []);
+    inDegree.set(n.id, 0);
+  });
   data.edges.forEach(e => {
     adj.get(e.source)?.push(e.target);
     adj.get(e.target)?.push(e.source);
+    inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
   });
 
-  const levels = new Map<number, string[]>();
   const visited = new Set<string>();
+  const trees: Array<{ root: GraphNode; levels: Map<number, string[]>; maxWidth: number; maxDepth: number }> = [];
+
+  // If a specific rootId was requested, process that component first
+  if (rootId && nodes.some(n => n.id === rootId)) {
+    const specifiedRoot = nodes.find(n => n.id === rootId)!;
+    trees.push(buildTreeComponent(specifiedRoot, adj, visited));
+  }
+
+  // Process all remaining components (supporting Forests and Multi-Trees)
+  nodes.forEach(node => {
+    if (!visited.has(node.id)) {
+      // Find optimal root for this component:
+      // 1. A node with in-degree 0 in directed mode
+      // 2. Or the component member with the highest degree
+      const compMembers: GraphNode[] = [];
+      const q = [node.id];
+      const compVisited = new Set<string>([node.id]);
+
+      while (q.length > 0) {
+        const u = q.shift()!;
+        compMembers.push(nodes.find(n => n.id === u)!);
+        for (const v of adj.get(u) || []) {
+          if (!compVisited.has(v) && !visited.has(v)) {
+            compVisited.add(v);
+            q.push(v);
+          }
+        }
+      }
+
+      const zeroIn = compMembers.find(n => (inDegree.get(n.id) || 0) === 0);
+      const bestRoot = zeroIn || compMembers.reduce((best, cur) =>
+        (adj.get(cur.id)?.length || 0) > (adj.get(best.id)?.length || 0) ? cur : best, compMembers[0]
+      );
+
+      trees.push(buildTreeComponent(bestRoot, adj, visited));
+    }
+  });
+
+  // Calculate layout coordinates side-by-side for each tree
+  const totalMaxWidth = trees.reduce((sum, t) => sum + Math.max(1, t.maxWidth), 0);
+  const gap = 80;
+  const availableWidth = Math.max(width - 160 - (trees.length - 1) * gap, trees.length * 120);
+  const topY = 80;
+
+  const positions = new Map<string, { x: number; y: number }>();
+  let currentStartX = 80;
+
+  trees.forEach(tree => {
+    const treeWidth = (Math.max(1, tree.maxWidth) / totalMaxWidth) * availableWidth;
+    const rowHeight = Math.min(100, (height - 160) / Math.max(1, tree.maxDepth));
+
+    tree.levels.forEach((nodeIds, lvl) => {
+      const y = topY + lvl * rowHeight;
+      const count = nodeIds.length;
+      const stepX = treeWidth / (count + 1);
+      nodeIds.forEach((id, idx) => {
+        positions.set(id, {
+          x: currentStartX + (idx + 1) * stepX,
+          y,
+        });
+      });
+    });
+
+    currentStartX += treeWidth + gap;
+  });
+
+  const newNodes = nodes.map(node => ({
+    ...node,
+    x: positions.get(node.id)?.x ?? node.x,
+    y: positions.get(node.id)?.y ?? node.y,
+    vx: 0,
+    vy: 0,
+  }));
+
+  return { ...data, nodes: newNodes };
+}
+
+function buildTreeComponent(
+  root: GraphNode,
+  adj: Map<string, string[]>,
+  visited: Set<string>
+): { root: GraphNode; levels: Map<number, string[]>; maxWidth: number; maxDepth: number } {
+  const levels = new Map<number, string[]>();
   const queue: { id: string; level: number }[] = [{ id: root.id, level: 0 }];
   visited.add(root.id);
 
@@ -136,42 +211,14 @@ export function applyTreeLayout(
     }
   }
 
-  // Any unreached nodes go to disconnected bottom row
-  nodes.forEach(n => {
-    if (!visited.has(n.id)) {
-      const maxL = Math.max(...Array.from(levels.keys()), 0) + 1;
-      if (!levels.has(maxL)) levels.set(maxL, []);
-      levels.get(maxL)!.push(n.id);
-    }
-  });
-
-  const maxLevel = Math.max(...Array.from(levels.keys()), 0);
-  const rowHeight = Math.min(100, (height - 160) / Math.max(1, maxLevel));
-  const topY = 80;
-
-  const positions = new Map<string, { x: number; y: number }>();
-
+  let maxWidth = 1;
+  let maxDepth = 0;
   levels.forEach((nodeIds, lvl) => {
-    const y = topY + lvl * rowHeight;
-    const count = nodeIds.length;
-    const stepX = (width - 160) / (count + 1);
-    nodeIds.forEach((id, idx) => {
-      positions.set(id, {
-        x: 80 + (idx + 1) * stepX,
-        y,
-      });
-    });
+    maxWidth = Math.max(maxWidth, nodeIds.length);
+    maxDepth = Math.max(maxDepth, lvl);
   });
 
-  const newNodes = nodes.map(node => ({
-    ...node,
-    x: positions.get(node.id)?.x ?? node.x,
-    y: positions.get(node.id)?.y ?? node.y,
-    vx: 0,
-    vy: 0,
-  }));
-
-  return { ...data, nodes: newNodes };
+  return { root, levels, maxWidth, maxDepth };
 }
 
 export function applyDAGLayout(data: GraphData, width: number, height: number): GraphData {

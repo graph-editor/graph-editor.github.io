@@ -1,4 +1,4 @@
-import { GraphData, GraphNode, GraphEdge, GraphSettings, NodeType } from '../types/graph';
+import { GraphData, GraphNode, GraphEdge, GraphSettings, NodeType, GraphTab } from '../types/graph';
 
 // Standard colors
 export const DEFAULT_NODE_COLOR = '#3b82f6'; // Bright blue
@@ -583,50 +583,162 @@ function parseAdjacencyList(
 /**
  * Serializes GraphData back to standard input format.
  * Preserves isolated / single nodes by emitting them on separate lines.
+ * Supports filtering by graphIndex for multi-graph / testcase tabs.
  */
-export function serializeGraphToCPInput(data: GraphData, settings: GraphSettings, includeHeader = false): string {
+export function serializeGraphToCPInput(
+  data: GraphData,
+  settings: GraphSettings,
+  includeHeader = false,
+  targetGraphIndex?: number
+): string {
+  const nodeMap = new Map<string, GraphNode>();
+  data.nodes.forEach(n => nodeMap.set(n.id, n));
+
+  const cleanNodeLabel = (id: string): string => {
+    const node = nodeMap.get(id);
+    if (node?.label) return node.label;
+    if (id.includes(':')) return id.slice(id.indexOf(':') + 1);
+    return id;
+  };
+
+  const relevantEdges = targetGraphIndex !== undefined
+    ? data.edges.filter(e => (e.graphIndex ?? 0) === targetGraphIndex)
+    : data.edges;
+
+  const relevantNodes = targetGraphIndex !== undefined
+    ? data.nodes.filter(n => (n.graphIndex ?? 0) === targetGraphIndex)
+    : data.nodes;
+
   let out = '';
   if (includeHeader) {
-    const n = settings.nodeCountPreserved ? Math.max(settings.nodeCountPreserved, data.nodes.length) : data.nodes.length;
-    const m = data.edges.length;
+    const n = settings.nodeCountPreserved ? Math.max(settings.nodeCountPreserved, relevantNodes.length) : relevantNodes.length;
+    const m = relevantEdges.length;
     out += `${n} ${m}\n`;
   }
 
   const connectedNodes = new Set<string>();
-  for (const edge of data.edges) {
+  for (const edge of relevantEdges) {
     connectedNodes.add(edge.source);
     connectedNodes.add(edge.target);
+    const src = cleanNodeLabel(edge.source);
+    const tgt = cleanNodeLabel(edge.target);
     if (settings.isWeighted && edge.weight !== undefined) {
-      out += `${edge.source} ${edge.target} ${edge.weight}\n`;
+      out += `${src} ${tgt} ${edge.weight}\n`;
     } else {
-      out += `${edge.source} ${edge.target}\n`;
+      out += `${src} ${tgt}\n`;
     }
   }
 
   // Emit any node weights for connected nodes
-  const connectedWeightedNodes = data.nodes.filter(
+  const connectedWeightedNodes = relevantNodes.filter(
     n => connectedNodes.has(n.id) && n.weight !== undefined && n.weight !== null && String(n.weight).trim() !== ''
   );
   if (connectedWeightedNodes.length > 0) {
     let weightPrefix = '';
     for (const node of connectedWeightedNodes) {
-      weightPrefix += `${node.id} [${node.weight}]\n`;
+      weightPrefix += `${cleanNodeLabel(node.id)} [${node.weight}]\n`;
     }
     out = weightPrefix + out;
   }
 
   // Any node not connected to any edge is output as a single isolated node line (with weight if present)
-  for (const node of data.nodes) {
+  for (const node of relevantNodes) {
     if (!connectedNodes.has(node.id)) {
+      const lbl = cleanNodeLabel(node.id);
       if (node.weight !== undefined && node.weight !== null && String(node.weight).trim() !== '') {
-        out += `${node.id} [${node.weight}]\n`;
+        out += `${lbl} [${node.weight}]\n`;
       } else {
-        out += `${node.id}\n`;
+        out += `${lbl}\n`;
       }
     }
   }
 
   return out.trim();
+}
+
+/**
+ * Parses multiple graph tabs and combines them into a unified GraphData object.
+ * Each tab gets unique scoped IDs internally (e.g. `g1:1`, `g2:1`), while preserving clean
+ * user-facing labels (`1`, `2`) on the canvas and in serialization.
+ */
+export function parseAndMergeTabs(
+  tabs: GraphTab[],
+  settings: GraphSettings,
+  existingNodeMap?: Map<string, GraphNode>
+): { data: GraphData; settings: Partial<GraphSettings>; error?: string } {
+  if (tabs.length === 0) {
+    return { data: { nodes: [], edges: [] }, settings: {} };
+  }
+
+  if (tabs.length === 1) {
+    const singleResult = parseGraphInput(tabs[0].text, settings, existingNodeMap);
+    return {
+      ...singleResult,
+      data: {
+        nodes: singleResult.data.nodes.map(n => ({ ...n, graphIndex: 0 })),
+        edges: singleResult.data.edges.map(e => ({ ...e, graphIndex: 0 })),
+      },
+    };
+  }
+
+  const allNodes: GraphNode[] = [];
+  const allEdges: GraphEdge[] = [];
+  let combinedSettings: Partial<GraphSettings> = {};
+
+  tabs.forEach((tab, gIdx) => {
+    // Filter existing nodes relevant to this tab
+    const tabExistingNodes = new Map<string, GraphNode>();
+    existingNodeMap?.forEach((node, id) => {
+      if ((node.graphIndex ?? 0) === gIdx || id.startsWith(`${tab.id}:`)) {
+        const rawId = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+        tabExistingNodes.set(rawId, node);
+      }
+    });
+
+    const parsed = parseGraphInput(tab.text, settings, tabExistingNodes);
+    combinedSettings = { ...combinedSettings, ...parsed.settings };
+
+    // Initial offset for newly added graphs so they appear side-by-side
+    const offsetX = gIdx * 450;
+
+    parsed.data.nodes.forEach(n => {
+      const scopedId = `${tab.id}:${n.id}`;
+      const exist = existingNodeMap?.get(scopedId) || existingNodeMap?.get(n.id);
+
+      const x = exist ? exist.x : (n.x + offsetX);
+      const y = exist ? exist.y : n.y;
+
+      allNodes.push({
+        ...n,
+        id: scopedId,
+        label: n.label || n.id,
+        graphIndex: gIdx,
+        x,
+        y,
+        fx: exist?.fx,
+        fy: exist?.fy,
+      });
+    });
+
+    parsed.data.edges.forEach(e => {
+      const scopedSource = `${tab.id}:${e.source}`;
+      const scopedTarget = `${tab.id}:${e.target}`;
+      const scopedEdgeId = `${tab.id}:${e.id}`;
+
+      allEdges.push({
+        ...e,
+        id: scopedEdgeId,
+        source: scopedSource,
+        target: scopedTarget,
+        graphIndex: gIdx,
+      });
+    });
+  });
+
+  return {
+    data: { nodes: allNodes, edges: allEdges },
+    settings: combinedSettings,
+  };
 }
 
 /**

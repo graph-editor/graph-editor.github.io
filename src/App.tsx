@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode } from './types/graph';
-import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing, detectNodeType } from './utils/parser';
+import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode, GraphTab } from './types/graph';
+import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing, detectNodeType, parseAndMergeTabs } from './utils/parser';
 import {
   computeGraphStats,
   runBFS,
@@ -68,6 +68,11 @@ export function App() {
     layout: 'force',
     hasHeader: false,
   });
+
+  const [tabs, setTabs] = useState<GraphTab[]>([
+    { id: 'g1', name: 'Graph 1', text: INITIAL_CP_TEXT },
+  ]);
+  const [activeTabId, setActiveTabId] = useState<string>('g1');
 
   const [rawText, setRawText] = useState<string>(INITIAL_CP_TEXT);
   const [data, setData] = useState<GraphData>({ nodes: [], edges: [] });
@@ -143,8 +148,19 @@ export function App() {
     setSelectedNodeId(nodeId);
     if (nodeId) {
       setIsInspectorOpen(true);
+      // Auto-switch active tab to the graph that owns this node
+      if (tabs.length > 1) {
+        const node = data.nodes.find(n => n.id === nodeId);
+        if (node && node.graphIndex !== undefined && tabs[node.graphIndex]) {
+          const targetTab = tabs[node.graphIndex];
+          if (targetTab.id !== activeTabId) {
+            setActiveTabId(targetTab.id);
+            setRawText(targetTab.text);
+          }
+        }
+      }
     }
-  }, []);
+  }, [tabs, activeTabId, data.nodes]);
 
   // Zoom scale reported by Canvas
   const [zoomScale, setZoomScale] = useState<number>(1);
@@ -189,6 +205,8 @@ export function App() {
       setData(prevState.data);
       setSettings(prevState.settings);
       setRawText(prevState.rawText);
+      if (prevState.tabs) setTabs(prevState.tabs);
+      if (prevState.activeTabId) setActiveTabId(prevState.activeTabId);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
@@ -203,6 +221,8 @@ export function App() {
       setData(nextState.data);
       setSettings(nextState.settings);
       setRawText(nextState.rawText);
+      if (nextState.tabs) setTabs(nextState.tabs);
+      if (nextState.activeTabId) setActiveTabId(nextState.activeTabId);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
@@ -221,10 +241,13 @@ export function App() {
           setData(shared.data);
           setSettings(shared.settings);
           setRawText(shared.rawText);
+          const initialTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: shared.rawText }];
+          setTabs(initialTabs);
+          setActiveTabId('g1');
           if (shared.theme) {
             setTheme(shared.theme);
           }
-          initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText });
+          initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText, tabs: initialTabs, activeTabId: 'g1' });
           setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
           setTimeout(() => setToastMessage(null), 3500);
           return;
@@ -234,7 +257,10 @@ export function App() {
       const parsed = parseGraphInput(INITIAL_CP_TEXT, settings);
       const positioned = applyLayout(parsed.data, 'tree', { width: 900, height: 650 });
       setData(positioned);
-      initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT });
+      const initialTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: INITIAL_CP_TEXT }];
+      setTabs(initialTabs);
+      setActiveTabId('g1');
+      initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT, tabs: initialTabs, activeTabId: 'g1' });
     };
 
     loadInitial();
@@ -242,25 +268,32 @@ export function App() {
 
   // Update text when graph is edited visually (and not running algorithm)
   const syncGraphToText = useCallback((newData: GraphData, newSettings: GraphSettings) => {
-    const text = serializeGraphToCPInput(newData, newSettings, false);
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    const text = serializeGraphToCPInput(newData, newSettings, false, tabs.length > 1 ? activeIdx : undefined);
+    const nextTabs = tabs.map((t, idx) => idx === activeIdx ? { ...t, text } : t);
+    setTabs(nextTabs);
     setRawText(text);
-  }, []);
+  }, [tabs, activeTabId]);
 
   // Handle changes in the text editor - strictly preserves existing node positions without jumping
   const handleRawTextChange = (text: string) => {
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    const nextTabs = tabs.map((t, idx) => idx === activeIdx ? { ...t, text } : t);
+    setTabs(nextTabs);
+    setRawText(text);
+
     const existingNodeMap = new Map<string, GraphNode>();
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
-    const parsed = parseGraphInput(text, settings, existingNodeMap);
-    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, settings);
+    const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings);
 
     setData(finalData);
 
-    setRawText(text);
     const nextSettings = {
       ...settings,
-      ...parsed.settings,
-      nodeCountPreserved: parsed.detectedHeader?.n ?? settings.nodeCountPreserved,
+      ...parsedSettings,
+      nodeCountPreserved: parsedSettings.nodeCountPreserved ?? settings.nodeCountPreserved,
     };
     setSettings(nextSettings);
 
@@ -268,8 +301,63 @@ export function App() {
       clearTimeout(rawTextDebounceTimerRef.current);
     }
     rawTextDebounceTimerRef.current = setTimeout(() => {
-      pushState({ data: finalData, settings: nextSettings, rawText: text });
+      pushState({ data: finalData, settings: nextSettings, rawText: text, tabs: nextTabs, activeTabId });
     }, 400);
+  };
+
+  // Tab management handlers
+  const handleSelectTab = (tabId: string) => {
+    setActiveTabId(tabId);
+    const tab = tabs.find(t => t.id === tabId);
+    if (tab) {
+      setRawText(tab.text);
+    }
+  };
+
+  const handleAddTab = () => {
+    const nextIdx = tabs.length + 1;
+    const newId = 'g' + Date.now().toString(36);
+    // Starter tree / graph for the new component
+    const newText = `1 2\n2 3`;
+    const newTab: GraphTab = {
+      id: newId,
+      name: `Graph ${nextIdx}`,
+      text: newText,
+    };
+    const nextTabs = [...tabs, newTab];
+    setTabs(nextTabs);
+    setActiveTabId(newId);
+    setRawText(newText);
+
+    const existingNodeMap = new Map<string, GraphNode>();
+    data.nodes.forEach(n => existingNodeMap.set(n.id, n));
+
+    const { data: mergedData } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+    setData(mergedData);
+    pushState({ data: mergedData, settings, rawText: newText, tabs: nextTabs, activeTabId: newId });
+    setToastMessage(`Added Graph #${nextIdx}`);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleCloseTab = (tabId: string) => {
+    if (tabs.length <= 1) return;
+    const nextTabs = tabs.filter(t => t.id !== tabId);
+    const nextActiveId = activeTabId === tabId ? nextTabs[0].id : activeTabId;
+    setTabs(nextTabs);
+    setActiveTabId(nextActiveId);
+    const activeTab = nextTabs.find(t => t.id === nextActiveId);
+    if (activeTab) {
+      setRawText(activeTab.text);
+    }
+
+    const existingNodeMap = new Map<string, GraphNode>();
+    data.nodes.forEach(n => existingNodeMap.set(n.id, n));
+
+    const { data: mergedData } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+    setData(mergedData);
+    pushState({ data: mergedData, settings, rawText: activeTab?.text || '', tabs: nextTabs, activeTabId: nextActiveId });
+    setToastMessage('Removed graph');
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   // Toggle explicit N M Header mode
@@ -305,24 +393,32 @@ export function App() {
 
   // Visual Node Addition
   const handleAddNode = (x: number, y: number) => {
-    const existingNums = data.nodes
-      .filter(n => /^-?\d+$/.test(n.id))
-      .map(n => Number(n.id))
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    const activeTab = tabs[activeIdx];
+    const prefix = tabs.length > 1 ? `${activeTab.id}:` : '';
+
+    const tabNodes = data.nodes.filter(n => (n.graphIndex ?? 0) === activeIdx);
+    const existingNums = tabNodes
+      .map(n => n.label || (n.id.includes(':') ? n.id.slice(n.id.indexOf(':') + 1) : n.id))
+      .filter(id => /^-?\d+$/.test(id))
+      .map(Number)
       .filter(n => !isNaN(n));
+
     let nextNum = settings.isZeroIndexed ? 0 : 1;
     if (existingNums.length > 0) {
       nextNum = Math.max(...existingNums) + 1;
     }
-    const existingIds = new Set(data.nodes.map(n => n.id));
+    const existingIds = new Set(tabNodes.map(n => n.label || (n.id.includes(':') ? n.id.slice(n.id.indexOf(':') + 1) : n.id)));
     while (existingIds.has(String(nextNum))) {
       nextNum++;
     }
 
     const newNode: GraphNode = {
-      id: String(nextNum),
+      id: `${prefix}${nextNum}`,
       label: String(nextNum),
       nodeType: 'int',
       index: nextNum,
+      graphIndex: activeIdx,
       x,
       y,
       color: '#3b82f6',
@@ -335,8 +431,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     handleSelectNode(newNode.id);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    const text = serializeGraphToCPInput(nextData, settings, false, tabs.length > 1 ? activeIdx : undefined);
+    pushState({ data: nextData, settings, rawText: text, tabs, activeTabId });
   };
 
   // Add single node by custom label/identifier (e.g. from LeftPanel)
@@ -406,6 +502,7 @@ export function App() {
 
   // Visual Edge Addition
   const handleAddEdge = (sourceId: string, targetId: string) => {
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
     const newEdge: GraphEdge = {
       id: `e-${sourceId}-${targetId}-${Date.now()}`,
       source: sourceId,
@@ -413,6 +510,7 @@ export function App() {
       weight: settings.isWeighted ? 1 : undefined,
       color: '#64748b',
       directed: settings.isDirected,
+      graphIndex: activeIdx,
     };
 
     const nextData = {
@@ -422,8 +520,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     setSelectedEdgeId(newEdge.id);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    const text = serializeGraphToCPInput(nextData, settings, false, tabs.length > 1 ? activeIdx : undefined);
+    pushState({ data: nextData, settings, rawText: text, tabs, activeTabId });
   };
 
   // Update Node Position (from dragging - always updates coordinates directly)
@@ -1014,6 +1112,11 @@ export function App() {
           onAddSingleNode={handleAddSingleNode}
           onToggleHeaderMode={handleToggleHeaderMode}
           theme={theme}
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSelectTab={handleSelectTab}
+          onAddTab={handleAddTab}
+          onCloseTab={handleCloseTab}
         />
 
         {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}

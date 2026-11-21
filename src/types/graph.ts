@@ -16,6 +16,7 @@ export interface GraphNode {
   value?: string | number; // Backward-compatible alias for weight
   annotation?: string;
   badge?: string; // e.g. "Root", "Cut", "LCA"
+  graphIndex?: number; // 0-based testcase/graph index for multi-graph mode
 }
 
 export interface GraphEdge {
@@ -31,6 +32,13 @@ export interface GraphEdge {
   label?: string;
   parallelIndex?: number;
   parallelTotal?: number;
+  graphIndex?: number; // 0-based testcase/graph index for multi-graph mode
+}
+
+export interface GraphTab {
+  id: string;
+  name: string;
+  text: string;
 }
 
 export interface GraphData {

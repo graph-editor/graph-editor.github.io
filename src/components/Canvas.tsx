@@ -1015,6 +1015,55 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return { minX, maxX, minY, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
   }, [displayLassoPoints]);
 
+  // Dynamic bounding boxes for multi-graph / test cases on the same canvas
+  const graphBoundingBoxes = useMemo(() => {
+    const groups = new Map<number, GraphNode[]>();
+    data.nodes.forEach(n => {
+      const gIdx = n.graphIndex ?? 0;
+      if (!groups.has(gIdx)) groups.set(gIdx, []);
+      groups.get(gIdx)!.push(n);
+    });
+
+    if (groups.size <= 1) return [];
+
+    const boxes: Array<{
+      graphIndex: number;
+      xMin: number;
+      xMax: number;
+      yMin: number;
+      yMax: number;
+      nodeCount: number;
+      edgeCount: number;
+    }> = [];
+
+    groups.forEach((nodes, gIdx) => {
+      if (nodes.length === 0) return;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      nodes.forEach(n => {
+        const r = getNodeRadius(n);
+        minX = Math.min(minX, n.x - r);
+        maxX = Math.max(maxX, n.x + r);
+        minY = Math.min(minY, n.y - r);
+        maxY = Math.max(maxY, n.y + r);
+      });
+
+      const pad = 36;
+      const edgesInGraph = data.edges.filter(e => (e.graphIndex ?? 0) === gIdx).length;
+
+      boxes.push({
+        graphIndex: gIdx,
+        xMin: minX - pad,
+        xMax: maxX + pad,
+        yMin: minY - pad,
+        yMax: maxY + pad,
+        nodeCount: nodes.length,
+        edgeCount: edgesInGraph,
+      });
+    });
+
+    return boxes;
+  }, [data.nodes, data.edges, getNodeRadius]);
+
   // Render edge path (Straight, Curved for multi-edges, or Looped for self-loops)
   const renderEdge = (edge: GraphEdge) => {
     const sourceNode = nodeMap.get(edge.source);
@@ -1688,6 +1737,63 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         <g transform={`translate(${viewTransform.x}, ${viewTransform.y}) scale(${viewTransform.scale})`}>
           {/* Subtle Dot Grid Layer */}
           <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#canvas-grid-dots)" pointerEvents="none" />
+
+          {/* Multi-Graph / Test Cases Bounding Enclosures */}
+          {graphBoundingBoxes.length > 0 && (
+            <g className="graph-bounding-boxes-layer pointer-events-none select-none">
+              {graphBoundingBoxes.map(box => {
+                const width = Math.max(90, box.xMax - box.xMin);
+                const height = Math.max(70, box.yMax - box.yMin);
+                const colors = isLight
+                  ? ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626']
+                  : ['#38bdf8', '#a855f7', '#34d399', '#fbbf24', '#f87171'];
+                const boxColor = colors[box.graphIndex % colors.length];
+
+                return (
+                  <g key={`bbox-${box.graphIndex}`}>
+                    {/* Dashed outer boundary */}
+                    <rect
+                      x={box.xMin}
+                      y={box.yMin}
+                      width={width}
+                      height={height}
+                      rx={16}
+                      fill={boxColor}
+                      fillOpacity={isLight ? 0.03 : 0.04}
+                      stroke={boxColor}
+                      strokeWidth={1.6}
+                      strokeDasharray="6,6"
+                      strokeOpacity={isLight ? 0.45 : 0.55}
+                    />
+                    {/* Title Tag Pill */}
+                    <g transform={`translate(${box.xMin + 14}, ${box.yMin - 12})`}>
+                      <rect
+                        x="0"
+                        y="0"
+                        width={Math.max(72, 70 + (box.nodeCount > 9 ? 8 : 0) + (box.edgeCount > 9 ? 8 : 0))}
+                        height="22"
+                        rx="11"
+                        fill={isLight ? '#ffffff' : '#0b0f19'}
+                        stroke={boxColor}
+                        strokeWidth="1.4"
+                        filter="url(#badge-shadow)"
+                      />
+                      <text
+                        x={10}
+                        y={14.5}
+                        fill={boxColor}
+                        fontSize="11"
+                        fontFamily={CANVAS_MONO_FONT}
+                        fontWeight="bold"
+                      >
+                        #{box.graphIndex + 1} • {box.nodeCount}V {box.edgeCount}E
+                      </text>
+                    </g>
+                  </g>
+                );
+              })}
+            </g>
+          )}
 
           {/* Edges Layer */}
           <g className="edges-layer">{renderedEdges.map(renderEdge)}</g>

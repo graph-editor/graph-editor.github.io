@@ -1,10 +1,12 @@
 import { useRef, useState, useCallback } from 'react';
-import { GraphData, GraphSettings } from '../types/graph';
+import { GraphData, GraphSettings, GraphTab } from '../types/graph';
 
 export interface HistoryState {
   data: GraphData;
   settings: GraphSettings;
   rawText: string;
+  tabs?: GraphTab[];
+  activeTabId?: string;
 }
 
 function cloneData(data: GraphData): GraphData {
@@ -16,6 +18,15 @@ function cloneData(data: GraphData): GraphData {
 
 function isStateEqual(a: HistoryState, b: HistoryState): boolean {
   if (a.rawText !== b.rawText) return false;
+  if (a.activeTabId !== b.activeTabId) return false;
+  if ((a.tabs?.length || 0) !== (b.tabs?.length || 0)) return false;
+  if (a.tabs && b.tabs) {
+    for (let i = 0; i < a.tabs.length; i++) {
+      if (a.tabs[i].id !== b.tabs[i].id || a.tabs[i].text !== b.tabs[i].text || a.tabs[i].name !== b.tabs[i].name) {
+        return false;
+      }
+    }
+  }
   if (
     a.settings.isDirected !== b.settings.isDirected ||
     a.settings.isWeighted !== b.settings.isWeighted ||
@@ -38,7 +49,8 @@ function isStateEqual(a: HistoryState, b: HistoryState): boolean {
       Math.abs(na.y - nb.y) > 0.5 ||
       na.label !== nb.label ||
       na.weight !== nb.weight ||
-      na.color !== nb.color
+      na.color !== nb.color ||
+      na.graphIndex !== nb.graphIndex
     ) {
       return false;
     }
@@ -53,7 +65,8 @@ function isStateEqual(a: HistoryState, b: HistoryState): boolean {
       ea.weight !== eb.weight ||
       ea.directed !== eb.directed ||
       ea.color !== eb.color ||
-      ea.style !== eb.style
+      ea.style !== eb.style ||
+      ea.graphIndex !== eb.graphIndex
     ) {
       return false;
     }
@@ -69,6 +82,8 @@ export function useGraphHistory(initialState?: HistoryState) {
             data: cloneData(initialState.data),
             settings: { ...initialState.settings },
             rawText: initialState.rawText,
+            tabs: initialState.tabs ? initialState.tabs.map(t => ({ ...t })) : undefined,
+            activeTabId: initialState.activeTabId,
           },
         ]
       : []
@@ -88,6 +103,8 @@ export function useGraphHistory(initialState?: HistoryState) {
         data: cloneData(state.data),
         settings: { ...state.settings },
         rawText: state.rawText,
+        tabs: state.tabs ? state.tabs.map(t => ({ ...t })) : undefined,
+        activeTabId: state.activeTabId,
       };
       historyRef.current = [cloned];
       indexRef.current = 0;
@@ -107,6 +124,8 @@ export function useGraphHistory(initialState?: HistoryState) {
         data: cloneData(state.data),
         settings: { ...state.settings },
         rawText: state.rawText,
+        tabs: state.tabs ? state.tabs.map(t => ({ ...t })) : undefined,
+        activeTabId: state.activeTabId,
       };
 
       // Discard any redo states ahead of the current pointer
