@@ -25,6 +25,7 @@ interface BottomStatusBarProps {
   isPhysicsActive: boolean;
   onTogglePhysics: () => void;
   theme?: 'dark' | 'light';
+  saveStatus?: 'saved' | 'saving';
 }
 
 export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
@@ -38,6 +39,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
   isPhysicsActive,
   onTogglePhysics,
   theme = 'dark',
+  saveStatus,
 }) => {
   const isLight = theme === 'light';
   return (
@@ -154,8 +156,30 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         </a>
       </div>
 
-      {/* Right: Zoom, Fit & Physics */}
+      {/* Right: Auto-Save Status, Zoom, Fit & Physics */}
       <div className="flex items-center gap-2">
+        {saveStatus && (
+          <div
+            className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans transition-all border ${
+              isLight
+                ? 'bg-slate-50 border-slate-200 text-slate-600'
+                : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+            }`}
+            title="Auto-saved to browser local storage. Your graphs persist across page refreshes."
+          >
+            {saveStatus === 'saved' ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">Saved</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="font-medium text-amber-600 dark:text-amber-400">Saving...</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Zoom Controls */}
         <div className={`flex items-center gap-1 px-1 py-0.5 rounded border ${

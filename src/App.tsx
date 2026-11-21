@@ -36,6 +36,7 @@ import { BatchActionToolbar } from './components/BatchActionToolbar';
 import { ShareModal } from './components/ShareModal';
 import { useGraphHistory } from './hooks/useGraphHistory';
 import { parseGraphFromHash } from './utils/share';
+import { loadSavedState, saveStateToStorage, SavedGraphState } from './utils/storage';
 import { Link2 } from 'lucide-react';
 
 // Initial CP Graph (Tree edges without manual N M header)
@@ -61,21 +62,45 @@ export function App() {
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<GraphSettings>({
-    isDirected: false,
-    isWeighted: false,
-    isZeroIndexed: false,
-    layout: 'force',
-    hasHeader: false,
+  // Synchronously restore saved state from localStorage (unless shared URL hash is present)
+  const [savedInitial] = useState<SavedGraphState | null>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && (hash.startsWith('#graph=') || hash.startsWith('#data='))) {
+        return null;
+      }
+    }
+    return loadSavedState();
   });
 
-  const [tabs, setTabs] = useState<GraphTab[]>([
-    { id: 'g1', name: 'Graph 1', text: INITIAL_CP_TEXT },
-  ]);
-  const [activeTabId, setActiveTabId] = useState<string>('g1');
+  const [settings, setSettings] = useState<GraphSettings>(() => {
+    return savedInitial?.settings || {
+      isDirected: false,
+      isWeighted: false,
+      isZeroIndexed: false,
+      layout: 'force',
+      hasHeader: false,
+    };
+  });
 
-  const [rawText, setRawText] = useState<string>(INITIAL_CP_TEXT);
-  const [data, setData] = useState<GraphData>({ nodes: [], edges: [] });
+  const [tabs, setTabs] = useState<GraphTab[]>(() => {
+    return savedInitial?.tabs || [
+      { id: 'g1', name: 'Graph 1', text: INITIAL_CP_TEXT },
+    ];
+  });
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    return savedInitial?.activeTabId || 'g1';
+  });
+
+  const [rawText, setRawText] = useState<string>(() => {
+    return savedInitial?.rawText ?? INITIAL_CP_TEXT;
+  });
+  const [data, setData] = useState<GraphData>(() => {
+    return savedInitial?.data || { nodes: [], edges: [] };
+  });
+
+  // Track auto-save status: 'saved' | 'saving'
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
 
   // Undo / Redo History Stack
   const { canUndo, canRedo, pushState, undo, redo, initHistory } = useGraphHistory();
@@ -231,7 +256,10 @@ export function App() {
     }
   }, [redo]);
 
-  // Parse initial graph once on mount, or restore from URL hash (#graph=...)
+  // Ref to ensure auto-save does not overwrite before initial load finishes
+  const isInitialLoadDoneRef = useRef(false);
+
+  // Parse initial graph once on mount, or restore from URL hash (#graph=...) or localStorage
   useEffect(() => {
     const loadInitial = async () => {
       const hash = typeof window !== 'undefined' ? window.location.hash : '';
@@ -248,12 +276,28 @@ export function App() {
             setTheme(shared.theme);
           }
           initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText, tabs: initialTabs, activeTabId: 'g1' });
+          saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: shared.rawText, data: shared.data, settings: shared.settings });
           setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
           setTimeout(() => setToastMessage(null), 3500);
+          isInitialLoadDoneRef.current = true;
           return;
         }
       }
 
+      // If restored from localStorage synchronously:
+      if (savedInitial) {
+        initHistory({
+          data: savedInitial.data,
+          settings: savedInitial.settings,
+          rawText: savedInitial.rawText,
+          tabs: savedInitial.tabs,
+          activeTabId: savedInitial.activeTabId,
+        });
+        isInitialLoadDoneRef.current = true;
+        return;
+      }
+
+      // First-time visit fallback: initialize starter graph
       const parsed = parseGraphInput(INITIAL_CP_TEXT, settings);
       const positioned = applyLayout(parsed.data, 'tree', { width: 900, height: 650 });
       setData(positioned);
@@ -261,9 +305,41 @@ export function App() {
       setTabs(initialTabs);
       setActiveTabId('g1');
       initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT, tabs: initialTabs, activeTabId: 'g1' });
+      saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: INITIAL_CP_TEXT, data: positioned, settings });
+      isInitialLoadDoneRef.current = true;
     };
 
     loadInitial();
+  }, []);
+
+  // Ref tracking latest state for synchronous saving
+  const stateRef = useRef({ tabs, activeTabId, rawText, data, settings });
+  stateRef.current = { tabs, activeTabId, rawText, data, settings };
+
+  // Debounced auto-save to localStorage
+  useEffect(() => {
+    if (!isInitialLoadDoneRef.current) return;
+    setSaveStatus('saving');
+    const timer = setTimeout(() => {
+      saveStateToStorage(stateRef.current);
+      setSaveStatus('saved');
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [tabs, activeTabId, rawText, data, settings]);
+
+  // Synchronous auto-save on page refresh/close (beforeunload / pagehide)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isInitialLoadDoneRef.current) {
+        saveStateToStorage(stateRef.current);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+    };
   }, []);
 
   // Update text when graph is edited visually (and not running algorithm)
@@ -839,12 +915,37 @@ export function App() {
   // Clear Graph
   const handleClearGraph = () => {
     const empty = { nodes: [], edges: [] };
-    setData(empty);
-    setRawText('');
-    setSelectedNodeId(null);
-    setSelectedEdgeId(null);
-    setAlgorithmSteps(null);
-    pushState({ data: empty, settings, rawText: '' });
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    if (tabs.length <= 1) {
+      const resetTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: '' }];
+      setTabs(resetTabs);
+      setActiveTabId('g1');
+      setRawText('');
+      setData(empty);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedNodeIds([]);
+      setSelectedEdgeIds([]);
+      setAlgorithmSteps(null);
+      pushState({ data: empty, settings, rawText: '', tabs: resetTabs, activeTabId: 'g1' });
+    } else {
+      // Multiple tabs: clear the active tab's edges
+      const nextTabs = tabs.map((t, idx) => idx === activeIdx ? { ...t, text: '' } : t);
+      setTabs(nextTabs);
+      setRawText('');
+      const existingNodeMap = new Map<string, GraphNode>();
+      data.nodes.filter(n => (n.graphIndex ?? 0) !== activeIdx).forEach(n => existingNodeMap.set(n.id, n));
+      const { data: mergedData } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+      setData(mergedData);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedNodeIds([]);
+      setSelectedEdgeIds([]);
+      setAlgorithmSteps(null);
+      pushState({ data: mergedData, settings, rawText: '', tabs: nextTabs, activeTabId });
+    }
+    setToastMessage('Cleared graph');
+    setTimeout(() => setToastMessage(null), 2000);
   };
 
   // Run CP Algorithm
@@ -1255,6 +1356,7 @@ export function App() {
         isPhysicsActive={isPhysicsActive}
         onTogglePhysics={() => setIsPhysicsActive(!isPhysicsActive)}
         theme={theme}
+        saveStatus={saveStatus}
       />
 
       {/* Export Modal Dialog */}
