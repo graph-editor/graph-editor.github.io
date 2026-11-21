@@ -1086,7 +1086,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       const x = sourceNode.x;
       const y = sourceNode.y - sourceRadius;
       const loopRadius = Math.max(22, sourceRadius + 4);
-      const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${y}`;
+      const endY = settings.isDirected ? y - 10 : y;
+      const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${endY}`;
 
       return (
         <g
@@ -1176,11 +1177,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const sourceRadius = getNodeRadius(sourceNode);
     const targetRadius = getNodeRadius(targetNode);
 
+    // Arrowhead geometry: forward length from refX (2.5) to tip (12.5) is 10px, with 2.5px gap to node boundary
+    const arrowOffset = settings.isDirected ? 12.5 : 0;
+
     // Node boundary intersection points
     const startX = sourceNode.x + ux * sourceRadius;
     const startY = sourceNode.y + uy * sourceRadius;
-    const endX = targetNode.x - ux * (targetRadius + (settings.isDirected ? 2.5 : 0));
-    const endY = targetNode.y - uy * (targetRadius + (settings.isDirected ? 2.5 : 0));
+    const endX = targetNode.x - ux * (targetRadius + arrowOffset);
+    const endY = targetNode.y - uy * (targetRadius + arrowOffset);
 
     let pathD = '';
     let labelX = (startX + endX) / 2;
@@ -1506,37 +1510,49 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#0f172a" floodOpacity={isLight ? 0.10 : 0.40} />
           </filter>
 
-          {/* Dynamic Arrowheads for each color */}
+          {/* Dynamic Arrowheads for each color - Crisp, professional solid triangle with clean docking */}
           {arrowheadColors.map(c => {
             const id = getMarkerId(c);
             return (
               <marker
                 key={id}
                 id={id}
-                viewBox="0 0 10 10"
-                refX="8.5"
-                refY="5"
+                viewBox="0 0 14 14"
+                refX="2.5"
+                refY="7"
                 markerUnits="userSpaceOnUse"
-                markerWidth="13"
-                markerHeight="13"
+                markerWidth="14"
+                markerHeight="14"
                 orient="auto-start-reverse"
               >
-                <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={c} />
+                <path
+                  d="M 1.5 2 L 12.5 7 L 1.5 12 Z"
+                  fill={c}
+                  stroke={c}
+                  strokeWidth="0.8"
+                  strokeLinejoin="round"
+                />
               </marker>
             );
           })}
           {/* Fallback default arrowhead in case any unusual color is referenced */}
           <marker
             id="arrowhead-default"
-            viewBox="0 0 10 10"
-            refX="8.5"
-            refY="5"
+            viewBox="0 0 14 14"
+            refX="2.5"
+            refY="7"
             markerUnits="userSpaceOnUse"
-            markerWidth="13"
-            markerHeight="13"
+            markerWidth="14"
+            markerHeight="14"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={isLight ? '#334155' : '#94a3b8'} />
+            <path
+              d="M 1.5 2 L 12.5 7 L 1.5 12 Z"
+              fill={isLight ? '#334155' : '#94a3b8'}
+              stroke={isLight ? '#334155' : '#94a3b8'}
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+            />
           </marker>
         </defs>
 
@@ -1609,19 +1625,30 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           )}
 
           {/* Temporary Connecting Edge when dragging in connect mode */}
-          {connectSourceId && mousePos && nodeMap.get(connectSourceId) && (
-            <line
-              x1={nodeMap.get(connectSourceId)!.x}
-              y1={nodeMap.get(connectSourceId)!.y}
-              x2={mousePos.x}
-              y2={mousePos.y}
-              stroke={isLight ? "#2563eb" : "#38bdf8"}
-              strokeWidth="3.2"
-              strokeDasharray="5,5"
-              className="pointer-events-none"
-              markerEnd={settings.isDirected ? `url(#${getMarkerId(isLight ? '#2563eb' : '#38bdf8')})` : undefined}
-            />
-          )}
+          {connectSourceId && mousePos && nodeMap.get(connectSourceId) && (() => {
+            const src = nodeMap.get(connectSourceId)!;
+            const dx = mousePos.x - src.x;
+            const dy = mousePos.y - src.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const ux = dx / dist;
+            const uy = dy / dist;
+            const arrowOffset = settings.isDirected ? 10 : 0;
+            const x2 = mousePos.x - ux * arrowOffset;
+            const y2 = mousePos.y - uy * arrowOffset;
+            return (
+              <line
+                x1={src.x}
+                y1={src.y}
+                x2={x2}
+                y2={y2}
+                stroke={isLight ? "#2563eb" : "#38bdf8"}
+                strokeWidth="3.2"
+                strokeDasharray="5,5"
+                className="pointer-events-none"
+                markerEnd={settings.isDirected ? `url(#${getMarkerId(isLight ? '#2563eb' : '#38bdf8')})` : undefined}
+              />
+            );
+          })()}
 
           {/* Nodes Layer */}
           <g className="nodes-layer">{data.nodes.map(renderNode)}</g>
