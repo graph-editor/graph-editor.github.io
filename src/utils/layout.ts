@@ -8,12 +8,72 @@ export function applyLayout(
     isDirected?: boolean;
     width?: number;
     height?: number;
+    targetGraphIndex?: number;
   }
 ): GraphData {
   const width = options?.width || 900;
   const height = options?.height || 650;
   const centerX = width / 2;
   const centerY = height / 2;
+
+  // If a specific targetGraphIndex was requested (multi-graph mode), lay out only that graph's subgraph
+  // while keeping all other graphs and nodes completely stationary at their current positions
+  if (options?.targetGraphIndex !== undefined) {
+    const targetIdx = options.targetGraphIndex;
+    const targetNodes = data.nodes.filter(n => (n.graphIndex ?? 0) === targetIdx);
+    if (targetNodes.length > 0 && targetNodes.length < data.nodes.length) {
+      const otherNodes = data.nodes.filter(n => (n.graphIndex ?? 0) !== targetIdx);
+      const targetNodeIds = new Set(targetNodes.map(n => n.id));
+      const targetEdges = data.edges.filter(e => targetNodeIds.has(e.source) && targetNodeIds.has(e.target));
+      const otherEdges = data.edges.filter(e => !targetNodeIds.has(e.source) || !targetNodeIds.has(e.target));
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      targetNodes.forEach(n => {
+        minX = Math.min(minX, n.x);
+        maxX = Math.max(maxX, n.x);
+        minY = Math.min(minY, n.y);
+        maxY = Math.max(maxY, n.y);
+      });
+      const boxWidth = Math.max(400, maxX - minX + 120);
+      const boxHeight = Math.max(300, maxY - minY + 120);
+      const origCenterX = (minX + maxX) / 2;
+      const origCenterY = (minY + maxY) / 2;
+
+      const laidOutTarget = applyLayout(
+        { nodes: targetNodes, edges: targetEdges },
+        mode,
+        {
+          ...options,
+          targetGraphIndex: undefined,
+          width: boxWidth,
+          height: boxHeight,
+        }
+      );
+
+      let newMinX = Infinity, newMaxX = -Infinity, newMinY = Infinity, newMaxY = -Infinity;
+      laidOutTarget.nodes.forEach(n => {
+        newMinX = Math.min(newMinX, n.x);
+        newMaxX = Math.max(newMaxX, n.x);
+        newMinY = Math.min(newMinY, n.y);
+        newMaxY = Math.max(newMaxY, n.y);
+      });
+      const newCenterX = (newMinX + newMaxX) / 2;
+      const newCenterY = (newMinY + newMaxY) / 2;
+      const shiftX = origCenterX - newCenterX;
+      const shiftY = origCenterY - newCenterY;
+
+      const shiftedTargetNodes = laidOutTarget.nodes.map(n => ({
+        ...n,
+        x: n.x + shiftX,
+        y: n.y + shiftY,
+      }));
+
+      return {
+        nodes: [...otherNodes, ...shiftedTargetNodes],
+        edges: [...otherEdges, ...laidOutTarget.edges],
+      };
+    }
+  }
 
   if (data.nodes.length === 1) {
     return {
@@ -395,9 +455,12 @@ export function applyForceLayoutStep(
   const damping = 0.85;
 
   for (let it = 0; it < iterations; it++) {
-    // 1. Repulsion between all pairs
+    // 1. Repulsion between node pairs (isolated per graph so independent graphs don't repel each other)
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
+        // Multi-graph physics isolation: nodes from different graphs never push each other
+        if ((nodes[i].graphIndex ?? 0) !== (nodes[j].graphIndex ?? 0)) continue;
+
         const dx = nodes[i].x - nodes[j].x;
         const dy = nodes[i].y - nodes[j].y;
         const distSq = dx * dx + dy * dy || 1;
@@ -444,6 +507,24 @@ export function applyForceLayoutStep(
       }
     }
 
+    // Precompute center of mass per graphIndex to isolate equilibrium
+    const graphCenters = new Map<number, { cx: number; cy: number }>();
+    const graphCounts = new Map<number, number>();
+    nodes.forEach(node => {
+      const g = node.graphIndex ?? 0;
+      const c = graphCenters.get(g) || { cx: 0, cy: 0 };
+      c.cx += node.x;
+      c.cy += node.y;
+      graphCenters.set(g, c);
+      graphCounts.set(g, (graphCounts.get(g) || 0) + 1);
+    });
+    graphCenters.forEach((c, g) => {
+      const cnt = graphCounts.get(g) || 1;
+      c.cx /= cnt;
+      c.cy /= cnt;
+    });
+    const hasMultipleGraphs = graphCenters.size > 1;
+
     // 3. Center gravity and update positions
     for (let i = 0; i < n; i++) {
       const node = nodes[i];
@@ -455,9 +536,14 @@ export function applyForceLayoutStep(
         continue;
       }
 
-      // Gravitate toward center
-      const gx = (centerX - node.x) * centerGravity;
-      const gy = (centerY - node.y) * centerGravity;
+      // Gravitate toward graph's own centroid (or canvas center if only 1 graph)
+      const g = node.graphIndex ?? 0;
+      const targetCenter = hasMultipleGraphs
+        ? (graphCenters.get(g) || { cx: centerX, cy: centerY })
+        : { cx: centerX, cy: centerY };
+
+      const gx = (targetCenter.cx - node.x) * centerGravity;
+      const gy = (targetCenter.cy - node.y) * centerGravity;
       node.vx = ((node.vx || 0) + gx) * damping;
       node.vy = ((node.vy || 0) + gy) * damping;
 
@@ -472,10 +558,12 @@ export function applyForceLayoutStep(
       node.x += node.vx;
       node.y += node.vy;
 
-      // Keep within bounds
-      const margin = 40;
-      node.x = Math.max(margin, Math.min(width - margin, node.x));
-      node.y = Math.max(margin, Math.min(height - margin, node.y));
+      // Keep within bounds if single graph; for multi-graph let user place anywhere
+      if (!hasMultipleGraphs) {
+        const margin = 40;
+        node.x = Math.max(margin, Math.min(width - margin, node.x));
+        node.y = Math.max(margin, Math.min(height - margin, node.y));
+      }
     }
   }
 

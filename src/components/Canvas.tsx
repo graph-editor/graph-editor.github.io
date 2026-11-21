@@ -166,6 +166,8 @@ interface CanvasProps {
   isPhysicsActive: boolean;
   onZoomChange?: (scale: number) => void;
   theme?: 'dark' | 'light';
+  activeGraphIndex?: number;
+  onSelectGraphTab?: (graphIndex: number) => void;
 }
 
 const CANVAS_MONO_FONT = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace";
@@ -192,6 +194,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   isPhysicsActive,
   onZoomChange,
   theme = 'dark',
+  activeGraphIndex = 0,
+  onSelectGraphTab,
 }, ref) => {
   const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -208,6 +212,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const batchDragStartPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const dragNodeStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const nodeClickStartPosRef = useRef<{ x: number; y: number; nodeId: string } | null>(null);
 
   // Connecting Edge state
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
@@ -343,7 +348,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           ids.forEach(id => onFinishDragNode(id));
         }
         batchDragStartPositionsRef.current.clear();
-      } else if (draggingNodeId !== '__lasso_batch__') {
+      } else if (draggingNodeId !== '__lasso_batch__' && !draggingNodeId.startsWith('__graph_box_')) {
         onFinishDragNode(draggingNodeId);
       }
       setDraggingNodeId(null);
@@ -529,14 +534,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
+    // Record position on pointer down to distinguish pure click (selection change) from dragging
+    nodeClickStartPosRef.current = { x: e.clientX, y: e.clientY, nodeId: node.id };
+
+    const nodeGIdx = node.graphIndex ?? 0;
     const isNodeInSelection =
       selectedNodeIds.includes(node.id) ||
       selectedNodeId === node.id ||
       allSelectedNodesForLasso.some(n => n.id === node.id);
 
     // If node is already part of the lasso/multi selection:
-    // Move all selected nodes & edges together as a group!
-    if (isNodeInSelection && allSelectedNodesForLasso.length > 1) {
+    // Move ONLY selected nodes that belong to the SAME graph!
+    const nodesToBatchMove = allSelectedNodesForLasso.filter(n => (n.graphIndex ?? 0) === nodeGIdx);
+    if (isNodeInSelection && nodesToBatchMove.length > 1) {
       const world = screenToWorld(e.clientX, e.clientY);
       dragOffsetRef.current = {
         x: node.x - world.x,
@@ -545,7 +555,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       dragNodeStartPosRef.current = { x: node.x, y: node.y };
 
       const posMap = new Map<string, { x: number; y: number }>();
-      allSelectedNodesForLasso.forEach(n => {
+      nodesToBatchMove.forEach(n => {
         posMap.set(n.id, { x: n.x, y: n.y });
       });
       batchDragStartPositionsRef.current = posMap;
@@ -593,11 +603,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
+    nodeClickStartPosRef.current = { x: touch.clientX, y: touch.clientY, nodeId: node.id };
+
+    const nodeGIdx = node.graphIndex ?? 0;
     const isNodeInSelection =
       selectedNodeIds.includes(node.id) ||
       selectedNodeId === node.id ||
       allSelectedNodesForLasso.some(n => n.id === node.id);
 
+    const nodesToBatchMove = allSelectedNodesForLasso.filter(n => (n.graphIndex ?? 0) === nodeGIdx);
     const world = screenToWorld(touch.clientX, touch.clientY);
     dragOffsetRef.current = {
       x: node.x - world.x,
@@ -605,9 +619,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     };
     dragNodeStartPosRef.current = { x: node.x, y: node.y };
 
-    if (isNodeInSelection && allSelectedNodesForLasso.length > 1) {
+    if (isNodeInSelection && nodesToBatchMove.length > 1) {
       const posMap = new Map<string, { x: number; y: number }>();
-      allSelectedNodesForLasso.forEach(n => {
+      nodesToBatchMove.forEach(n => {
         posMap.set(n.id, { x: n.x, y: n.y });
       });
       batchDragStartPositionsRef.current = posMap;
@@ -623,6 +637,77 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     batchDragStartPositionsRef.current.clear();
     setDraggingNodeId(node.id);
+  };
+
+  // Graph Bounding Box Mouse Down: moves the entire selected graph independently without moving other graphs
+  const handleGraphBoxMouseDown = (e: React.MouseEvent, graphIndex: number) => {
+    e.stopPropagation();
+    if (e.button !== 0) return; // Only primary button moves graph
+
+    onSelectGraphTab?.(graphIndex);
+
+    const graphNodes = data.nodes.filter(n => (n.graphIndex ?? 0) === graphIndex);
+    if (graphNodes.length === 0) return;
+
+    const graphNodeIds = graphNodes.map(n => n.id);
+    const graphEdgeIds = data.edges.filter(edge => {
+      const u = nodeMap.get(edge.source);
+      const v = nodeMap.get(edge.target);
+      return (u?.graphIndex ?? 0) === graphIndex && (v?.graphIndex ?? 0) === graphIndex;
+    }).map(edge => edge.id);
+
+    onBatchSelect?.(graphNodeIds, graphEdgeIds);
+    onSelectNode(null);
+    onSelectEdge(null);
+
+    const world = screenToWorld(e.clientX, e.clientY);
+    dragOffsetRef.current = { x: 0, y: 0 };
+    dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    graphNodes.forEach(n => {
+      posMap.set(n.id, { x: n.x, y: n.y });
+    });
+    batchDragStartPositionsRef.current = posMap;
+
+    setDraggingNodeId(`__graph_box_${graphIndex}__`);
+    showToast(`Moving Graph ${graphIndex + 1} (${graphNodes.length} nodes)`);
+  };
+
+  // Graph Bounding Box Touch Start: touch drag the entire selected graph independently
+  const handleGraphBoxTouchStart = (e: React.TouchEvent, graphIndex: number) => {
+    e.stopPropagation();
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    onSelectGraphTab?.(graphIndex);
+
+    const graphNodes = data.nodes.filter(n => (n.graphIndex ?? 0) === graphIndex);
+    if (graphNodes.length === 0) return;
+
+    const graphNodeIds = graphNodes.map(n => n.id);
+    const graphEdgeIds = data.edges.filter(edge => {
+      const u = nodeMap.get(edge.source);
+      const v = nodeMap.get(edge.target);
+      return (u?.graphIndex ?? 0) === graphIndex && (v?.graphIndex ?? 0) === graphIndex;
+    }).map(edge => edge.id);
+
+    onBatchSelect?.(graphNodeIds, graphEdgeIds);
+    onSelectNode(null);
+    onSelectEdge(null);
+
+    const world = screenToWorld(touch.clientX, touch.clientY);
+    dragOffsetRef.current = { x: 0, y: 0 };
+    dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    graphNodes.forEach(n => {
+      posMap.set(n.id, { x: n.x, y: n.y });
+    });
+    batchDragStartPositionsRef.current = posMap;
+
+    setDraggingNodeId(`__graph_box_${graphIndex}__`);
+    showToast(`Moving Graph ${graphIndex + 1}`);
   };
 
   // Lasso Enclosure Mouse Down: Move the entire selected graph by dragging the lasso area
@@ -740,7 +825,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }
     };
 
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
       // Finalize Lasso selection
       if (isLassoingRef.current) {
         isLassoingRef.current = false;
@@ -784,6 +869,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         }
       }
 
+      if (nodeClickStartPosRef.current) {
+        const { x, y, nodeId } = nodeClickStartPosRef.current;
+        nodeClickStartPosRef.current = null;
+        const distMoved = Math.hypot(e.clientX - x, e.clientY - y);
+        if (distMoved < 4 && !e.shiftKey) {
+          onSelectNode(nodeId);
+          onBatchSelect?.([nodeId], []);
+        }
+      }
+
       if (isPanning) {
         setIsPanning(false);
       }
@@ -796,7 +891,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             ids.forEach(id => onFinishDragNode(id));
           }
           batchDragStartPositionsRef.current.clear();
-        } else if (draggingNodeId !== '__lasso_batch__') {
+        } else if (draggingNodeId !== '__lasso_batch__' && !draggingNodeId.startsWith('__graph_box_')) {
           onFinishDragNode(draggingNodeId);
         }
         setDraggingNodeId(null);
@@ -871,6 +966,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     const handleGlobalTouchEnd = () => {
       lastPinchDistRef.current = null;
+      nodeClickStartPosRef.current = null;
+
       if (isPanning) {
         setIsPanning(false);
       }
@@ -883,7 +980,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             ids.forEach(id => onFinishDragNode(id));
           }
           batchDragStartPositionsRef.current.clear();
-        } else if (draggingNodeId !== '__lasso_batch__') {
+        } else if (draggingNodeId !== '__lasso_batch__' && !draggingNodeId.startsWith('__graph_box_')) {
           onFinishDragNode(draggingNodeId);
         }
         setDraggingNodeId(null);
@@ -1451,7 +1548,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const isHovered = hoveredNodeId === node.id;
     const isConnectSource = connectSourceId === node.id;
     const isNodeInBatch = allSelectedNodesForLasso.some(n => n.id === node.id);
-    const isDragging = draggingNodeId === node.id || (draggingNodeId !== null && isNodeInBatch);
+    const isDragging = draggingNodeId === node.id || (draggingNodeId !== null && (isNodeInBatch || batchDragStartPositionsRef.current.has(node.id)));
 
     // Algorithm state overrides
     const isActiveAlgo = currentStep?.activeNodes.includes(node.id);
@@ -1740,7 +1837,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
           {/* Multi-Graph / Test Cases Bounding Enclosures */}
           {graphBoundingBoxes.length > 0 && (
-            <g className="graph-bounding-boxes-layer pointer-events-none select-none">
+            <g className="graph-bounding-boxes-layer select-none">
               {graphBoundingBoxes.map(box => {
                 const width = Math.max(90, box.xMax - box.xMin);
                 const height = Math.max(70, box.yMax - box.yMin);
@@ -1748,10 +1845,13 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                   ? ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626']
                   : ['#38bdf8', '#a855f7', '#34d399', '#fbbf24', '#f87171'];
                 const boxColor = colors[box.graphIndex % colors.length];
+                const isActive = activeGraphIndex === box.graphIndex;
+                const isDraggingThis = draggingNodeId === `__graph_box_${box.graphIndex}__`;
+                const pillWidth = Math.max(130, 110 + (box.nodeCount > 9 ? 10 : 0) + (box.edgeCount > 9 ? 10 : 0));
 
                 return (
-                  <g key={`bbox-${box.graphIndex}`}>
-                    {/* Dashed outer boundary */}
+                  <g key={`bbox-${box.graphIndex}`} className="transition-opacity">
+                    {/* Interior Background Drag Target - enables moving this specific graph by dragging empty space inside */}
                     <rect
                       x={box.xMin}
                       y={box.yMin}
@@ -1759,34 +1859,98 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       height={height}
                       rx={16}
                       fill={boxColor}
-                      fillOpacity={isLight ? 0.03 : 0.04}
-                      stroke={boxColor}
-                      strokeWidth={1.6}
-                      strokeDasharray="6,6"
-                      strokeOpacity={isLight ? 0.45 : 0.55}
+                      fillOpacity={isActive ? (isLight ? 0.06 : 0.08) : (isLight ? 0.025 : 0.035)}
+                      className="cursor-grab active:cursor-grabbing pointer-events-auto"
+                      onMouseDown={(e) => handleGraphBoxMouseDown(e, box.graphIndex)}
+                      onTouchStart={(e) => handleGraphBoxTouchStart(e, box.graphIndex)}
                     />
-                    {/* Title Tag Pill */}
-                    <g transform={`translate(${box.xMin + 14}, ${box.yMin - 12})`}>
+
+                    {/* Outer Invisible Wide Perimeter for effortless border grabbing */}
+                    <rect
+                      x={box.xMin}
+                      y={box.yMin}
+                      width={width}
+                      height={height}
+                      rx={16}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={24}
+                      className="cursor-grab active:cursor-grabbing pointer-events-auto"
+                      onMouseDown={(e) => handleGraphBoxMouseDown(e, box.graphIndex)}
+                      onTouchStart={(e) => handleGraphBoxTouchStart(e, box.graphIndex)}
+                    />
+
+                    {/* Dashed Visual Boundary */}
+                    <rect
+                      x={box.xMin}
+                      y={box.yMin}
+                      width={width}
+                      height={height}
+                      rx={16}
+                      fill="none"
+                      stroke={boxColor}
+                      strokeWidth={isActive ? (isDraggingThis ? 2.5 : 2.0) : 1.5}
+                      strokeDasharray={isActive ? "7,4" : "6,6"}
+                      strokeOpacity={isActive ? (isLight ? 0.85 : 0.95) : (isLight ? 0.40 : 0.50)}
+                      className="pointer-events-none"
+                      filter={isActive ? (isLight ? "drop-shadow(0 0 4px rgba(37,99,235,0.25))" : "drop-shadow(0 0 6px rgba(56,189,248,0.35))") : undefined}
+                    />
+
+                    {/* Interactive Title Tag Pill with Move Handle */}
+                    <g
+                      transform={`translate(${box.xMin + 14}, ${box.yMin - 14})`}
+                      className="cursor-grab active:cursor-grabbing pointer-events-auto"
+                      onMouseDown={(e) => handleGraphBoxMouseDown(e, box.graphIndex)}
+                      onTouchStart={(e) => handleGraphBoxTouchStart(e, box.graphIndex)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectGraphTab?.(box.graphIndex);
+                      }}
+                    >
                       <rect
                         x="0"
                         y="0"
-                        width={Math.max(72, 70 + (box.nodeCount > 9 ? 8 : 0) + (box.edgeCount > 9 ? 8 : 0))}
-                        height="22"
-                        rx="11"
-                        fill={isLight ? '#ffffff' : '#0b0f19'}
+                        width={pillWidth}
+                        height="26"
+                        rx="13"
+                        fill={isActive ? boxColor : (isLight ? '#ffffff' : '#0b0f19')}
                         stroke={boxColor}
-                        strokeWidth="1.4"
+                        strokeWidth={isActive ? "1.8" : "1.4"}
                         filter="url(#badge-shadow)"
                       />
+                      {/* Drag Grip Icon ⠿ */}
                       <text
-                        x={10}
-                        y={14.5}
-                        fill={boxColor}
-                        fontSize="11"
+                        x={11}
+                        y={17}
+                        fill={isActive ? '#ffffff' : boxColor}
+                        fontSize="14"
+                        fontFamily="sans-serif"
+                        fontWeight="bold"
+                      >
+                        ⠿
+                      </text>
+                      {/* Label Text */}
+                      <text
+                        x={26}
+                        y={17}
+                        fill={isActive ? '#ffffff' : boxColor}
+                        fontSize="11.5"
                         fontFamily={CANVAS_MONO_FONT}
                         fontWeight="bold"
                       >
                         #{box.graphIndex + 1} • {box.nodeCount}V {box.edgeCount}E
+                      </text>
+                      {/* Move Hint */}
+                      <text
+                        x={pillWidth - 10}
+                        y={16.5}
+                        textAnchor="end"
+                        fill={isActive ? 'rgba(255,255,255,0.85)' : (isLight ? '#64748b' : '#94a3b8')}
+                        fontSize="9.5"
+                        fontFamily="sans-serif"
+                        fontWeight="600"
+                      >
+                        Move
                       </text>
                     </g>
                   </g>

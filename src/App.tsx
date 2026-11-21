@@ -312,7 +312,19 @@ export function App() {
     if (tab) {
       setRawText(tab.text);
     }
+    // Clear selection so nodes from other tabs/graphs are not carried over
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setSelectedNodeIds([]);
+    setSelectedEdgeIds([]);
   };
+
+  const activeGraphIndex = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+  const handleSelectGraphTab = useCallback((graphIndex: number) => {
+    if (tabs[graphIndex]) {
+      handleSelectTab(tabs[graphIndex].id);
+    }
+  }, [tabs]);
 
   const handleAddTab = () => {
     const nextIdx = tabs.length + 1;
@@ -801,14 +813,16 @@ export function App() {
   const handleApplyLayout = (layout: LayoutMode) => {
     const nextSettings = { ...settings, layout };
     setSettings(nextSettings);
+    const activeIdx = tabs.length > 1 ? tabs.findIndex(t => t.id === activeTabId) : undefined;
     const laidOut = applyLayout(data, layout, {
       rootId: settings.treeRootId,
       isDirected: settings.isDirected,
+      targetGraphIndex: activeIdx !== undefined && activeIdx >= 0 ? activeIdx : undefined,
     });
     setData(laidOut);
     setIsPhysicsActive(layout === 'force');
-    const text = serializeGraphToCPInput(laidOut, nextSettings, false);
-    pushState({ data: laidOut, settings: nextSettings, rawText: text });
+    const text = serializeGraphToCPInput(laidOut, nextSettings, false, tabs.length > 1 ? activeIdx : undefined);
+    pushState({ data: laidOut, settings: nextSettings, rawText: text, tabs, activeTabId });
   };
 
   // Load Preset
@@ -1146,6 +1160,8 @@ export function App() {
               isPhysicsActive={isPhysicsActive}
               onZoomChange={setZoomScale}
               theme={theme}
+              activeGraphIndex={activeGraphIndex}
+              onSelectGraphTab={handleSelectGraphTab}
             />
 
             {/* Batch Action Toolbar: Floats over canvas when nodes/edges are lasso/multi-selected */}
