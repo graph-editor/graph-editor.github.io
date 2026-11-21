@@ -1094,32 +1094,37 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
             markerEnd={isDirected ? `url(#${getMarkerId(effectiveEdgeColor)})` : undefined}
           />
-          {settings.isWeighted && edge.weight !== undefined && (
-            <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
-              <rect
-                x="-16"
-                y="-10"
-                width="32"
-                height="20"
-                rx="5"
-                fill={isLight ? '#ffffff' : '#0a0a0a'}
-                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
-                strokeWidth="2"
-                filter={isLight ? 'url(#badge-shadow)' : undefined}
-              />
-              <text
-                textAnchor="middle"
-                dy="4.5"
-                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
-                fontSize="12"
-                fontFamily={CANVAS_MONO_FONT}
-                fontWeight="900"
-                style={{ fontWeight: 900 }}
-              >
-                {edge.weight}
-              </text>
-            </g>
-          )}
+          {settings.isWeighted && edge.weight !== undefined && (() => {
+            const weightStr = String(edge.weight);
+            const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
+            const badgeHeight = 20;
+            return (
+              <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
+                <rect
+                  x={-badgeWidth / 2}
+                  y={-badgeHeight / 2}
+                  width={badgeWidth}
+                  height={badgeHeight}
+                  rx="6"
+                  fill={isLight ? '#ffffff' : '#0b0f19'}
+                  stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#334155' : '#475569'}
+                  strokeWidth="1.8"
+                  filter="url(#badge-shadow)"
+                />
+                <text
+                  textAnchor="middle"
+                  dy="4.2"
+                  fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#0f172a' : '#f8fafc'}
+                  fontSize="12"
+                  fontFamily={CANVAS_MONO_FONT}
+                  fontWeight="800"
+                  style={{ fontWeight: 800 }}
+                >
+                  {edge.weight}
+                </text>
+              </g>
+            );
+          })()}
         </g>
       );
     }
@@ -1146,12 +1151,13 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     // For simple directed unweighted edges, it shows ONLY a straight line with both-side arrow.
     if (isWeighted) {
       if (stats.total > 1) {
-        const offsetStep = 32;
+        const offsetStep = 36;
         const centerOffset = (stats.total - 1) / 2;
         curvature = (stats.index - centerOffset) * offsetStep;
       } else if (hasOppositeEdge) {
-        // Distinct non-colliding curves for weighted opposing edges
-        curvature = 28;
+        // Generous, smooth, non-colliding curves for weighted opposing edges (scaled gracefully by distance)
+        const oppCurvature = Math.max(34, Math.min(48, dist * 0.18));
+        curvature = oppCurvature;
       }
     } else {
       curvature = 0;
@@ -1164,19 +1170,25 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const arrowOffset = isDirected ? 12.5 : 0;
     // For bidirectional straight edges (like in CS Academy), start at the base of the opposite arrowhead
     // so the stroke begins cleanly at the opposite arrow's base and does not occlude either arrowhead
-    const startOffset = (isDirected && hasOppositeEdge && Math.abs(curvature) < 1) ? arrowOffset : 0;
+    const isCurved = Math.abs(curvature) >= 1;
+    const startOffset = (isDirected && hasOppositeEdge && !isCurved) ? arrowOffset : 0;
+
+    // For curved edges, shift attachment points slightly along the node circumference in the direction of the curve
+    // so incoming arrowhead and outgoing line never pinch or collide at the node perimeter
+    const sinA = isCurved ? Math.max(-0.35, Math.min(0.35, (curvature / sourceRadius) * 0.16)) : 0;
+    const cosA = isCurved ? Math.sqrt(1 - sinA * sinA) : 1;
 
     // Node boundary intersection points
-    const startX = sourceNode.x + ux * (sourceRadius + startOffset);
-    const startY = sourceNode.y + uy * (sourceRadius + startOffset);
-    const endX = targetNode.x - ux * (targetRadius + arrowOffset);
-    const endY = targetNode.y - uy * (targetRadius + arrowOffset);
+    const startX = sourceNode.x + (ux * cosA + nx * sinA) * (sourceRadius + startOffset);
+    const startY = sourceNode.y + (uy * cosA + ny * sinA) * (sourceRadius + startOffset);
+    const endX = targetNode.x - (ux * cosA - nx * sinA) * (targetRadius + arrowOffset);
+    const endY = targetNode.y - (uy * cosA - ny * sinA) * (targetRadius + arrowOffset);
 
     let pathD = '';
     let labelX = (startX + endX) / 2;
     let labelY = (startY + endY) / 2;
 
-    if (Math.abs(curvature) < 1) {
+    if (!isCurved) {
       pathD = `M ${startX} ${startY} L ${endX} ${endY}`;
       if (hasOppositeEdge) {
         // Offset weight badge along the normal vector so both weights stay cleanly visible without colliding
@@ -1184,11 +1196,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         labelY += ny * 18;
       }
     } else {
-      const midX = (startX + endX) / 2 + nx * curvature;
-      const midY = (startY + endY) / 2 + ny * curvature;
-      pathD = `M ${startX} ${startY} Q ${midX} ${midY} ${endX} ${endY}`;
-      labelX = (startX + 2 * midX + endX) / 4;
-      labelY = (startY + 2 * midY + endY) / 4;
+      const chordDx = endX - startX;
+      const chordDy = endY - startY;
+      const chordDist = Math.hypot(chordDx, chordDy) || 1;
+      const chordUx = chordDx / chordDist;
+      const chordUy = chordDy / chordDist;
+
+      // Control points for a graceful, organic cubic bezier
+      const cpDist = chordDist * 0.38;
+      const cp1x = startX + chordUx * cpDist + nx * curvature;
+      const cp1y = startY + chordUy * cpDist + ny * curvature;
+      const cp2x = endX - chordUx * cpDist + nx * curvature;
+      const cp2y = endY - chordUy * cpDist + ny * curvature;
+
+      pathD = `M ${startX} ${startY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${endX} ${endY}`;
+
+      // Geometric center at t = 0.5 of the cubic bezier
+      labelX = 0.125 * startX + 0.375 * cp1x + 0.375 * cp2x + 0.125 * endX;
+      labelY = 0.125 * startY + 0.375 * cp1y + 0.375 * cp2y + 0.125 * endY;
     }
 
     const markerId = getMarkerId(effectiveEdgeColor);
@@ -1329,37 +1354,44 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           fill="none"
           stroke={effectiveEdgeColor}
           strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
           markerEnd={isDirected ? `url(#${markerId})` : undefined}
         />
 
         {/* Edge weight badge */}
-        {settings.isWeighted && edge.weight !== undefined && (
-          <g transform={`translate(${labelX}, ${labelY})`}>
-            <rect
-              x="-16"
-              y="-10"
-              width="32"
-              height="20"
-              rx="5"
-              fill={isLight ? '#ffffff' : '#0a0a0a'}
-              stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
-              strokeWidth="2"
-              filter={isLight ? 'url(#badge-shadow)' : undefined}
-            />
-            <text
-              textAnchor="middle"
-              dy="4.5"
-              fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#0f172a' : '#f8fafc'}
-              fontSize="12"
-              fontFamily={CANVAS_MONO_FONT}
-              fontWeight="900"
-              style={{ fontWeight: 900 }}
-            >
-              {edge.weight}
-            </text>
-          </g>
-        )}
+        {settings.isWeighted && edge.weight !== undefined && (() => {
+          const weightStr = String(edge.weight);
+          const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
+          const badgeHeight = 20;
+          return (
+            <g transform={`translate(${labelX}, ${labelY})`}>
+              <rect
+                x={-badgeWidth / 2}
+                y={-badgeHeight / 2}
+                width={badgeWidth}
+                height={badgeHeight}
+                rx="6"
+                fill={isLight ? '#ffffff' : '#0b0f19'}
+                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#334155' : '#475569'}
+                strokeWidth="1.8"
+                filter="url(#badge-shadow)"
+              />
+              <text
+                textAnchor="middle"
+                dy="4.2"
+                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#0f172a' : '#f8fafc'}
+                fontSize="12"
+                fontFamily={CANVAS_MONO_FONT}
+                fontWeight="800"
+                style={{ fontWeight: 800 }}
+              >
+                {edge.weight}
+              </text>
+            </g>
+          );
+        })()}
       </g>
     );
   };
@@ -1601,9 +1633,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#0f172a" floodOpacity={isLight ? 0.12 : 0.45} />
           </filter>
 
-          {/* Crisp Shadow Filter for Badges in Light Mode */}
+          {/* Crisp Shadow Filter for Badges */}
           <filter id="badge-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#0f172a" floodOpacity={isLight ? 0.10 : 0.40} />
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2" floodColor="#000000" floodOpacity={isLight ? 0.12 : 0.55} />
           </filter>
 
           {/* Dynamic Arrowheads for each color - Crisp, professional solid triangle with clean docking */}
