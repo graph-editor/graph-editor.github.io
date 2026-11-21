@@ -26,6 +26,7 @@ import {
   Moon,
   Undo2,
   Redo2,
+  Link2,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -47,6 +48,7 @@ interface TopBarProps {
   onClearGraph: () => void;
   onToggleIndexMode: () => void;
   onOpenExportModal: () => void;
+  onOpenShareModal?: () => void;
   onOpenShortcutsModal: () => void;
   isInspectorOpen: boolean;
   onToggleInspector: () => void;
@@ -71,6 +73,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onClearGraph,
   onToggleIndexMode,
   onOpenExportModal,
+  onOpenShareModal,
   onOpenShortcutsModal,
   isInspectorOpen,
   onToggleInspector,
@@ -445,6 +448,22 @@ export const TopBar: React.FC<TopBarProps> = ({
         )}
 
         <div className={`w-[1px] h-4 my-auto hidden sm:block ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
+
+        {/* Share Link Button */}
+        {onOpenShareModal && (
+          <button
+            onClick={onOpenShareModal}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all border shadow-xs cursor-pointer ${
+              isLight
+                ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'
+                : 'bg-blue-950/40 hover:bg-blue-900/50 border-blue-500/30 text-blue-300'
+            }`}
+            title="Share Graph via Compressed URL Link"
+          >
+            <Link2 size={13} />
+            <span className="hidden sm:inline">Share</span>
+          </button>
+        )}
 
         {/* Export & Actions */}
         <button

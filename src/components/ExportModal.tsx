@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Copy, Check, Download, FileCode2, Image as ImageIcon, Terminal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Copy, Check, Download, FileCode2, Image as ImageIcon, Terminal, Link2, ExternalLink } from 'lucide-react';
 import { GraphData, GraphSettings } from '../types/graph';
 import {
   generateCppAdjacencyList,
@@ -8,19 +8,27 @@ import {
   exportPngFromSvg,
 } from '../utils/export';
 import { serializeGraphToCPInput } from '../utils/parser';
+import { buildShareUrl } from '../utils/share';
 
 interface ExportModalProps {
   data: GraphData;
   settings: GraphSettings;
   onClose: () => void;
   theme?: 'dark' | 'light';
+  initialTab?: 'cpp' | 'python' | 'text' | 'image' | 'share';
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClose, theme = 'dark' }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClose, theme = 'dark', initialTab = 'cpp' }) => {
   const isLight = theme === 'light';
-  const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'image'>('cpp');
+  const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'image' | 'share'>(initialTab);
   const [includeHeader, setIncludeHeader] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>('');
+  const [copiedMarkdown, setCopiedMarkdown] = useState(false);
+
+  useEffect(() => {
+    buildShareUrl(data, settings, theme).then(setShareUrl);
+  }, [data, settings, theme]);
 
   const cppCode = generateCppAdjacencyList(data, settings);
   const pythonCode = generatePythonAdjacencyList(data, settings);
@@ -121,6 +129,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
           >
             <ImageIcon size={14} />
             <span>Image (PNG / SVG)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('share')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all cursor-pointer ${
+              activeTab === 'share'
+                ? 'border-blue-500 text-blue-500 font-semibold'
+                : isLight ? 'border-transparent text-slate-600 hover:text-slate-900' : 'border-transparent text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <Link2 size={14} />
+            <span>Share Link</span>
           </button>
         </div>
 
@@ -231,6 +250,75 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
                 <span className={`text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>Download SVG</span>
                 <span className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>Scalable vector graphics</span>
               </button>
+            </div>
+          )}
+
+          {activeTab === 'share' && (
+            <div className="space-y-4 py-2">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className={`font-medium ${isLight ? 'text-slate-700' : 'text-neutral-300'}`}>
+                    Compressed Shareable URL
+                  </span>
+                  <span className={`text-[11px] font-mono ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+                    {shareUrl.length} characters • Deflate compressed
+                  </span>
+                </div>
+                <div
+                  className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-mono ${
+                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-neutral-900 border-neutral-800'
+                  }`}
+                >
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl || 'Generating URL...'}
+                    className={`flex-1 bg-transparent border-none outline-none truncate select-all ${
+                      isLight ? 'text-slate-800' : 'text-neutral-200'
+                    }`}
+                    onClick={e => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    onClick={() => handleCopy(shareUrl)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                  >
+                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`[View Graph on CP Graph Editor](${shareUrl})`);
+                    setCopiedMarkdown(true);
+                    setTimeout(() => setCopiedMarkdown(false), 2000);
+                  }}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                      : 'bg-neutral-900/60 hover:bg-neutral-800 border-neutral-800 text-neutral-300'
+                  }`}
+                >
+                  {copiedMarkdown ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                  <span>{copiedMarkdown ? 'Copied Markdown!' : 'Copy as Markdown Link'}</span>
+                </button>
+
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                      : 'bg-neutral-900/60 hover:bg-neutral-800 border-neutral-800 text-neutral-300'
+                  }`}
+                >
+                  <ExternalLink size={14} />
+                  <span>Open in New Tab</span>
+                </a>
+              </div>
             </div>
           )}
         </div>
