@@ -369,6 +369,30 @@ export function App() {
     }));
   };
 
+  // Batch update node positions for multi-selection / lasso dragging
+  const handleUpdateNodePositions = useCallback((updates: { id: string; x: number; y: number }[]) => {
+    const updateMap = new Map<string, { x: number; y: number }>();
+    updates.forEach(u => updateMap.set(u.id, { x: u.x, y: u.y }));
+    setData(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(n => {
+        const u = updateMap.get(n.id);
+        if (u) {
+          return {
+            ...n,
+            x: u.x,
+            y: u.y,
+            fx: u.x,
+            fy: u.y,
+            vx: 0,
+            vy: 0,
+          };
+        }
+        return n;
+      }),
+    }));
+  }, []);
+
   // Finish dragging: keep node coordinates cleanly updated
   const handleFinishDragNode = (id: string) => {
     setData(prev => {
@@ -389,6 +413,28 @@ export function App() {
       return nextData;
     });
   };
+
+  // Finish dragging multiple nodes
+  const handleFinishDragNodes = useCallback((ids: string[]) => {
+    const idSet = new Set(ids);
+    setData(prev => {
+      const nextNodes = prev.nodes.map(n => {
+        if (idSet.has(n.id)) {
+          return {
+            ...n,
+            fx: null,
+            fy: null,
+            vx: 0,
+            vy: 0,
+          };
+        }
+        return n;
+      });
+      const nextData = { ...prev, nodes: nextNodes };
+      syncGraphToText(nextData, settings);
+      return nextData;
+    });
+  }, [settings]);
 
   // Node property update
   const handleUpdateNode = (nodeId: string, updates: Partial<GraphNode>) => {
@@ -831,7 +877,9 @@ export function App() {
               onAddNode={handleAddNode}
               onAddEdge={handleAddEdge}
               onUpdateNodePosition={handleUpdateNodePosition}
+              onUpdateNodePositions={handleUpdateNodePositions}
               onFinishDragNode={handleFinishDragNode}
+              onFinishDragNodes={handleFinishDragNodes}
               onUpdateGraphData={setData}
               currentStep={algorithmSteps ? algorithmSteps[currentStepIndex] : undefined}
               isPhysicsActive={isPhysicsActive}

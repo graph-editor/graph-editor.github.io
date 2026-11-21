@@ -158,7 +158,9 @@ interface CanvasProps {
   onAddNode: (x: number, y: number) => void;
   onAddEdge: (sourceId: string, targetId: string) => void;
   onUpdateNodePosition: (id: string, x: number, y: number, isFixed?: boolean) => void;
+  onUpdateNodePositions?: (updates: { id: string; x: number; y: number }[]) => void;
   onFinishDragNode: (id: string) => void;
+  onFinishDragNodes?: (ids: string[]) => void;
   onUpdateGraphData: (newData: GraphData) => void;
   currentStep?: AlgorithmStep;
   isPhysicsActive: boolean;
@@ -182,7 +184,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   onAddNode,
   onAddEdge,
   onUpdateNodePosition,
+  onUpdateNodePositions,
   onFinishDragNode,
+  onFinishDragNodes,
   onUpdateGraphData,
   currentStep,
   isPhysicsActive,
@@ -333,12 +337,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const cancelAction = useCallback(() => {
     setConnectSourceId(null);
     if (draggingNodeId) {
-      if (selectedNodeIds.includes(draggingNodeId) && selectedNodeIds.length > 1 && batchDragStartPositionsRef.current.size > 0) {
-        batchDragStartPositionsRef.current.forEach((_, id) => {
-          onFinishDragNode(id);
-        });
+      if (batchDragStartPositionsRef.current.size > 0) {
+        const ids = Array.from(batchDragStartPositionsRef.current.keys());
+        if (onFinishDragNodes) {
+          onFinishDragNodes(ids);
+        } else {
+          ids.forEach(id => onFinishDragNode(id));
+        }
         batchDragStartPositionsRef.current.clear();
-      } else {
+      } else if (draggingNodeId !== '__lasso_batch__') {
         onFinishDragNode(draggingNodeId);
       }
       setDraggingNodeId(null);
@@ -352,7 +359,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setHoveredNodeId(null);
     setHoveredEdgeId(null);
     setToastMessage(null);
-  }, [draggingNodeId, onFinishDragNode, onBatchSelect, selectedNodeIds]);
+  }, [draggingNodeId, onFinishDragNode, onFinishDragNodes, onBatchSelect]);
 
   // Expose imperative handle to BottomStatusBar and App
   useImperativeHandle(ref, () => ({
@@ -491,7 +498,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
   };
 
-  // Node Mouse Down: Handles selection, edge connection, and initiates node dragging
+  // Node Mouse Down: Handles selection, edge connection, and initiates node / batch dragging
   const handleNodeMouseDown = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
 
@@ -512,8 +519,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
-    // If holding shift or using Lasso tool: toggle node in/out of multi-selection
-    if (e.shiftKey || activeTool === 'lasso') {
+    // If holding shift: toggle node in/out of multi-selection
+    if (e.shiftKey) {
       const nextNodes = selectedNodeIds.includes(node.id)
         ? selectedNodeIds.filter(id => id !== node.id)
         : [...selectedNodeIds, node.id];
@@ -527,11 +534,42 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
+    const isNodeInSelection =
+      selectedNodeIds.includes(node.id) ||
+      selectedNodeId === node.id ||
+      allSelectedNodesForLasso.some(n => n.id === node.id);
+
+    // If node is already part of the lasso/multi selection:
+    // Move all selected nodes & edges together as a group!
+    if (isNodeInSelection && allSelectedNodesForLasso.length > 1) {
+      const world = screenToWorld(e.clientX, e.clientY);
+      dragOffsetRef.current = {
+        x: node.x - world.x,
+        y: node.y - world.y,
+      };
+      dragNodeStartPosRef.current = { x: node.x, y: node.y };
+
+      if (displayLassoPoints.length >= 3) {
+        lassoDragStartPointsRef.current = [...displayLassoPoints];
+      } else {
+        lassoDragStartPointsRef.current = [];
+      }
+
+      const posMap = new Map<string, { x: number; y: number }>();
+      allSelectedNodesForLasso.forEach(n => {
+        posMap.set(n.id, { x: n.x, y: n.y });
+      });
+      batchDragStartPositionsRef.current = posMap;
+
+      setDraggingNodeId(node.id);
+      return;
+    }
+
     // Single select mode: select node and initiate drag
     onSelectNode(node.id);
     onSelectEdge(null);
     if (!selectedNodeIds.includes(node.id)) {
-      onBatchSelect?.([], []);
+      onBatchSelect?.([node.id], []);
       setPersistedLassoPoints([]);
     }
 
@@ -543,24 +581,13 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     };
     dragNodeStartPosRef.current = { x: node.x, y: node.y };
 
-    if (persistedLassoPoints.length >= 3) {
-      lassoDragStartPointsRef.current = [...persistedLassoPoints];
+    if (displayLassoPoints.length >= 3) {
+      lassoDragStartPointsRef.current = [...displayLassoPoints];
     } else {
       lassoDragStartPointsRef.current = [];
     }
 
-    if (selectedNodeIds.includes(node.id) && selectedNodeIds.length > 1) {
-      const posMap = new Map<string, { x: number; y: number }>();
-      data.nodes.forEach(n => {
-        if (selectedNodeIds.includes(n.id)) {
-          posMap.set(n.id, { x: n.x, y: n.y });
-        }
-      });
-      batchDragStartPositionsRef.current = posMap;
-    } else {
-      batchDragStartPositionsRef.current.clear();
-    }
-
+    batchDragStartPositionsRef.current.clear();
     setDraggingNodeId(node.id);
   };
 
@@ -584,16 +611,94 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
-    onSelectNode(node.id);
-    onSelectEdge(null);
+    const isNodeInSelection =
+      selectedNodeIds.includes(node.id) ||
+      selectedNodeId === node.id ||
+      allSelectedNodesForLasso.some(n => n.id === node.id);
 
-    // Always initiate touch drag
     const world = screenToWorld(touch.clientX, touch.clientY);
     dragOffsetRef.current = {
       x: node.x - world.x,
       y: node.y - world.y,
     };
+    dragNodeStartPosRef.current = { x: node.x, y: node.y };
+
+    if (displayLassoPoints.length >= 3) {
+      lassoDragStartPointsRef.current = [...displayLassoPoints];
+    } else {
+      lassoDragStartPointsRef.current = [];
+    }
+
+    if (isNodeInSelection && allSelectedNodesForLasso.length > 1) {
+      const posMap = new Map<string, { x: number; y: number }>();
+      allSelectedNodesForLasso.forEach(n => {
+        posMap.set(n.id, { x: n.x, y: n.y });
+      });
+      batchDragStartPositionsRef.current = posMap;
+      setDraggingNodeId(node.id);
+      return;
+    }
+
+    onSelectNode(node.id);
+    onSelectEdge(null);
+    if (!selectedNodeIds.includes(node.id)) {
+      onBatchSelect?.([node.id], []);
+      setPersistedLassoPoints([]);
+    }
+
+    batchDragStartPositionsRef.current.clear();
     setDraggingNodeId(node.id);
+  };
+
+  // Lasso Enclosure Mouse Down: Move the entire selected graph by dragging the lasso area
+  const handleLassoMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    if (allSelectedNodesForLasso.length === 0) return;
+
+    const world = screenToWorld(e.clientX, e.clientY);
+    dragOffsetRef.current = { x: 0, y: 0 };
+    dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+    if (displayLassoPoints.length >= 3) {
+      lassoDragStartPointsRef.current = [...displayLassoPoints];
+    } else {
+      lassoDragStartPointsRef.current = [];
+    }
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    allSelectedNodesForLasso.forEach(n => {
+      posMap.set(n.id, { x: n.x, y: n.y });
+    });
+    batchDragStartPositionsRef.current = posMap;
+
+    setDraggingNodeId('__lasso_batch__');
+  };
+
+  // Lasso Enclosure Touch Start: Touch drag the entire selected graph
+  const handleLassoTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (e.touches.length !== 1) return;
+    if (allSelectedNodesForLasso.length === 0) return;
+
+    const touch = e.touches[0];
+    const world = screenToWorld(touch.clientX, touch.clientY);
+    dragOffsetRef.current = { x: 0, y: 0 };
+    dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+    if (displayLassoPoints.length >= 3) {
+      lassoDragStartPointsRef.current = [...displayLassoPoints];
+    } else {
+      lassoDragStartPointsRef.current = [];
+    }
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    allSelectedNodesForLasso.forEach(n => {
+      posMap.set(n.id, { x: n.x, y: n.y });
+    });
+    batchDragStartPositionsRef.current = posMap;
+
+    setDraggingNodeId('__lasso_batch__');
   };
 
   // Node Double Click: Enter edge connection mode to connect to another node
@@ -658,11 +763,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           setPersistedLassoPoints(lassoDragStartPointsRef.current.map(p => ({ x: p.x + dx, y: p.y + dy })));
         }
 
-        if (selectedNodeIdsRef.current.includes(draggingNodeId) && selectedNodeIdsRef.current.length > 1 && batchDragStartPositionsRef.current.size > 0) {
-          batchDragStartPositionsRef.current.forEach((initialPos, id) => {
-            onUpdateNodePosition(id, initialPos.x + dx, initialPos.y + dy, false);
-          });
-        } else {
+        if (batchDragStartPositionsRef.current.size > 0) {
+          if (onUpdateNodePositions) {
+            const updates: { id: string; x: number; y: number }[] = [];
+            batchDragStartPositionsRef.current.forEach((initialPos, id) => {
+              updates.push({ id, x: initialPos.x + dx, y: initialPos.y + dy });
+            });
+            onUpdateNodePositions(updates);
+          } else {
+            batchDragStartPositionsRef.current.forEach((initialPos, id) => {
+              onUpdateNodePosition(id, initialPos.x + dx, initialPos.y + dy, false);
+            });
+          }
+        } else if (draggingNodeId !== '__lasso_batch__') {
           onUpdateNodePosition(draggingNodeId, newX, newY, false);
         }
       }
@@ -721,12 +834,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         setIsPanning(false);
       }
       if (draggingNodeId) {
-        if (selectedNodeIdsRef.current.includes(draggingNodeId) && selectedNodeIdsRef.current.length > 1 && batchDragStartPositionsRef.current.size > 0) {
-          batchDragStartPositionsRef.current.forEach((_, id) => {
-            onFinishDragNode(id);
-          });
+        if (batchDragStartPositionsRef.current.size > 0) {
+          const ids = Array.from(batchDragStartPositionsRef.current.keys());
+          if (onFinishDragNodes) {
+            onFinishDragNodes(ids);
+          } else {
+            ids.forEach(id => onFinishDragNode(id));
+          }
           batchDragStartPositionsRef.current.clear();
-        } else {
+        } else if (draggingNodeId !== '__lasso_batch__') {
           onFinishDragNode(draggingNodeId);
         }
         setDraggingNodeId(null);
@@ -777,7 +893,28 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           e.preventDefault();
           const newX = world.x + dragOffsetRef.current.x;
           const newY = world.y + dragOffsetRef.current.y;
-          onUpdateNodePosition(draggingNodeId, newX, newY, false);
+          const dx = newX - (dragNodeStartPosRef.current?.x ?? newX);
+          const dy = newY - (dragNodeStartPosRef.current?.y ?? newY);
+
+          if (lassoDragStartPointsRef.current.length >= 3) {
+            setPersistedLassoPoints(lassoDragStartPointsRef.current.map(p => ({ x: p.x + dx, y: p.y + dy })));
+          }
+
+          if (batchDragStartPositionsRef.current.size > 0) {
+            if (onUpdateNodePositions) {
+              const updates: { id: string; x: number; y: number }[] = [];
+              batchDragStartPositionsRef.current.forEach((initialPos, id) => {
+                updates.push({ id, x: initialPos.x + dx, y: initialPos.y + dy });
+              });
+              onUpdateNodePositions(updates);
+            } else {
+              batchDragStartPositionsRef.current.forEach((initialPos, id) => {
+                onUpdateNodePosition(id, initialPos.x + dx, initialPos.y + dy, false);
+              });
+            }
+          } else if (draggingNodeId !== '__lasso_batch__') {
+            onUpdateNodePosition(draggingNodeId, newX, newY, false);
+          }
         }
       }
     };
@@ -788,7 +925,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         setIsPanning(false);
       }
       if (draggingNodeId) {
-        onFinishDragNode(draggingNodeId);
+        if (batchDragStartPositionsRef.current.size > 0) {
+          const ids = Array.from(batchDragStartPositionsRef.current.keys());
+          if (onFinishDragNodes) {
+            onFinishDragNodes(ids);
+          } else {
+            ids.forEach(id => onFinishDragNode(id));
+          }
+          batchDragStartPositionsRef.current.clear();
+        } else if (draggingNodeId !== '__lasso_batch__') {
+          onFinishDragNode(draggingNodeId);
+        }
         setDraggingNodeId(null);
       }
     };
@@ -806,7 +953,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       window.removeEventListener('touchend', handleGlobalTouchEnd);
       window.removeEventListener('touchcancel', handleGlobalTouchEnd);
     };
-  }, [isPanning, draggingNodeId, screenToWorld, onUpdateNodePosition, onFinishDragNode]);
+  }, [isPanning, draggingNodeId, screenToWorld, onUpdateNodePosition, onUpdateNodePositions, onFinishDragNode, onFinishDragNodes]);
 
   // Fast node lookup
   const nodeMap = useMemo(() => {
@@ -887,6 +1034,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return computeSelectionLassoPolygon(allSelectedNodesForLasso, getNodeRadius);
   }, [persistedLassoPoints, allSelectedNodesForLasso, getNodeRadius]);
 
+  // Bounding box of lasso enclosure for move indicator pill
+  const lassoBBox = useMemo(() => {
+    if (displayLassoPoints.length < 3) return null;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    displayLassoPoints.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+    return { minX, maxX, minY, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
+  }, [displayLassoPoints]);
+
   // Render edge path (Straight, Curved for multi-edges, or Looped for self-loops)
   const renderEdge = (edge: GraphEdge) => {
     const sourceNode = nodeMap.get(edge.source);
@@ -927,6 +1087,70 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }
     };
 
+    const handleEdgeMouseDown = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (e.button !== 0) return;
+      if (e.shiftKey) return;
+
+      const isEdgeInSelection =
+        selectedEdgeId === edge.id ||
+        selectedEdgeIds.includes(edge.id) ||
+        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
+
+      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        dragOffsetRef.current = { x: 0, y: 0 };
+        dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+        if (displayLassoPoints.length >= 3) {
+          lassoDragStartPointsRef.current = [...displayLassoPoints];
+        } else {
+          lassoDragStartPointsRef.current = [];
+        }
+
+        const posMap = new Map<string, { x: number; y: number }>();
+        allSelectedNodesForLasso.forEach(n => {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        });
+        batchDragStartPositionsRef.current = posMap;
+
+        setDraggingNodeId('__lasso_batch__');
+        return;
+      }
+    };
+
+    const handleEdgeTouchStart = (e: React.TouchEvent) => {
+      e.stopPropagation();
+      if (e.touches.length !== 1) return;
+
+      const isEdgeInSelection =
+        selectedEdgeId === edge.id ||
+        selectedEdgeIds.includes(edge.id) ||
+        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
+
+      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
+        const touch = e.touches[0];
+        const world = screenToWorld(touch.clientX, touch.clientY);
+        dragOffsetRef.current = { x: 0, y: 0 };
+        dragNodeStartPosRef.current = { x: world.x, y: world.y };
+
+        if (displayLassoPoints.length >= 3) {
+          lassoDragStartPointsRef.current = [...displayLassoPoints];
+        } else {
+          lassoDragStartPointsRef.current = [];
+        }
+
+        const posMap = new Map<string, { x: number; y: number }>();
+        allSelectedNodesForLasso.forEach(n => {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        });
+        batchDragStartPositionsRef.current = posMap;
+
+        setDraggingNodeId('__lasso_batch__');
+        return;
+      }
+    };
+
     // Self loop
     if (edge.source === edge.target) {
       const sourceRadius = getNodeRadius(sourceNode);
@@ -940,6 +1164,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           key={edge.id}
           className="edge-group cursor-pointer"
           onClick={handleEdgeClick}
+          onMouseDown={handleEdgeMouseDown}
+          onTouchStart={handleEdgeTouchStart}
           onMouseEnter={() => setHoveredEdgeId(edge.id)}
           onMouseLeave={() => setHoveredEdgeId(null)}
         >
@@ -1048,6 +1274,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         key={edge.id}
         className="edge-group cursor-pointer"
         onClick={handleEdgeClick}
+        onMouseDown={handleEdgeMouseDown}
+        onTouchStart={handleEdgeTouchStart}
         onMouseEnter={() => setHoveredEdgeId(edge.id)}
         onMouseLeave={() => setHoveredEdgeId(null)}
       >
@@ -1112,7 +1340,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const isSelected = selectedNodeId === node.id || selectedNodeIds.includes(node.id);
     const isHovered = hoveredNodeId === node.id;
     const isConnectSource = connectSourceId === node.id;
-    const isDragging = draggingNodeId === node.id;
+    const isNodeInBatch = allSelectedNodesForLasso.some(n => n.id === node.id);
+    const isDragging = draggingNodeId === node.id || (draggingNodeId !== null && isNodeInBatch);
 
     // Algorithm state overrides
     const isActiveAlgo = currentStep?.activeNodes.includes(node.id);
@@ -1392,11 +1621,22 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
           {/* Persistent Selection Lasso Enclosure (between edges and nodes) */}
           {activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (
-            <g className="selection-lasso pointer-events-none">
+            <g
+              className={`selection-lasso select-none transition-opacity ${draggingNodeId ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onMouseDown={handleLassoMouseDown}
+              onTouchStart={handleLassoTouchStart}
+            >
+              {/* Invisible wider boundary stroke to make grabbing effortless */}
               <path
                 d={pointsToSvgPath(displayLassoPoints)}
-                fill={isLight ? "rgba(37, 99, 235, 0.07)" : "rgba(56, 189, 248, 0.10)"}
-                stroke={isLight ? "rgba(37, 99, 235, 0.25)" : "rgba(56, 189, 248, 0.35)"}
+                fill="none"
+                stroke="transparent"
+                strokeWidth="28"
+              />
+              <path
+                d={pointsToSvgPath(displayLassoPoints)}
+                fill={isLight ? "rgba(37, 99, 235, 0.08)" : "rgba(56, 189, 248, 0.12)"}
+                stroke={isLight ? "rgba(37, 99, 235, 0.35)" : "rgba(56, 189, 248, 0.45)"}
                 strokeWidth="4"
                 strokeLinejoin="round"
               />
@@ -1409,6 +1649,33 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 strokeLinejoin="round"
                 filter={isLight ? "drop-shadow(0 0 4px rgba(37, 99, 235, 0.3))" : "drop-shadow(0 0 6px rgba(56, 189, 248, 0.5))"}
               />
+
+              {/* Move Indicator Badge at the top of the lasso enclosure */}
+              {lassoBBox && (
+                <g transform={`translate(${lassoBBox.cx}, ${lassoBBox.minY - 14})`} className="pointer-events-none select-none">
+                  <rect
+                    x="-42"
+                    y="-11"
+                    width="84"
+                    height="22"
+                    rx="11"
+                    fill={isLight ? "#2563eb" : "#0284c7"}
+                    stroke={isLight ? "#ffffff" : "#38bdf8"}
+                    strokeWidth="1.5"
+                    filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+                  />
+                  <text
+                    textAnchor="middle"
+                    dy="4"
+                    fill="#ffffff"
+                    fontSize="11"
+                    fontFamily="sans-serif"
+                    fontWeight="700"
+                  >
+                    ✥ Move Area
+                  </text>
+                </g>
+              )}
             </g>
           )}
 
