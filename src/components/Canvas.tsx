@@ -98,6 +98,12 @@ function getContrastTextColor(hexColor?: string, isLightMode = false): string {
   return yiq >= 150 ? '#0f172a' : '#ffffff';
 }
 
+// Robust SVG marker ID generator for high-contrast arrowheads
+const getMarkerId = (color: string) => {
+  const clean = (color || '#94a3b8').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return `arrowhead-${clean}`;
+};
+
 // Compute smooth lasso perimeter around any set of selected nodes
 function computeSelectionLassoPolygon(
   selectedNodes: GraphNode[],
@@ -892,8 +898,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // Check algorithm highlight
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
-    const defaultColor = isLight ? '#334155' : '#52525b';
-    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? (isLight ? '#0f172a' : '#a1a1aa') : (edge.color === '#64748b' ? defaultColor : edge.color));
+    const defaultColor = isLight ? '#334155' : '#94a3b8';
+    const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
+    const effectiveEdgeColor = algoEdgeHighlight?.color || (
+      isSelected
+        ? (isLight ? '#2563eb' : '#38bdf8')
+        : isHovered
+        ? hoveredColor
+        : (edge.color === '#64748b' ? defaultColor : edge.color)
+    );
     const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
 
     const handleEdgeClick = (e: React.MouseEvent) => {
@@ -947,7 +960,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             stroke={effectiveEdgeColor}
             strokeWidth={strokeWidth}
             strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
-            markerEnd={settings.isDirected ? `url(#arrowhead-${effectiveEdgeColor.replace('#', '')})` : undefined}
+            markerEnd={settings.isDirected ? `url(#${getMarkerId(effectiveEdgeColor)})` : undefined}
           />
           {settings.isWeighted && edge.weight !== undefined && (
             <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
@@ -1011,8 +1024,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     // Node boundary intersection points
     const startX = sourceNode.x + ux * sourceRadius;
     const startY = sourceNode.y + uy * sourceRadius;
-    const endX = targetNode.x - ux * (targetRadius + (settings.isDirected ? 6 : 0));
-    const endY = targetNode.y - uy * (targetRadius + (settings.isDirected ? 6 : 0));
+    const endX = targetNode.x - ux * (targetRadius + (settings.isDirected ? 2.5 : 0));
+    const endY = targetNode.y - uy * (targetRadius + (settings.isDirected ? 2.5 : 0));
 
     let pathD = '';
     let labelX = (startX + endX) / 2;
@@ -1028,7 +1041,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       labelY = (startY + 2 * midY + endY) / 4;
     }
 
-    const markerId = `arrowhead-${effectiveEdgeColor.replace('#', '')}`;
+    const markerId = getMarkerId(effectiveEdgeColor);
 
     return (
       <g
@@ -1249,19 +1262,35 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Collect unique colors for SVG marker arrowheads
   const arrowheadColors = useMemo(() => {
     const colors = new Set<string>();
-    colors.add('#64748b'); // default edge
-    colors.add('#38bdf8'); // selected
-    colors.add('#2563eb'); // selected light
-    colors.add('#334155'); // default edge light
+    // Default & high-contrast UI state colors
+    colors.add('#94a3b8'); // default edge dark (Slate-400)
+    colors.add('#cbd5e1'); // high-contrast light/dark (Slate-300)
+    colors.add('#334155'); // default edge light (Slate-700)
+    colors.add('#64748b'); // default edge raw slate
+    colors.add('#52525b'); // legacy dark fallback
     colors.add('#0f172a'); // hovered edge light
-    colors.add('#94a3b8'); // hovered
-    colors.add('#10b981'); // success/MST
-    colors.add('#ef4444'); // error/bridge
-    colors.add('#f59e0b'); // active/relax
-    CP_PALETTE.forEach(p => colors.add(p.color));
-    data.edges.forEach(e => colors.add(e.color));
+    colors.add('#38bdf8'); // hovered / selected dark (Sky-400)
+    colors.add('#2563eb'); // selected light (Blue-600)
+    colors.add('#a1a1aa'); // legacy hovered dark
+    colors.add('#f8fafc'); // white / light slate
+    colors.add('#ffffff'); // pure white
+    colors.add('#10b981'); // success / MST
+    colors.add('#ef4444'); // error / bridge
+    colors.add('#f59e0b'); // active / relax
+    colors.add('#8b5cf6'); // purple
+    colors.add('#ec4899'); // pink
+
+    CP_PALETTE.forEach(p => {
+      if (p.color) colors.add(p.color.toLowerCase());
+    });
+    data.edges.forEach(e => {
+      if (e.color) colors.add(e.color.toLowerCase());
+    });
+    currentStep?.highlightedEdges.forEach(h => {
+      if (h.color) colors.add(h.color.toLowerCase());
+    });
     return Array.from(colors);
-  }, [data.edges]);
+  }, [data.edges, currentStep]);
 
   return (
     <div
@@ -1320,20 +1349,37 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           </filter>
 
           {/* Dynamic Arrowheads for each color */}
-          {arrowheadColors.map(c => (
-            <marker
-              key={c}
-              id={`arrowhead-${c.replace('#', '')}`}
-              viewBox="0 0 10 10"
-              refX="8"
-              refY="5"
-              markerWidth="8.5"
-              markerHeight="8.5"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={c} />
-            </marker>
-          ))}
+          {arrowheadColors.map(c => {
+            const id = getMarkerId(c);
+            return (
+              <marker
+                key={id}
+                id={id}
+                viewBox="0 0 10 10"
+                refX="8.5"
+                refY="5"
+                markerUnits="userSpaceOnUse"
+                markerWidth="13"
+                markerHeight="13"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={c} />
+              </marker>
+            );
+          })}
+          {/* Fallback default arrowhead in case any unusual color is referenced */}
+          <marker
+            id="arrowhead-default"
+            viewBox="0 0 10 10"
+            refX="8.5"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="13"
+            markerHeight="13"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={isLight ? '#334155' : '#94a3b8'} />
+          </marker>
         </defs>
 
         {/* Pan/Zoom World Container: Clean Solid Canvas with subtle dot orientation */}
@@ -1377,6 +1423,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
               strokeWidth="3.2"
               strokeDasharray="5,5"
               className="pointer-events-none"
+              markerEnd={settings.isDirected ? `url(#${getMarkerId(isLight ? '#2563eb' : '#38bdf8')})` : undefined}
             />
           )}
 
