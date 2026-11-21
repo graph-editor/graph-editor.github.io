@@ -33,6 +33,7 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { LandingPage } from './components/LandingPage';
 import { DownloadModal } from './components/DownloadModal';
 import { BatchActionToolbar } from './components/BatchActionToolbar';
+import { useGraphHistory } from './hooks/useGraphHistory';
 
 // Initial CP Graph (Tree edges without manual N M header)
 const INITIAL_CP_TEXT = `1 2
@@ -160,11 +161,44 @@ export function App() {
   const [algorithmSteps, setAlgorithmSteps] = useState<AlgorithmStep[] | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
+  // Undo / Redo History Stack
+  const { canUndo, canRedo, pushState, undo, redo, initHistory } = useGraphHistory();
+  const rawTextDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleUndo = useCallback(() => {
+    const prevState = undo();
+    if (prevState) {
+      setData(prevState.data);
+      setSettings(prevState.settings);
+      setRawText(prevState.rawText);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedNodeIds([]);
+      setSelectedEdgeIds([]);
+      setAlgorithmSteps(null);
+    }
+  }, [undo]);
+
+  const handleRedo = useCallback(() => {
+    const nextState = redo();
+    if (nextState) {
+      setData(nextState.data);
+      setSettings(nextState.settings);
+      setRawText(nextState.rawText);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedNodeIds([]);
+      setSelectedEdgeIds([]);
+      setAlgorithmSteps(null);
+    }
+  }, [redo]);
+
   // Parse initial graph once on mount
   useEffect(() => {
     const parsed = parseGraphInput(INITIAL_CP_TEXT, settings);
     const positioned = applyLayout(parsed.data, 'tree', { width: 900, height: 650 });
     setData(positioned);
+    initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT });
   }, []);
 
   // Update text when graph is edited visually (and not running algorithm)
@@ -189,11 +223,19 @@ export function App() {
     setData(finalData);
 
     setRawText(text);
-    setSettings(prev => ({
-      ...prev,
+    const nextSettings = {
+      ...settings,
       ...parsed.settings,
-      nodeCountPreserved: parsed.detectedHeader?.n ?? prev.nodeCountPreserved,
-    }));
+      nodeCountPreserved: parsed.detectedHeader?.n ?? settings.nodeCountPreserved,
+    };
+    setSettings(nextSettings);
+
+    if (rawTextDebounceTimerRef.current) {
+      clearTimeout(rawTextDebounceTimerRef.current);
+    }
+    rawTextDebounceTimerRef.current = setTimeout(() => {
+      pushState({ data: finalData, settings: nextSettings, rawText: text });
+    }, 400);
   };
 
   // Toggle explicit N M Header mode
@@ -210,6 +252,7 @@ export function App() {
       finalData = applyLayout(parsed.data, settings.layout);
     }
     setData(finalData);
+    pushState({ data: finalData, settings: newSettings, rawText });
   };
 
   // Allow setting custom isolated node count from the Nodes field, or reset to auto (null)
@@ -226,6 +269,7 @@ export function App() {
       finalData = applyLayout(parsed.data, settings.layout);
     }
     setData(finalData);
+    pushState({ data: finalData, settings: newSettings, rawText });
   };
 
   // Compute live graph stats
@@ -263,6 +307,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     handleSelectNode(newNode.id);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Add single node by custom label/identifier (e.g. from LeftPanel)
@@ -326,6 +372,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     handleSelectNode(newNode.id);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Visual Edge Addition
@@ -346,6 +394,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     setSelectedEdgeId(newEdge.id);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Update Node Position (from dragging - always updates coordinates directly)
@@ -410,6 +460,8 @@ export function App() {
       });
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
+      const text = serializeGraphToCPInput(nextData, settings, false);
+      pushState({ data: nextData, settings, rawText: text });
       return nextData;
     });
   };
@@ -432,9 +484,11 @@ export function App() {
       });
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
+      const text = serializeGraphToCPInput(nextData, settings, false);
+      pushState({ data: nextData, settings, rawText: text });
       return nextData;
     });
-  }, [settings]);
+  }, [settings, pushState, syncGraphToText]);
 
   // Node property update
   const handleUpdateNode = (nodeId: string, updates: Partial<GraphNode>) => {
@@ -473,6 +527,8 @@ export function App() {
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
 
     if (selectedNodeId === nodeId && targetId !== nodeId) {
       setSelectedNodeId(targetId);
@@ -487,6 +543,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     setSelectedNodeId(null);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Edge property update
@@ -495,6 +553,8 @@ export function App() {
     const nextData = { ...data, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Delete Edge
@@ -504,6 +564,8 @@ export function App() {
     setData(nextData);
     syncGraphToText(nextData, settings);
     setSelectedEdgeId(null);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
   };
 
   // Batch Multi-Selection Handlers (Lasso / Shift-select)
@@ -532,13 +594,15 @@ export function App() {
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
 
     setSelectedNodeIds([]);
     setSelectedEdgeIds([]);
     if (selectedNodeId && nodeSet.has(selectedNodeId)) setSelectedNodeId(null);
     if (selectedEdgeId && edgeSet.has(selectedEdgeId)) setSelectedEdgeId(null);
     setIsInspectorOpen(false);
-  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, selectedNodeId, selectedEdgeId]);
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, selectedNodeId, selectedEdgeId, pushState]);
 
   // Batch Color: Color all selected nodes and edges together
   const handleBatchColor = useCallback((color: string) => {
@@ -553,7 +617,9 @@ export function App() {
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
-  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText]);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, pushState]);
 
   // Batch Add Value: Set weight/value for all selected nodes and edges together
   const handleBatchAddValue = useCallback((val: string | number | undefined) => {
@@ -589,7 +655,9 @@ export function App() {
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
-  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText]);
+    const text = serializeGraphToCPInput(nextData, settings, false);
+    pushState({ data: nextData, settings, rawText: text });
+  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, pushState]);
 
   // Change indexing mode (0-based vs 1-based)
   const handleToggleIndexMode = () => {
@@ -598,7 +666,9 @@ export function App() {
     const nextSettings = { ...settings, isZeroIndexed: nextZero };
     setSettings(nextSettings);
     setData(toggled);
-    syncGraphToText(toggled, nextSettings);
+    const text = serializeGraphToCPInput(toggled, nextSettings, false);
+    setRawText(text);
+    pushState({ data: toggled, settings: nextSettings, rawText: text });
   };
 
   // Apply layout
@@ -611,6 +681,8 @@ export function App() {
     });
     setData(laidOut);
     setIsPhysicsActive(layout === 'force');
+    const text = serializeGraphToCPInput(laidOut, nextSettings, false);
+    pushState({ data: laidOut, settings: nextSettings, rawText: text });
   };
 
   // Load Preset
@@ -620,6 +692,8 @@ export function App() {
     setData(newData);
     syncGraphToText(newData, mergedSettings);
     setAlgorithmSteps(null);
+    const text = serializeGraphToCPInput(newData, mergedSettings, false);
+    pushState({ data: newData, settings: mergedSettings, rawText: text });
   };
 
   // Clear Graph
@@ -630,6 +704,7 @@ export function App() {
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
     setAlgorithmSteps(null);
+    pushState({ data: empty, settings, rawText: '' });
   };
 
   // Run CP Algorithm
@@ -739,6 +814,29 @@ export function App() {
         return;
       }
 
+      // Handle Undo (Ctrl+Z / Cmd+Z) and Redo (Ctrl+Y / Cmd+Y / Ctrl+Shift+Z / Cmd+Shift+Z)
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      if (isCtrlOrCmd) {
+        const key = e.key.toLowerCase();
+        if (key === 'z') {
+          if (!['TEXTAREA', 'INPUT'].includes((e.target as HTMLElement).tagName)) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              handleRedo();
+            } else {
+              handleUndo();
+            }
+            return;
+          }
+        } else if (key === 'y') {
+          if (!['TEXTAREA', 'INPUT'].includes((e.target as HTMLElement).tagName)) {
+            e.preventDefault();
+            handleRedo();
+            return;
+          }
+        }
+      }
+
       if (['TEXTAREA', 'INPUT'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
@@ -758,6 +856,8 @@ export function App() {
           const nextDirected = !s.isDirected;
           const next = { ...s, isDirected: nextDirected };
           syncGraphToText(data, next);
+          const text = serializeGraphToCPInput(data, next, false);
+          pushState({ data, settings: next, rawText: text });
           return next;
         });
       } else if (key === 'w') {
@@ -765,6 +865,8 @@ export function App() {
           const nextWeighted = !s.isWeighted;
           const next = { ...s, isWeighted: nextWeighted };
           syncGraphToText(data, next);
+          const text = serializeGraphToCPInput(data, next, false);
+          pushState({ data, settings: next, rawText: text });
           return next;
         });
       } else if (key === ' ') {
@@ -785,7 +887,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCancelAllActions, selectedNodeId, selectedEdgeId, selectedNodeIds, selectedEdgeIds, handleBatchDelete, data, settings]);
+  }, [handleCancelAllActions, handleUndo, handleRedo, selectedNodeId, selectedEdgeId, selectedNodeIds, selectedEdgeIds, handleBatchDelete, data, settings, syncGraphToText, pushState]);
 
   const selectedNode = useMemo(() => data.nodes.find(n => n.id === selectedNodeId) || null, [data.nodes, selectedNodeId]);
   const selectedEdge = useMemo(() => data.edges.find(e => e.id === selectedEdgeId) || null, [data.edges, selectedEdgeId]);
@@ -821,6 +923,8 @@ export function App() {
           const merged = { ...settings, ...s };
           setSettings(merged);
           syncGraphToText(data, merged);
+          const text = serializeGraphToCPInput(data, merged, false);
+          pushState({ data, settings: merged, rawText: text });
         }}
         onApplyLayout={handleApplyLayout}
         onClearGraph={handleClearGraph}
@@ -838,6 +942,10 @@ export function App() {
         onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
       />
 
       {/* Main Workspace: Left Panel, Center Canvas Area, Bottom/Right Docked Inspector */}

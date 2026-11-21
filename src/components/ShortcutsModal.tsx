@@ -9,10 +9,13 @@ interface ShortcutsModalProps {
 export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme = 'dark' }) => {
   const isLight = theme === 'light';
   const shortcuts = [
+    { key: 'Ctrl + Z', desc: 'Undo last graph change' },
+    { key: 'Ctrl + Y / ⇧⌘Z', desc: 'Redo previously undone change' },
     { key: 'V / S', desc: 'Select & Move tool (drag nodes freely)' },
     { key: 'L', desc: 'Lasso tool (draw loop to select nodes & edges)' },
     { key: 'Shift + Drag', desc: 'Quick Lasso select in any tool' },
     { key: 'Double-click Canvas', desc: 'Quickly add a new node' },
+    { key: 'Double-click Node', desc: 'Connect to another node (create edge)' },
     { key: 'Drag Canvas', desc: 'Pan graph view' },
     { key: 'N', desc: 'Add Node tool' },
     { key: 'E', desc: 'Connect / Add Edge tool' },

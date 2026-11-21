@@ -24,6 +24,8 @@ import {
   Check,
   Sun,
   Moon,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -54,6 +56,10 @@ interface TopBarProps {
   onOpenDownloadModal?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -74,6 +80,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenDownloadModal,
   theme = 'dark',
   onToggleTheme,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }) => {
   const isLight = theme === 'light';
   const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
@@ -227,6 +237,47 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <Share2 size={14} />
             <span className="hidden md:inline">Connect</span>
+          </button>
+        </div>
+
+        {/* Undo & Redo History Controls */}
+        <div className={`flex items-center p-0.5 sm:p-1 rounded-xl border transition-colors shrink-0 ${
+          isLight ? 'bg-slate-100 border-slate-200' : 'bg-neutral-900 border-neutral-800'
+        }`}>
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all ${
+              !canUndo
+                ? isLight
+                  ? 'text-slate-300 cursor-not-allowed opacity-40'
+                  : 'text-neutral-600 cursor-not-allowed opacity-40'
+                : isLight
+                ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-200 cursor-pointer active:scale-95'
+                : 'text-neutral-300 hover:text-white hover:bg-neutral-800 cursor-pointer active:scale-95'
+            }`}
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo"
+          >
+            <Undo2 size={15} />
+          </button>
+
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all ${
+              !canRedo
+                ? isLight
+                  ? 'text-slate-300 cursor-not-allowed opacity-40'
+                  : 'text-neutral-600 cursor-not-allowed opacity-40'
+                : isLight
+                ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-200 cursor-pointer active:scale-95'
+                : 'text-neutral-300 hover:text-white hover:bg-neutral-800 cursor-pointer active:scale-95'
+            }`}
+            title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
+            aria-label="Redo"
+          >
+            <Redo2 size={15} />
           </button>
         </div>
       </div>
