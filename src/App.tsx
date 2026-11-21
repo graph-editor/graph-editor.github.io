@@ -73,6 +73,7 @@ export function App() {
     isWeighted: false,
     isZeroIndexed: false,
     layout: 'force',
+    hasHeader: false,
   });
 
   const [rawText, setRawText] = useState<string>(INITIAL_CP_TEXT);
@@ -191,8 +192,24 @@ export function App() {
     setSettings(prev => ({
       ...prev,
       ...parsed.settings,
-      nodeCountPreserved: parsed.detectedHeader?.n ?? undefined,
+      nodeCountPreserved: parsed.detectedHeader?.n ?? prev.nodeCountPreserved,
     }));
+  };
+
+  // Toggle explicit N M Header mode
+  const handleToggleHeaderMode = (hasHeader: boolean) => {
+    const newSettings = { ...settings, hasHeader };
+    setSettings(newSettings);
+
+    const existingNodeMap = new Map<string, GraphNode>();
+    data.nodes.forEach(n => existingNodeMap.set(n.id, n));
+
+    const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
+    let finalData = parsed.data;
+    if (parsed.data.nodes.some(n => !existingNodeMap.has(n.id))) {
+      finalData = applyLayout(parsed.data, settings.layout);
+    }
+    setData(finalData);
   };
 
   // Allow setting custom isolated node count from the Nodes field, or reset to auto (null)
@@ -791,6 +808,7 @@ export function App() {
           onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
           onSetCustomNodeCount={handleSetCustomNodeCount}
           onAddSingleNode={handleAddSingleNode}
+          onToggleHeaderMode={handleToggleHeaderMode}
           theme={theme}
         />
 

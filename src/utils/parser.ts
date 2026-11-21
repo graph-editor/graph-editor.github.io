@@ -145,8 +145,8 @@ export function parseGraphInput(
   let lines = cleanLines;
 
   // Check if first line might be `t` (number of testcases T = 1).
-  // Only slice line 0 if line 1 explicitly starts a CP header `N M` matching following lines count
-  if (lines.length > 2 && lines[0] === '1') {
+  // Only slice line 0 if line 1 explicitly starts a CP header `N M` matching following lines count AND hasHeader is enabled
+  if (currentSettings.hasHeader && lines.length > 2 && lines[0] === '1') {
     const headerTokens = splitLineTokens(lines[1]);
     if (headerTokens.length === 2) {
       const n = parseInt(headerTokens[0], 10);
@@ -183,52 +183,17 @@ function parseEdgeList(
   let edgeStartIndex = 0;
 
   const firstTokens = splitLineTokens(lines[0]);
-  // Check if first line is explicitly a CP header `N M`
-  if (lines.length > 1 && firstTokens.length === 2) {
+
+  // Only parse first line as N M header if explicitly enabled by settings.hasHeader === true.
+  // In CP, users routinely paste ONLY edges (e.g. 1 2, 4 5, 10 20) without an N M header.
+  if (settings.hasHeader && lines.length > 1 && firstTokens.length === 2) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
     if (!isNaN(n) && !isNaN(m) && n >= 1 && m >= 0) {
-      let isHeader = false;
-      if (lines.length - 1 === m) {
-        let allValid = true;
-        for (let i = 1; i < lines.length; i++) {
-          const parts = splitLineTokens(lines[i]);
-          if (parts.length >= 2) {
-            const u = parseInt(parts[0], 10);
-            const v = parseInt(parts[1], 10);
-            if (!isNaN(u) && !isNaN(v) && (u > n || v > n)) {
-              allValid = false;
-              break;
-            }
-          }
-        }
-        if (allValid) isHeader = true;
-      } else {
-        let allValid = true;
-        let edgeCount = 0;
-        for (let i = 1; i < lines.length; i++) {
-          const parts = splitLineTokens(lines[i]);
-          if (parts.length >= 2) {
-            edgeCount++;
-            const u = parseInt(parts[0], 10);
-            const v = parseInt(parts[1], 10);
-            if (!isNaN(u) && !isNaN(v) && (u > n || v > n)) {
-              allValid = false;
-              break;
-            }
-          }
-        }
-        if (allValid && edgeCount > 0 && n >= 2) {
-          isHeader = true;
-        }
-      }
-
-      if (isHeader) {
-        hasHeader = true;
-        declaredN = n;
-        declaredM = m;
-        edgeStartIndex = 1;
-      }
+      hasHeader = true;
+      declaredN = n;
+      declaredM = m;
+      edgeStartIndex = 1;
     }
   }
 
@@ -403,6 +368,7 @@ function parseEdgeList(
       isWeighted: hasWeights || settings.isWeighted,
       isZeroIndexed,
       nodeCountPreserved: effectiveN ?? undefined,
+      hasHeader: settings.hasHeader ?? false,
     },
     detected0Indexed: foundZero,
     detectedHeader: hasHeader && declaredN !== null && declaredM !== null
