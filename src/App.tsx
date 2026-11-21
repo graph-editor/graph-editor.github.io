@@ -33,7 +33,10 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { LandingPage } from './components/LandingPage';
 import { DownloadModal } from './components/DownloadModal';
 import { BatchActionToolbar } from './components/BatchActionToolbar';
+import { ShareModal } from './components/ShareModal';
 import { useGraphHistory } from './hooks/useGraphHistory';
+import { parseGraphFromHash } from './utils/share';
+import { Link2 } from 'lucide-react';
 
 // Initial CP Graph (Tree edges without manual N M header)
 const INITIAL_CP_TEXT = `1 2
@@ -55,19 +58,8 @@ export function App() {
     return 'editor';
   });
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (isElectron) return;
-    const handleHashChange = () => {
-      if (window.location.hash === '#about' || window.location.hash === '#landing') {
-        setCurrentView('landing');
-      } else {
-        setCurrentView('editor');
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isElectron]);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<GraphSettings>({
     isDirected: false,
@@ -79,6 +71,36 @@ export function App() {
 
   const [rawText, setRawText] = useState<string>(INITIAL_CP_TEXT);
   const [data, setData] = useState<GraphData>({ nodes: [], edges: [] });
+
+  // Undo / Redo History Stack
+  const { canUndo, canRedo, pushState, undo, redo, initHistory } = useGraphHistory();
+  const rawTextDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (isElectron) return;
+    const handleHashChange = async () => {
+      const hash = window.location.hash;
+      if (hash === '#about' || hash === '#landing') {
+        setCurrentView('landing');
+      } else {
+        setCurrentView('editor');
+        if (hash.startsWith('#graph=') || hash.startsWith('#data=')) {
+          const shared = await parseGraphFromHash(hash);
+          if (shared && shared.data.nodes.length > 0) {
+            setData(shared.data);
+            setSettings(shared.settings);
+            setRawText(shared.rawText);
+            if (shared.theme) setTheme(shared.theme);
+            initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText });
+            setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
+            setTimeout(() => setToastMessage(null), 3500);
+          }
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isElectron, initHistory]);
 
   // Tools & Selection
   const [activeTool, setActiveTool] = useState<'select' | 'lasso' | 'node' | 'edge'>('select');
@@ -161,10 +183,6 @@ export function App() {
   const [algorithmSteps, setAlgorithmSteps] = useState<AlgorithmStep[] | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
-  // Undo / Redo History Stack
-  const { canUndo, canRedo, pushState, undo, redo, initHistory } = useGraphHistory();
-  const rawTextDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const handleUndo = useCallback(() => {
     const prevState = undo();
     if (prevState) {
@@ -193,12 +211,33 @@ export function App() {
     }
   }, [redo]);
 
-  // Parse initial graph once on mount
+  // Parse initial graph once on mount, or restore from URL hash (#graph=...)
   useEffect(() => {
-    const parsed = parseGraphInput(INITIAL_CP_TEXT, settings);
-    const positioned = applyLayout(parsed.data, 'tree', { width: 900, height: 650 });
-    setData(positioned);
-    initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT });
+    const loadInitial = async () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : '';
+      if (hash && (hash.startsWith('#graph=') || hash.startsWith('#data='))) {
+        const shared = await parseGraphFromHash(hash);
+        if (shared && shared.data.nodes.length > 0) {
+          setData(shared.data);
+          setSettings(shared.settings);
+          setRawText(shared.rawText);
+          if (shared.theme) {
+            setTheme(shared.theme);
+          }
+          initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText });
+          setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
+          setTimeout(() => setToastMessage(null), 3500);
+          return;
+        }
+      }
+
+      const parsed = parseGraphInput(INITIAL_CP_TEXT, settings);
+      const positioned = applyLayout(parsed.data, 'tree', { width: 900, height: 650 });
+      setData(positioned);
+      initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT });
+    };
+
+    loadInitial();
   }, []);
 
   // Update text when graph is edited visually (and not running algorithm)
@@ -793,6 +832,7 @@ export function App() {
     // 5. Close all modals
     setIsExportModalOpen(false);
     setIsShortcutsModalOpen(false);
+    setIsShareModalOpen(false);
 
     // 6. Stop and remove algorithm playback/visualization
     setAlgorithmSteps(null);
@@ -930,6 +970,7 @@ export function App() {
         onClearGraph={handleClearGraph}
         onToggleIndexMode={handleToggleIndexMode}
         onOpenExportModal={() => setIsExportModalOpen(true)}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
         isInspectorOpen={isInspectorOpen || !!selectedNode || !!selectedEdge}
         onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
@@ -1098,6 +1139,16 @@ export function App() {
         />
       )}
 
+      {/* Share Modal Dialog */}
+      {isShareModalOpen && (
+        <ShareModal
+          data={data}
+          settings={settings}
+          theme={theme}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
+
       {/* Keyboard & Mouse Shortcuts Dialog */}
       {isShortcutsModalOpen && (
         <ShortcutsModal
@@ -1113,6 +1164,14 @@ export function App() {
           onClose={() => setIsDownloadModalOpen(false)}
           theme={theme}
         />
+      )}
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border shadow-2xl backdrop-blur-md bg-blue-600/95 border-blue-400 text-white text-xs font-medium animate-in fade-in slide-in-from-bottom-3 pointer-events-none">
+          <Link2 size={15} className="shrink-0 text-white" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );
