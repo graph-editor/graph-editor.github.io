@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { X, Sparkles, FileCode2, ArrowRight, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Sparkles, ArrowRight, Check } from 'lucide-react';
 import {
-  isLeetCode2DArray,
   parseLeetCode2DArray,
-  isParentArrayFormat,
   parseParentArrayFormat,
   parseParentChildArrays,
   detectMultiTestcases,
@@ -36,6 +35,25 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 }) => {
   const isLight = theme === 'light';
   const [inputText, setInputText] = useState<string>('');
+
+  // Body scroll lock & Escape listener
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [onClose]);
 
   // Live detection
   const detection = useMemo(() => {
@@ -100,21 +118,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-fade-in"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 select-none animate-fade-in"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className={`border rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] transition-colors ${
+        className={`border rounded-2xl w-full max-w-xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col transition-colors ${
           isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
         }`}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-3.5 border-b ${
+          className={`flex items-center justify-between px-5 py-3.5 border-b shrink-0 ${
             isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
           }`}
         >
@@ -134,8 +153,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-5 flex-1 flex flex-col space-y-3.5 overflow-y-auto">
+        {/* Scrollable Content */}
+        <div className="p-4 sm:p-5 flex-1 flex flex-col space-y-3.5 overflow-y-auto overscroll-contain">
           {/* Quick Sample Chips */}
           <div>
             <label className={`text-[11px] font-medium block mb-1.5 ${isLight ? 'text-slate-600' : 'text-neutral-400'}`}>
@@ -209,7 +228,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           {/* Live Detection Info Badge */}
           {detection && (
             <div
-              className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition-all ${
+              className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition-all shrink-0 ${
                 detection.type === 'multi'
                   ? isLight
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
@@ -232,7 +251,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Footer Actions */}
         <div
-          className={`flex items-center justify-end gap-2 px-5 py-3 border-t ${
+          className={`flex items-center justify-end gap-2 px-5 py-3 border-t shrink-0 ${
             isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
           }`}
         >
@@ -262,6 +281,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

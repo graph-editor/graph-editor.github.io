@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Copy, Check, Download, FileCode2, Image as ImageIcon, Terminal, Link2, ExternalLink } from 'lucide-react';
 import { GraphData, GraphSettings } from '../types/graph';
 import {
@@ -26,6 +27,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
+
+  // Body scroll lock & Escape listener
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [onClose]);
 
   useEffect(() => {
     buildShareUrl(data, settings, theme).then(setShareUrl);
@@ -56,18 +76,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-fade-in"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 select-none animate-fade-in"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] transition-colors ${
-        isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-      }`}>
+      <div
+        className={`border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col transition-colors ${
+          isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className={`flex items-center justify-between px-5 py-3.5 border-b ${
+        <div className={`flex items-center justify-between px-5 py-3.5 border-b shrink-0 ${
           isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
         }`}>
           <div className="flex items-center gap-2">
@@ -362,6 +385,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

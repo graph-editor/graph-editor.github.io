@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Keyboard } from 'lucide-react';
 
 interface ShortcutsModalProps {
@@ -8,6 +9,26 @@ interface ShortcutsModalProps {
 
 export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme = 'dark' }) => {
   const isLight = theme === 'light';
+
+  // Body scroll lock & Escape listener
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [onClose]);
+
   const shortcuts = [
     { key: 'Ctrl + Z', desc: 'Undo last graph change' },
     { key: 'Ctrl + Y / ⇧⌘Z', desc: 'Redo previously undone change' },
@@ -27,51 +48,69 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
     { key: 'Esc', desc: 'Cancel all actions (tools, connect, selection, algorithms, modals)' },
   ];
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-fade-in"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 select-none animate-fade-in"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transition-colors ${
-        isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-      }`}>
-        <div className={`flex items-center justify-between px-5 py-3.5 border-b ${
-          isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
-        }`}>
+      <div
+        className={`border rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden shadow-2xl transition-colors ${
+          isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className={`flex items-center justify-between px-5 py-3.5 border-b shrink-0 ${
+            isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <Keyboard size={18} className="text-blue-500" />
-            <h3 className={`text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>Keyboard & Mouse Shortcuts</h3>
+            <h3 className={`text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Keyboard & Mouse Shortcuts
+            </h3>
           </div>
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-lg transition-colors ${
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
               isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
             }`}
+            title="Close shortcuts"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-5 space-y-2.5">
+        {/* Scrollable Content */}
+        <div className="p-4 sm:p-5 space-y-2 flex-1 overflow-y-auto overscroll-contain">
           {shortcuts.map(s => (
-            <div key={s.key} className={`flex items-center justify-between py-1.5 border-b text-xs ${
-              isLight ? 'border-slate-100' : 'border-neutral-900'
-            }`}>
+            <div
+              key={s.key}
+              className={`flex items-center justify-between py-1.5 border-b text-xs ${
+                isLight ? 'border-slate-100' : 'border-neutral-900'
+              }`}
+            >
               <span className={isLight ? 'text-slate-700' : 'text-neutral-300'}>{s.desc}</span>
-              <kbd className={`px-2 py-1 border rounded-md font-mono text-[11px] font-semibold ${
-                isLight ? 'bg-slate-100 border-slate-300 text-blue-600' : 'bg-neutral-950 border-neutral-800 text-blue-400'
-              }`}>
+              <kbd
+                className={`px-2 py-1 border rounded-md font-mono text-[11px] font-semibold shrink-0 ml-2 ${
+                  isLight ? 'bg-slate-100 border-slate-300 text-blue-600' : 'bg-neutral-950 border-neutral-800 text-blue-400'
+                }`}
+              >
                 {s.key}
               </kbd>
             </div>
           ))}
         </div>
 
-        <div className={`px-5 py-3 border-t text-xs flex items-center justify-between ${
-          isLight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-neutral-800 bg-neutral-950/80 text-neutral-400'
-        }`}>
+        {/* Footer */}
+        <div
+          className={`px-5 py-3 border-t text-xs flex items-center justify-between shrink-0 ${
+            isLight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-neutral-800 bg-neutral-950/80 text-neutral-400'
+          }`}
+        >
           <span className="font-medium">CP Graph Editor v2.1</span>
           <a
             href="https://github.com/mostafa-cse"
@@ -83,6 +122,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
           </a>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

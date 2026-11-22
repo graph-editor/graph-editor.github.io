@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { GraphData, GraphSettings, AlgorithmType, GraphTab } from '../types/graph';
 import { detectMultiTestcases } from '../utils/contestParser';
-import { ImportModal } from './ImportModal';
 import {
   generateBamboo,
   generateStar,
@@ -49,6 +48,7 @@ interface LeftPanelProps {
   onAddTab?: () => void;
   onCloseTab?: (id: string) => void;
   onSplitMultiTestcases?: (cases: { name: string; text: string }[]) => void;
+  onOpenImportModal?: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -70,6 +70,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onAddTab,
   onCloseTab,
   onSplitMultiTestcases,
+  onOpenImportModal,
 }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
@@ -77,7 +78,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   const [startNodeId, setStartNodeId] = useState<string>(data.nodes[0]?.id || (settings.isZeroIndexed ? '0' : '1'));
   const [copied, setCopied] = useState(false);
   const [singleNodeInput, setSingleNodeInput] = useState('');
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Auto-detect multi-testcase inputs in the current raw text
   const multiTestcaseDetection = useMemo(() => detectMultiTestcases(rawText), [rawText]);
@@ -449,7 +449,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => setIsImportModalOpen(true)}
+                onClick={() => onOpenImportModal?.()}
                 className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans flex items-center gap-1 ${
                   isLight
                     ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 shadow-2xs font-medium'
@@ -820,20 +820,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
       )}
       </aside>
-
-      {/* Import Modal */}
-      {isImportModalOpen && (
-        <ImportModal
-          onClose={() => setIsImportModalOpen(false)}
-          onImportSingle={text => {
-            onRawTextChange(text);
-          }}
-          onImportMulti={cases => {
-            onSplitMultiTestcases?.(cases);
-          }}
-          theme={theme}
-        />
-      )}
     </>
   );
 };

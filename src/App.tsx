@@ -32,6 +32,7 @@ import { ExportModal } from './components/ExportModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { LandingPage } from './components/LandingPage';
 import { DownloadModal } from './components/DownloadModal';
+import { ImportModal } from './components/ImportModal';
 import { BatchActionToolbar } from './components/BatchActionToolbar';
 import { ShareModal } from './components/ShareModal';
 import { useGraphHistory } from './hooks/useGraphHistory';
@@ -58,8 +59,18 @@ export function App() {
     }
     return 'editor';
   });
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  // Centralized Modal Management (Mutually exclusive: only 1 modal can ever be open at a time, eliminating overlaps)
+  type ActiveModal = 'export' | 'share' | 'shortcuts' | 'download' | 'import' | null;
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+
+  const openModal = useCallback((modal: ActiveModal) => {
+    setActiveModal(modal);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setActiveModal(null);
+  }, []);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Synchronously restore saved state from localStorage (unless shared URL hash is present)
@@ -139,13 +150,11 @@ export function App() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
-  // Panels & Modals
+  // Panels
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(
     () => typeof window !== 'undefined' && window.innerWidth < 768
   );
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
-  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
 
   // Tracer Dock Position (Right Side vs Bottom)
   const [tracerPosition, setTracerPosition] = useState<'right' | 'bottom'>(() => {
@@ -1052,10 +1061,8 @@ export function App() {
     // 4. Close properties inspector
     setIsInspectorOpen(false);
 
-    // 5. Close all modals
-    setIsExportModalOpen(false);
-    setIsShortcutsModalOpen(false);
-    setIsShareModalOpen(false);
+    // 5. Close any open modal
+    closeModal();
 
     // 6. Stop and remove algorithm playback/visualization
     setAlgorithmSteps(null);
@@ -1170,11 +1177,12 @@ export function App() {
             setCurrentView('editor');
             if (typeof window !== 'undefined') window.location.hash = '';
           }}
-          onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
+          onOpenDownloadModal={() => openModal('download')}
         />
         <DownloadModal
-          isOpen={isDownloadModalOpen}
-          onClose={() => setIsDownloadModalOpen(false)}
+          isOpen={activeModal === 'download'}
+          onClose={closeModal}
+          theme={theme}
         />
       </>
     );
@@ -1212,9 +1220,9 @@ export function App() {
         onApplyLayout={handleApplyLayout}
         onClearGraph={handleClearGraph}
         onToggleIndexMode={handleToggleIndexMode}
-        onOpenExportModal={() => setIsExportModalOpen(true)}
-        onOpenShareModal={() => setIsShareModalOpen(true)}
-        onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+        onOpenExportModal={() => openModal('export')}
+        onOpenShareModal={() => openModal('share')}
+        onOpenShortcutsModal={() => openModal('shortcuts')}
         isInspectorOpen={isInspectorOpen || !!selectedNode || !!selectedEdge}
         onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
         tracerPosition={tracerPosition}
@@ -1223,7 +1231,7 @@ export function App() {
           setCurrentView('landing');
           if (typeof window !== 'undefined') window.location.hash = '#about';
         }}
-        onOpenDownloadModal={() => setIsDownloadModalOpen(true)}
+        onOpenDownloadModal={() => openModal('download')}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         canUndo={canUndo}
@@ -1254,6 +1262,7 @@ export function App() {
           onAddTab={handleAddTab}
           onCloseTab={handleCloseTab}
           onSplitMultiTestcases={handleSplitMultiTestcases}
+          onOpenImportModal={() => openModal('import')}
         />
 
         {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}
@@ -1381,39 +1390,49 @@ export function App() {
         saveStatus={saveStatus}
       />
 
-      {/* Export Modal Dialog */}
-      {isExportModalOpen && (
+      {/* Mutually Exclusive Modals (Guaranteed Zero Overlap via document.body Portal) */}
+      {activeModal === 'export' && (
         <ExportModal
           data={data}
           settings={settings}
-          onClose={() => setIsExportModalOpen(false)}
+          onClose={closeModal}
           theme={theme}
         />
       )}
 
-      {/* Share Modal Dialog */}
-      {isShareModalOpen && (
+      {activeModal === 'share' && (
         <ShareModal
           data={data}
           settings={settings}
           theme={theme}
-          onClose={() => setIsShareModalOpen(false)}
+          onClose={closeModal}
         />
       )}
 
-      {/* Keyboard & Mouse Shortcuts Dialog */}
-      {isShortcutsModalOpen && (
+      {activeModal === 'shortcuts' && (
         <ShortcutsModal
-          onClose={() => setIsShortcutsModalOpen(false)}
+          onClose={closeModal}
           theme={theme}
         />
       )}
 
-      {/* Desktop App Download Dialog */}
-      {isDownloadModalOpen && (
+      {activeModal === 'download' && (
         <DownloadModal
-          isOpen={isDownloadModalOpen}
-          onClose={() => setIsDownloadModalOpen(false)}
+          isOpen={true}
+          onClose={closeModal}
+          theme={theme}
+        />
+      )}
+
+      {activeModal === 'import' && (
+        <ImportModal
+          onClose={closeModal}
+          onImportSingle={text => {
+            handleRawTextChange(text);
+          }}
+          onImportMulti={cases => {
+            handleSplitMultiTestcases(cases);
+          }}
           theme={theme}
         />
       )}
