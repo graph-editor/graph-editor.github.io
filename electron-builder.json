@@ -13,6 +13,7 @@
   ],
   "linux": {
     "target": ["AppImage", "deb"],
+    "maintainer": "Mostafa <100847323+mostafa-cse@users.noreply.github.com>",
     "icon": "build/icon.png",
     "category": "Development",
     "synopsis": "Competitive Programming Graph Visualizer & Editor",
