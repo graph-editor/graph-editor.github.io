@@ -231,6 +231,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const activeLassoPointsRef = useRef<{ x: number; y: number }[]>([]);
   const [isLassoSelected, setIsLassoSelected] = useState(false);
 
+  // Reset lasso selection view whenever user is not actively using the Lasso tool
+  useEffect(() => {
+    if (activeTool !== 'lasso') {
+      setIsLassoSelected(false);
+      setActiveLassoPoints([]);
+      isLassoingRef.current = false;
+    }
+  }, [activeTool]);
+
   // Persistent reference to latest selectedNodeIds to avoid stale closures
   const selectedNodeIdsRef = useRef(selectedNodeIds);
   useEffect(() => {
@@ -576,6 +585,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     // If holding Ctrl/Cmd/Shift: toggle node in/out of multi-selection and prepare batch dragging
     if (isMultiSelect) {
+      setIsLassoSelected(false);
       nodeClickStartPosRef.current = { x: e.clientX, y: e.clientY, nodeId: node.id };
       const isAlreadySelected = selectedNodeIds.includes(node.id);
       const nextNodes = isAlreadySelected
@@ -641,6 +651,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
 
     // Single select mode: select node and initiate drag
+    setIsLassoSelected(false);
     onSelectNode(node.id);
     onSelectEdge(null);
     if (!selectedNodeIds.includes(node.id)) {
@@ -680,6 +691,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
 
     nodeClickStartPosRef.current = { x: touch.clientX, y: touch.clientY, nodeId: node.id };
+    setIsLassoSelected(false);
 
     const nodeGIdx = node.graphIndex ?? 0;
     const isNodeInSelection =
@@ -1078,34 +1090,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       set.add(selectedNodeId);
     }
 
-    if (selectedEdgeIds.length > 0) {
-      selectedEdgeIds.forEach(edgeId => {
-        const edge = data.edges.find(e => e.id === edgeId);
-        if (edge) {
-          set.add(edge.source);
-          set.add(edge.target);
-        }
-      });
-    } else if (selectedEdgeId) {
-      const edge = data.edges.find(e => e.id === selectedEdgeId);
-      if (edge) {
-        set.add(edge.source);
-        set.add(edge.target);
-      }
-    }
-
     return Array.from(set)
       .map(id => nodeMap.get(id))
       .filter((n): n is GraphNode => Boolean(n));
-  }, [selectedNodeIds, selectedNodeId, selectedEdgeIds, selectedEdgeId, data.edges, nodeMap]);
+  }, [selectedNodeIds, selectedNodeId, nodeMap]);
 
   // Displayed lasso points for the selection enclosure:
-  // Appears when nodes are selected via lasso or multi-selection
+  // Appears ONLY when the user actively used the Lasso tool to make a selection
   const displayLassoPoints = useMemo(() => {
-    if (allSelectedNodesForLasso.length === 0) return [];
-    if (allSelectedNodesForLasso.length < 2 && !isLassoSelected) return [];
+    if (activeTool !== 'lasso' || !isLassoSelected) return [];
+    if (allSelectedNodesForLasso.length < 2) return [];
     return computeSelectionLassoPolygon(allSelectedNodesForLasso, getNodeRadius);
-  }, [allSelectedNodesForLasso, isLassoSelected, getNodeRadius]);
+  }, [activeTool, isLassoSelected, allSelectedNodesForLasso, getNodeRadius]);
 
   // Bounding box of lasso enclosure for move indicator pill
   const lassoBBox = useMemo(() => {
@@ -1149,6 +1145,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (edge.source === edge.target) {
       const handleLoopClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+        setIsLassoSelected(false);
         const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
         if (isMulti) {
           const nextEdges = selectedEdgeIds.includes(edge.id)
@@ -1338,6 +1335,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }
 
       const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
+      setIsLassoSelected(false);
       if (isMulti) {
         const nextEdges = selectedEdgeIds.includes(targetEdge.id)
           ? selectedEdgeIds.filter(id => id !== targetEdge.id)
@@ -1354,55 +1352,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const handleEdgeMouseDown = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (e.button !== 0) return;
+      setIsLassoSelected(false);
       if (e.shiftKey || e.ctrlKey || e.metaKey) return;
-
-      const isEdgeInSelection =
-        selectedEdgeId === edge.id ||
-        selectedEdgeIds.includes(edge.id) ||
-        (oppEdge && (selectedEdgeId === oppEdge.id || selectedEdgeIds.includes(oppEdge.id))) ||
-        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
-
-      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
-        const world = screenToWorld(e.clientX, e.clientY);
-        dragOffsetRef.current = { x: 0, y: 0 };
-        dragNodeStartPosRef.current = { x: world.x, y: world.y };
-
-        const posMap = new Map<string, { x: number; y: number }>();
-        allSelectedNodesForLasso.forEach(n => {
-          posMap.set(n.id, { x: n.x, y: n.y });
-        });
-        batchDragStartPositionsRef.current = posMap;
-
-        setDraggingNodeId('__lasso_batch__');
-        return;
-      }
     };
 
     const handleEdgeTouchStart = (e: React.TouchEvent) => {
       e.stopPropagation();
       if (e.touches.length !== 1) return;
-
-      const isEdgeInSelection =
-        selectedEdgeId === edge.id ||
-        selectedEdgeIds.includes(edge.id) ||
-        (oppEdge && (selectedEdgeId === oppEdge.id || selectedEdgeIds.includes(oppEdge.id))) ||
-        (selectedNodeIds.includes(edge.source) && selectedNodeIds.includes(edge.target));
-
-      if (isEdgeInSelection && allSelectedNodesForLasso.length > 0) {
-        const touch = e.touches[0];
-        const world = screenToWorld(touch.clientX, touch.clientY);
-        dragOffsetRef.current = { x: 0, y: 0 };
-        dragNodeStartPosRef.current = { x: world.x, y: world.y };
-
-        const posMap = new Map<string, { x: number; y: number }>();
-        allSelectedNodesForLasso.forEach(n => {
-          posMap.set(n.id, { x: n.x, y: n.y });
-        });
-        batchDragStartPositionsRef.current = posMap;
-
-        setDraggingNodeId('__lasso_batch__');
-        return;
-      }
+      setIsLassoSelected(false);
     };
 
     return (
@@ -1794,8 +1751,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           {/* Edges Layer */}
           <g className="edges-layer">{renderedEdges.map(renderEdge)}</g>
 
-          {/* Selection Lasso Enclosure (Appears ONLY when user selects using lasso / multi-selection, allowing moving) */}
-          {activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (
+          {/* Selection Lasso Enclosure (Appears ONLY when actively using the Lasso tool and a lasso selection was made) */}
+          {activeTool === 'lasso' && isLassoSelected && activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (
             <g
               className={`selection-lasso select-none transition-opacity ${draggingNodeId ? 'cursor-grabbing' : 'cursor-grab'}`}
               onMouseDown={handleLassoMouseDown}
