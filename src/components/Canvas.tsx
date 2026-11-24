@@ -142,6 +142,9 @@ export interface CanvasHandle {
   zoomOut: () => void;
   resetZoom: () => void;
   cancelAction: () => void;
+  getVisibleCenter: () => { x: number; y: number };
+  getVisibleBounds: () => { minX: number; maxX: number; minY: number; maxY: number; centerX: number; centerY: number };
+  ensureNodeVisible: (nodeId: string) => void;
 }
 
 interface CanvasProps {
@@ -365,6 +368,50 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     setToastMessage(null);
   }, [draggingNodeId, onFinishDragNode, onFinishDragNodes, onBatchSelect]);
 
+  // Get current world coordinates of visible viewport bounds and center
+  const getVisibleBounds = useCallback(() => {
+    if (!svgRef.current) {
+      return { minX: 0, maxX: 800, minY: 0, maxY: 600, centerX: 400, centerY: 300 };
+    }
+    const rect = svgRef.current.getBoundingClientRect();
+    const width = rect.width || 800;
+    const height = rect.height || 600;
+    const minX = (0 - viewTransform.x) / viewTransform.scale;
+    const maxX = (width - viewTransform.x) / viewTransform.scale;
+    const minY = (0 - viewTransform.y) / viewTransform.scale;
+    const maxY = (height - viewTransform.y) / viewTransform.scale;
+    const centerX = (width / 2 - viewTransform.x) / viewTransform.scale;
+    const centerY = (height / 2 - viewTransform.y) / viewTransform.scale;
+    return { minX, maxX, minY, maxY, centerX, centerY };
+  }, [viewTransform]);
+
+  const getVisibleCenter = useCallback(() => {
+    const b = getVisibleBounds();
+    return { x: b.centerX, y: b.centerY };
+  }, [getVisibleBounds]);
+
+  // Ensure specified node is visibly positioned inside viewport
+  const ensureNodeVisible = useCallback((nodeId: string) => {
+    if (!svgRef.current) return;
+    const node = dataRef.current.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const width = rect.width || 800;
+    const height = rect.height || 600;
+    const pad = 75;
+
+    const screenX = node.x * viewTransform.scale + viewTransform.x;
+    const screenY = node.y * viewTransform.scale + viewTransform.y;
+
+    if (screenX < pad || screenX > width - pad || screenY < pad || screenY > height - pad) {
+      setViewTransform(prev => ({
+        ...prev,
+        x: width / 2 - node.x * prev.scale,
+        y: height / 2 - node.y * prev.scale,
+      }));
+    }
+  }, [viewTransform]);
+
   // Expose imperative handle to BottomStatusBar and App
   useImperativeHandle(ref, () => ({
     fitView: handleFitView,
@@ -372,7 +419,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     zoomOut: () => setViewTransform(v => ({ ...v, scale: Math.max(0.2, v.scale * 0.8) })),
     resetZoom: () => setViewTransform(v => ({ ...v, scale: 1 })),
     cancelAction,
-  }), [handleFitView, cancelAction]);
+    getVisibleCenter,
+    getVisibleBounds,
+    ensureNodeVisible,
+  }), [handleFitView, cancelAction, getVisibleCenter, getVisibleBounds, ensureNodeVisible]);
 
   // Cancel connecting edge if active tool changes away from 'edge'
   useEffect(() => {
@@ -485,7 +535,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (e.button === 1 || e.button === 2 || e.altKey || (e.button === 0 && activeTool === 'select')) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
-      if (!e.shiftKey) {
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
         onSelectNode(null);
         onSelectEdge(null);
         onBatchSelect?.([], []);
@@ -522,13 +572,36 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       return;
     }
 
-    // If holding shift: toggle node in/out of multi-selection
-    if (e.shiftKey) {
-      const nextNodes = selectedNodeIds.includes(node.id)
+    const isMultiSelect = e.ctrlKey || e.metaKey || e.shiftKey;
+
+    // If holding Ctrl/Cmd/Shift: toggle node in/out of multi-selection and prepare batch dragging
+    if (isMultiSelect) {
+      nodeClickStartPosRef.current = { x: e.clientX, y: e.clientY, nodeId: node.id };
+      const isAlreadySelected = selectedNodeIds.includes(node.id);
+      const nextNodes = isAlreadySelected
         ? selectedNodeIds.filter(id => id !== node.id)
         : [...selectedNodeIds, node.id];
       onBatchSelect?.(nextNodes, selectedEdgeIds);
-      onSelectNode(node.id);
+      onSelectNode(isAlreadySelected ? (nextNodes[nextNodes.length - 1] || null) : node.id);
+
+      // Prepare batch drag positions in case user drags while holding modifier
+      const nodeGIdx = node.graphIndex ?? 0;
+      const nodesToMove = data.nodes.filter(n => nextNodes.includes(n.id) && (n.graphIndex ?? 0) === nodeGIdx);
+      if (nodesToMove.length > 0) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        dragOffsetRef.current = {
+          x: node.x - world.x,
+          y: node.y - world.y,
+        };
+        dragNodeStartPosRef.current = { x: node.x, y: node.y };
+
+        const posMap = new Map<string, { x: number; y: number }>();
+        nodesToMove.forEach(n => {
+          posMap.set(n.id, { x: n.x, y: n.y });
+        });
+        batchDragStartPositionsRef.current = posMap;
+        setDraggingNodeId(node.id);
+      }
       return;
     }
 
@@ -808,7 +881,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         const { x, y, nodeId } = nodeClickStartPosRef.current;
         nodeClickStartPosRef.current = null;
         const distMoved = Math.hypot(e.clientX - x, e.clientY - y);
-        if (distMoved < 4 && !e.shiftKey) {
+        if (distMoved < 4 && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
           onSelectNode(nodeId);
           onBatchSelect?.([nodeId], []);
         }
@@ -1064,12 +1137,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
     const defaultColor = isLight ? '#334155' : '#94a3b8';
     const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
+    const edgeActualColor = edge.color && edge.color !== '#64748b' ? edge.color : defaultColor;
     const effectiveEdgeColor = algoEdgeHighlight?.color || (
-      isSelected
-        ? (isLight ? '#2563eb' : '#38bdf8')
-        : isHovered
+      isHovered && !isSelected
         ? hoveredColor
-        : (edge.color === '#64748b' ? defaultColor : edge.color)
+        : edgeActualColor
     );
     const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
 
@@ -1077,19 +1149,18 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (edge.source === edge.target) {
       const handleLoopClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (e.shiftKey || activeTool === 'lasso') {
+        const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
+        if (isMulti) {
           const nextEdges = selectedEdgeIds.includes(edge.id)
             ? selectedEdgeIds.filter(id => id !== edge.id)
             : [...selectedEdgeIds, edge.id];
           onBatchSelect?.(selectedNodeIds, nextEdges);
-          onSelectEdge(edge.id);
+          onSelectEdge(nextEdges[nextEdges.length - 1] || null);
           return;
         }
         onSelectEdge(edge.id);
         onSelectNode(null);
-        if (!selectedEdgeIds.includes(edge.id)) {
-          onBatchSelect?.([], []);
-        }
+        onBatchSelect?.([], [edge.id]);
       };
 
       const sourceRadius = getNodeRadius(sourceNode);
@@ -1266,25 +1337,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         }
       }
 
-      if (e.shiftKey || activeTool === 'lasso') {
+      const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
+      if (isMulti) {
         const nextEdges = selectedEdgeIds.includes(targetEdge.id)
           ? selectedEdgeIds.filter(id => id !== targetEdge.id)
           : [...selectedEdgeIds, targetEdge.id];
         onBatchSelect?.(selectedNodeIds, nextEdges);
-        onSelectEdge(targetEdge.id);
+        onSelectEdge(nextEdges[nextEdges.length - 1] || null);
         return;
       }
       onSelectEdge(targetEdge.id);
       onSelectNode(null);
-      if (!selectedEdgeIds.includes(targetEdge.id)) {
-        onBatchSelect?.([], []);
-      }
+      onBatchSelect?.([], [targetEdge.id]);
     };
 
     const handleEdgeMouseDown = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (e.button !== 0) return;
-      if (e.shiftKey) return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey) return;
 
       const isEdgeInSelection =
         selectedEdgeId === edge.id ||

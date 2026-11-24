@@ -371,7 +371,8 @@ export function App() {
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
-    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings);
+    const center = canvasRef.current?.getVisibleCenter();
+    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings, center);
 
     setData(finalData);
 
@@ -470,7 +471,8 @@ export function App() {
 
     const existingNodeMap = new Map<string, GraphNode>();
     const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(newTabs, settings, existingNodeMap);
-    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings);
+    const center = canvasRef.current?.getVisibleCenter();
+    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings, center);
 
     setData(finalData);
     pushState({ data: finalData, settings, rawText: newTabs[0].text, tabs: newTabs, activeTabId: newTabs[0].id });
@@ -487,9 +489,19 @@ export function App() {
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
-    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings);
+    const center = canvasRef.current?.getVisibleCenter();
+    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings, center);
     setData(finalData);
     pushState({ data: finalData, settings: newSettings, rawText });
+
+    if (finalData.nodes.length > data.nodes.length) {
+      const lastNewNode = finalData.nodes[finalData.nodes.length - 1];
+      if (lastNewNode) {
+        setTimeout(() => {
+          canvasRef.current?.ensureNodeVisible(lastNewNode.id);
+        }, 20);
+      }
+    }
   };
 
   // Allow setting custom isolated node count from the Nodes field, or reset to auto (null)
@@ -501,9 +513,19 @@ export function App() {
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
     const parsed = parseGraphInput(rawText, newSettings, existingNodeMap);
-    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings);
+    const center = canvasRef.current?.getVisibleCenter();
+    const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings, center);
     setData(finalData);
     pushState({ data: finalData, settings: newSettings, rawText });
+
+    if (finalData.nodes.length > data.nodes.length) {
+      const lastNewNode = finalData.nodes[finalData.nodes.length - 1];
+      if (lastNewNode) {
+        setTimeout(() => {
+          canvasRef.current?.ensureNodeVisible(lastNewNode.id);
+        }, 20);
+      }
+    }
   };
 
   // Compute live graph stats
@@ -595,6 +617,28 @@ export function App() {
       finalId = `${raw}_${counter++}`;
     }
 
+    const center = canvasRef.current?.getVisibleCenter() ?? { x: 400, y: 300 };
+    let posX = center.x + (Math.random() - 0.5) * 60;
+    let posY = center.y + (Math.random() - 0.5) * 60;
+
+    // Check collision with existing nodes and offset in a spiral to find a clear spot
+    let collision = true;
+    let attempts = 0;
+    while (collision && attempts < 25) {
+      collision = data.nodes.some(n => {
+        const dx = n.x - posX;
+        const dy = n.y - posY;
+        return dx * dx + dy * dy < 55 * 55;
+      });
+      if (collision) {
+        const angle = (attempts * 137.5 * Math.PI) / 180;
+        const dist = 65 * Math.sqrt(attempts + 1);
+        posX = center.x + Math.cos(angle) * dist;
+        posY = center.y + Math.sin(angle) * dist;
+      }
+      attempts++;
+    }
+
     const newNode: GraphNode = {
       id: finalId,
       label: finalId,
@@ -602,8 +646,8 @@ export function App() {
       weight,
       value: weight,
       index: data.nodes.length + (settings.isZeroIndexed ? 0 : 1),
-      x: data.nodes.length === 0 ? 400 : 360 + (Math.random() - 0.5) * 160,
-      y: data.nodes.length === 0 ? 300 : 260 + (Math.random() - 0.5) * 160,
+      x: posX,
+      y: posY,
       color: '#3b82f6',
     };
 
@@ -616,6 +660,10 @@ export function App() {
     handleSelectNode(newNode.id);
     const text = serializeGraphToCPInput(nextData, settings, false);
     pushState({ data: nextData, settings, rawText: text });
+
+    setTimeout(() => {
+      canvasRef.current?.ensureNodeVisible(newNode.id);
+    }, 20);
   };
 
   // Visual Edge Addition
@@ -747,7 +795,24 @@ export function App() {
       }
     }
 
+    const isBatchColor = updates.color !== undefined && selectedNodeIds.includes(nodeId) && selectedNodeIds.length > 1;
+    const batchNodeSet = isBatchColor ? new Set(selectedNodeIds) : null;
+
     const nextNodes = data.nodes.map(n => {
+      if (batchNodeSet && batchNodeSet.has(n.id)) {
+        return {
+          ...n,
+          color: updates.color ?? n.color,
+          ...(n.id === nodeId
+            ? {
+                ...updates,
+                id: targetId,
+                label: updates.label !== undefined ? updates.label : n.label,
+                nodeType: detectNodeType(targetId),
+              }
+            : {}),
+        };
+      }
       if (n.id === nodeId) {
         return {
           ...n,
@@ -793,7 +858,19 @@ export function App() {
 
   // Edge property update
   const handleUpdateEdge = (edgeId: string, updates: Partial<GraphEdge>) => {
-    const nextEdges = data.edges.map(e => (e.id === edgeId ? { ...e, ...updates } : e));
+    const isBatchColor = updates.color !== undefined && selectedEdgeIds.includes(edgeId) && selectedEdgeIds.length > 1;
+    const batchEdgeSet = isBatchColor ? new Set(selectedEdgeIds) : null;
+
+    const nextEdges = data.edges.map(e => {
+      if (batchEdgeSet && batchEdgeSet.has(e.id)) {
+        return {
+          ...e,
+          color: updates.color ?? e.color,
+          ...(e.id === edgeId ? updates : {}),
+        };
+      }
+      return e.id === edgeId ? { ...e, ...updates } : e;
+    });
     const nextData = { ...data, edges: nextEdges };
     setData(nextData);
     syncGraphToText(nextData, settings);
@@ -850,10 +927,11 @@ export function App() {
 
   // Batch Color: Color all selected nodes and edges together
   const handleBatchColor = useCallback((color: string) => {
-    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return;
-
     const nodeSet = new Set(selectedNodeIds);
     const edgeSet = new Set(selectedEdgeIds);
+    if (selectedNodeId) nodeSet.add(selectedNodeId);
+    if (selectedEdgeId) edgeSet.add(selectedEdgeId);
+    if (nodeSet.size === 0 && edgeSet.size === 0) return;
 
     const nextNodes = data.nodes.map(n => (nodeSet.has(n.id) ? { ...n, color } : n));
     const nextEdges = data.edges.map(e => (edgeSet.has(e.id) ? { ...e, color } : e));
@@ -863,14 +941,15 @@ export function App() {
     syncGraphToText(nextData, settings);
     const text = serializeGraphToCPInput(nextData, settings, false);
     pushState({ data: nextData, settings, rawText: text });
-  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, pushState]);
+  }, [selectedNodeIds, selectedEdgeIds, selectedNodeId, selectedEdgeId, data, settings, syncGraphToText, pushState]);
 
   // Batch Add Value: Set weight/value for all selected nodes and edges together
   const handleBatchAddValue = useCallback((val: string | number | undefined) => {
-    if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return;
-
     const nodeSet = new Set(selectedNodeIds);
     const edgeSet = new Set(selectedEdgeIds);
+    if (selectedNodeId) nodeSet.add(selectedNodeId);
+    if (selectedEdgeId) edgeSet.add(selectedEdgeId);
+    if (nodeSet.size === 0 && edgeSet.size === 0) return;
 
     const nextNodes = data.nodes.map(n => {
       if (nodeSet.has(n.id)) {

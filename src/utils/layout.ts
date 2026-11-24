@@ -577,7 +577,8 @@ export function applyForceLayoutStep(
 export function positionNewNodesPreservingExisting(
   parsed: GraphData,
   existingNodeMap: Map<string, GraphNode>,
-  settings: GraphSettings
+  settings: GraphSettings,
+  visibleCenter?: { x: number; y: number }
 ): GraphData {
   // If no existing nodes in canvas, lay out the new graph from scratch
   if (existingNodeMap.size === 0) {
@@ -708,10 +709,20 @@ export function positionNewNodesPreservingExisting(
   }
 
   // Any remaining new nodes are isolated (or in a new disconnected component)
+  // Position them neatly in the visible viewport (or to the right of the graph)
   let isolatedIndex = 0;
+  const baseX = visibleCenter ? visibleCenter.x : (isFinite(maxX) ? maxX + 90 : 450);
+  const baseY = visibleCenter ? visibleCenter.y : (isFinite(minY) ? minY : 325);
+
   for (const node of remaining) {
-    const candX = maxX + 90 + (isolatedIndex % 3) * 80;
-    const candY = minY + Math.floor(isolatedIndex / 3) * 85;
+    const col = isolatedIndex % 4;
+    const row = Math.floor(isolatedIndex / 4);
+    const candX = visibleCenter
+      ? baseX + (col - 1.5) * 85
+      : baseX + col * 80;
+    const candY = visibleCenter
+      ? baseY + (row - 0.5) * 85
+      : baseY + row * 85;
     isolatedIndex++;
     const spot = findClearSpot(candX, candY);
     posMap.set(node.id, spot);

@@ -33,6 +33,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
     { key: 'Ctrl + Z', desc: 'Undo last graph change' },
     { key: 'Ctrl + Y / ⇧⌘Z', desc: 'Redo previously undone change' },
     { key: 'V / S', desc: 'Select & Move tool (drag nodes freely)' },
+    { key: 'Ctrl / Shift + Click', desc: 'Multi-select nodes & edges (color, move)' },
     { key: 'L', desc: 'Lasso tool (draw loop to select nodes & edges)' },
     { key: 'Shift + Drag', desc: 'Quick Lasso select in any tool' },
     { key: 'Double-click Canvas', desc: 'Quickly add a new node' },

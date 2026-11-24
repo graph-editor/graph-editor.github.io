@@ -32,6 +32,7 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
 }) => {
   const isLight = theme === 'light';
   const [valInput, setValInput] = useState<string>('');
+  const [currentColor, setCurrentColor] = useState<string>('#3b82f6');
   const [isColorPickerOpen, setIsColorPickerOpen] = useState<boolean>(false);
   const [isValueModalOpen, setIsValueModalOpen] = useState<boolean>(false);
 
@@ -81,7 +82,10 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
                 <button
                   type="button"
                   key={p.color}
-                  onClick={() => onBatchColor(p.color)}
+                  onClick={() => {
+                    setCurrentColor(p.color);
+                    onBatchColor(p.color);
+                  }}
                   className={`w-4 h-4 rounded-full border hover:scale-125 transition-transform ${
                     isLight ? 'border-slate-300' : 'border-slate-800'
                   }`}
@@ -102,9 +106,17 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
               <label className="cursor-pointer ml-0.5 flex items-center" title="Pick any custom live color">
                 <input
                   type="color"
-                  defaultValue="#3b82f6"
-                  onInput={e => onBatchColor((e.target as HTMLInputElement).value)}
-                  onChange={e => onBatchColor((e.target as HTMLInputElement).value)}
+                  value={currentColor}
+                  onInput={e => {
+                    const c = (e.target as HTMLInputElement).value;
+                    setCurrentColor(c);
+                    onBatchColor(c);
+                  }}
+                  onChange={e => {
+                    const c = (e.target as HTMLInputElement).value;
+                    setCurrentColor(c);
+                    onBatchColor(c);
+                  }}
                   className="w-3.5 h-3.5 rounded-full cursor-pointer border-0 bg-transparent p-0 block"
                 />
               </label>
@@ -121,6 +133,7 @@ export const BatchActionToolbar: React.FC<BatchActionToolbarProps> = ({
                   type="button"
                   key={p.color}
                   onClick={() => {
+                    setCurrentColor(p.color);
                     onBatchColor(p.color);
                     setIsColorPickerOpen(false);
                   }}
