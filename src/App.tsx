@@ -196,6 +196,13 @@ export function App() {
     }
   }, [tabs, activeTabId, data.nodes]);
 
+  const handleSelectEdge = useCallback((edgeId: string | null) => {
+    setSelectedEdgeId(edgeId);
+    if (edgeId) {
+      setIsInspectorOpen(true);
+    }
+  }, []);
+
   // Zoom scale reported by Canvas
   const [zoomScale, setZoomScale] = useState<number>(1);
 
@@ -1245,8 +1252,26 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleCancelAllActions, handleUndo, handleRedo, selectedNodeId, selectedEdgeId, selectedNodeIds, selectedEdgeIds, handleBatchDelete, data, settings, syncGraphToText, pushState]);
 
-  const selectedNode = useMemo(() => data.nodes.find(n => n.id === selectedNodeId) || null, [data.nodes, selectedNodeId]);
-  const selectedEdge = useMemo(() => data.edges.find(e => e.id === selectedEdgeId) || null, [data.edges, selectedEdgeId]);
+  const selectedNode = useMemo(() => {
+    if (selectedNodeId) return data.nodes.find(n => n.id === selectedNodeId) || null;
+    if (selectedNodeIds.length > 0) return data.nodes.find(n => n.id === selectedNodeIds[selectedNodeIds.length - 1]) || null;
+    return null;
+  }, [data.nodes, selectedNodeId, selectedNodeIds]);
+
+  const selectedEdge = useMemo(() => {
+    if (selectedEdgeId) return data.edges.find(e => e.id === selectedEdgeId) || null;
+    if (selectedEdgeIds.length > 0) return data.edges.find(e => e.id === selectedEdgeIds[selectedEdgeIds.length - 1]) || null;
+    return null;
+  }, [data.edges, selectedEdgeId, selectedEdgeIds]);
+
+  const hasSelection = Boolean(selectedNode || selectedEdge || selectedNodeIds.length > 0 || selectedEdgeIds.length > 0);
+
+  // Automatically hide Node Tracer / Properties Inspector when no nodes or edges are selected
+  useEffect(() => {
+    if (!hasSelection) {
+      setIsInspectorOpen(false);
+    }
+  }, [hasSelection]);
 
   if (currentView === 'landing') {
     return (
@@ -1302,8 +1327,17 @@ export function App() {
         onOpenExportModal={() => openModal('export')}
         onOpenShareModal={() => openModal('share')}
         onOpenShortcutsModal={() => openModal('shortcuts')}
-        isInspectorOpen={isInspectorOpen || !!selectedNode || !!selectedEdge}
-        onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
+        isInspectorOpen={isInspectorOpen && hasSelection}
+        onToggleInspector={() => {
+          if (isInspectorOpen && hasSelection) {
+            setIsInspectorOpen(false);
+          } else {
+            if (!hasSelection && data.nodes.length > 0) {
+              handleSelectNode(data.nodes[0].id);
+            }
+            setIsInspectorOpen(true);
+          }
+        }}
         tracerPosition={tracerPosition}
         onToggleTracerPosition={handleToggleTracerPosition}
         onGoHome={isElectron ? undefined : () => {
@@ -1358,7 +1392,7 @@ export function App() {
               selectedNodeIds={selectedNodeIds}
               selectedEdgeIds={selectedEdgeIds}
               onSelectNode={handleSelectNode}
-              onSelectEdge={setSelectedEdgeId}
+              onSelectEdge={handleSelectEdge}
               onBatchSelect={handleBatchSelect}
               onAddNode={handleAddNode}
               onAddEdge={handleAddEdge}
@@ -1403,7 +1437,7 @@ export function App() {
           </div>
 
           {/* Bottom Docked Node Tracer / Properties Inspector */}
-          {tracerPosition === 'bottom' && (isInspectorOpen || selectedNode || selectedEdge) && (
+          {tracerPosition === 'bottom' && isInspectorOpen && hasSelection && (selectedNode || selectedEdge) && (
             <PropertiesInspector
               position="bottom"
               onPositionChange={handleSetTracerPosition}
@@ -1421,6 +1455,8 @@ export function App() {
               onClose={() => {
                 setSelectedNodeId(null);
                 setSelectedEdgeId(null);
+                setSelectedNodeIds([]);
+                setSelectedEdgeIds([]);
                 setIsInspectorOpen(false);
               }}
               theme={theme}
@@ -1429,7 +1465,7 @@ export function App() {
         </div>
 
         {/* Docked Right Properties Inspector: Slides in beside canvas, zero overlap */}
-        {tracerPosition === 'right' && (isInspectorOpen || selectedNode || selectedEdge) && (
+        {tracerPosition === 'right' && isInspectorOpen && hasSelection && (selectedNode || selectedEdge) && (
           <PropertiesInspector
             position="right"
             onPositionChange={handleSetTracerPosition}
@@ -1447,6 +1483,8 @@ export function App() {
             onClose={() => {
               setSelectedNodeId(null);
               setSelectedEdgeId(null);
+              setSelectedNodeIds([]);
+              setSelectedEdgeIds([]);
               setIsInspectorOpen(false);
             }}
             theme={theme}
