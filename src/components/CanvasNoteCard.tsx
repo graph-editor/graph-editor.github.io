@@ -89,36 +89,58 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
   };
 
   // Resizing handler (bottom-right corner)
-  const handleStartResize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const startResize = (clientX: number, clientY: number) => {
     onBringToFront?.(note.id);
     setIsResizing(true);
 
-    const startX = e.clientX;
-    const startY = e.clientY;
+    const startX = clientX;
+    const startY = clientY;
     const startWidth = width;
     const currentTextareaHeight = textareaRef.current?.offsetHeight ?? 92;
     const startHeight = note.height ?? currentTextareaHeight;
 
-    const onMouseMove = (ev: MouseEvent) => {
-      const dx = (ev.clientX - startX) / viewScale;
-      const dy = (ev.clientY - startY) / viewScale;
+    const handleMove = (moveX: number, moveY: number) => {
+      const dx = (moveX - startX) / viewScale;
+      const dy = (moveY - startY) / viewScale;
       onUpdateNote(note.id, {
         width: Math.max(185, Math.min(540, Math.round(startWidth + dx))),
         height: Math.max(76, Math.min(480, Math.round(startHeight + dy))),
       });
     };
 
-    const onMouseUp = () => {
+    const onMouseMove = (ev: MouseEvent) => handleMove(ev.clientX, ev.clientY);
+    const onTouchMove = (ev: TouchEvent) => {
+      if (ev.touches.length === 1) {
+        ev.preventDefault();
+        handleMove(ev.touches[0].clientX, ev.touches[0].clientY);
+      }
+    };
+
+    const onEnd = () => {
       setIsResizing(false);
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onEnd);
       onCommitHistory?.();
     };
 
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+  };
+
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    startResize(e.clientX, e.clientY);
+  };
+
+  const handleStartResizeTouch = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    startResize(e.touches[0].clientX, e.touches[0].clientY);
   };
 
   return (
@@ -201,17 +223,20 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
               ? { height: `${note.height}px` }
               : { fieldSizing: 'content' as any, minHeight: '82px', maxHeight: '380px' }),
           }}
-          className="w-full px-3 py-2.5 bg-transparent text-[12.5px] leading-relaxed font-sans text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
+          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent text-[12.5px] leading-relaxed font-sans text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
         />
 
-        {/* Minimal Corner Resize Handle */}
+        {/* Clear Classic Corner Resize Grip */}
         <div
           onMouseDown={handleStartResize}
-          className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 cursor-nwse-resize text-neutral-600 opacity-30 hover:opacity-90 hover:text-neutral-300 transition-opacity flex items-end justify-end p-0.5"
+          onTouchStart={handleStartResizeTouch}
+          className="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize text-neutral-400 hover:text-white hover:bg-neutral-800/75 rounded-tl-md transition-colors flex items-end justify-end p-1"
           title="Drag to resize note"
         >
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.2">
-            <path d="M7 3L3 7M7 6L6 7" strokeLinecap="round" />
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M10.5 2.5L2.5 10.5" />
+            <path d="M10.5 6.5L6.5 10.5" />
+            <path d="M10.5 10L10 10.5" />
           </svg>
         </div>
       </div>
