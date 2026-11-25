@@ -1161,10 +1161,10 @@ export function App() {
       id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       x: targetX,
       y: targetY,
-      width: 240,
+      width: 236,
       title: 'Note',
       text: '',
-      color: 'amber',
+      color: 'neutral',
     };
 
     const nextNotes = [...notes, newNote];
