@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GripHorizontal, X } from 'lucide-react';
+import { Move, X } from 'lucide-react';
 import { GraphNote } from '../types/graph';
 
 interface CanvasNoteCardProps {
@@ -175,10 +175,12 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
         className="flex items-center justify-between px-2.5 py-1.5 border-b border-neutral-800/90 bg-neutral-950/90 select-none cursor-grab active:cursor-grabbing"
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <GripHorizontal
-            size={12}
-            className="shrink-0 text-neutral-600 group-hover:text-neutral-400 transition-colors"
-          />
+          <span
+            className="p-0.5 rounded text-neutral-300 group-hover:text-white transition-colors shrink-0"
+            title="Drag to move note"
+          >
+            <Move size={13} strokeWidth={2} />
+          </span>
           <input
             type="text"
             value={note.title ?? ''}
@@ -188,7 +190,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
             onMouseDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
             spellCheck={false}
-            className="w-full min-w-0 bg-transparent text-[11px] font-medium tracking-wide text-neutral-300 placeholder:text-neutral-500 focus:text-white focus:outline-none select-text"
+            className="w-full min-w-0 bg-transparent text-[11px] font-medium tracking-wide text-neutral-200 placeholder:text-neutral-400 focus:text-white focus:outline-none select-text"
           />
         </div>
 
@@ -196,10 +198,10 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           type="button"
           onMouseDown={e => e.stopPropagation()}
           onClick={() => onDeleteNote(note.id)}
-          className="p-0.5 ml-1 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors cursor-pointer opacity-60 group-hover:opacity-100"
+          className="p-1 ml-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
           title="Delete Note"
         >
-          <X size={12} />
+          <X size={14} strokeWidth={2.25} />
         </button>
       </div>
 
