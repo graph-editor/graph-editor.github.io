@@ -35,6 +35,20 @@ export interface GraphEdge {
   graphIndex?: number; // 0-based testcase/graph index for multi-graph mode
 }
 
+export type NoteColor = 'amber' | 'blue' | 'emerald' | 'purple' | 'rose' | 'neutral';
+
+export interface GraphNote {
+  id: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  title?: string;
+  text: string;
+  color?: NoteColor;
+  graphIndex?: number;
+}
+
 export interface GraphTab {
   id: string;
   name: string;

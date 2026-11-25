@@ -1,4 +1,4 @@
-import { GraphData, GraphSettings, GraphNode, GraphEdge } from '../types/graph';
+import { GraphData, GraphSettings, GraphNode, GraphEdge, GraphNote, NoteColor } from '../types/graph';
 import { serializeGraphToCPInput, detectNodeType } from './parser';
 
 export interface SerializedGraphPayload {
@@ -22,6 +22,16 @@ export interface SerializedGraphPayload {
     directed?: boolean;
     style?: 'solid' | 'dashed' | 'dotted';
     label?: string;
+  }[];
+  notes?: {
+    id: string;
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    title?: string;
+    text: string;
+    color?: NoteColor;
   }[];
   settings: {
     isDirected: boolean;
@@ -190,7 +200,8 @@ export async function decodeGraphPayload(encoded: string): Promise<SerializedGra
 export async function buildShareUrl(
   data: GraphData,
   settings: GraphSettings,
-  theme?: 'dark' | 'light'
+  theme?: 'dark' | 'light',
+  notes?: GraphNote[]
 ): Promise<string> {
   const payload: SerializedGraphPayload = {
     v: 1,
@@ -214,6 +225,18 @@ export async function buildShareUrl(
       style: e.style,
       label: e.label,
     })),
+    notes: notes && notes.length > 0
+      ? notes.map(nt => ({
+          id: nt.id,
+          x: Math.round(nt.x),
+          y: Math.round(nt.y),
+          width: nt.width ? Math.round(nt.width) : undefined,
+          height: nt.height ? Math.round(nt.height) : undefined,
+          title: nt.title || undefined,
+          text: nt.text,
+          color: nt.color !== 'amber' ? nt.color : undefined,
+        }))
+      : undefined,
     settings: {
       isDirected: settings.isDirected,
       isWeighted: settings.isWeighted,
@@ -241,6 +264,7 @@ export async function parseGraphFromHash(hash: string): Promise<{
   settings: GraphSettings;
   rawText: string;
   theme?: 'dark' | 'light';
+  notes?: GraphNote[];
 } | null> {
   const payload = await decodeGraphPayload(hash);
   if (!payload || !payload.nodes) return null;
@@ -283,10 +307,24 @@ export async function parseGraphFromHash(hash: string): Promise<{
   const data: GraphData = { nodes, edges };
   const rawText = serializeGraphToCPInput(data, settings, settings.hasHeader);
 
+  const notes: GraphNote[] = Array.isArray(payload.notes)
+    ? payload.notes.map(nt => ({
+        id: nt.id,
+        x: nt.x,
+        y: nt.y,
+        width: nt.width,
+        height: nt.height,
+        title: nt.title,
+        text: nt.text || '',
+        color: nt.color || 'amber',
+      }))
+    : [];
+
   return {
     data,
     settings,
     rawText,
     theme: payload.theme,
+    notes,
   };
 }

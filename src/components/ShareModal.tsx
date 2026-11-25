@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, ExternalLink, Link2, FileCode, ShieldCheck, Share2 } from 'lucide-react';
-import { GraphData, GraphSettings } from '../types/graph';
+import { GraphData, GraphSettings, GraphNote } from '../types/graph';
 import { buildShareUrl } from '../utils/share';
 
 // Authentic, pixel-aligned brand SVG icons (zero emoji characters)
@@ -32,6 +32,7 @@ const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 13
 interface ShareModalProps {
   data: GraphData;
   settings: GraphSettings;
+  notes?: GraphNote[];
   theme?: 'dark' | 'light';
   onClose: () => void;
 }
@@ -39,6 +40,7 @@ interface ShareModalProps {
 export const ShareModal: React.FC<ShareModalProps> = ({
   data,
   settings,
+  notes,
   theme = 'dark',
   onClose,
 }) => {
@@ -69,7 +71,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    buildShareUrl(data, settings, theme).then(url => {
+    buildShareUrl(data, settings, theme, notes).then(url => {
       if (isMounted) {
         setShareUrl(url);
         setIsGenerating(false);
@@ -78,7 +80,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [data, settings, theme]);
+  }, [data, settings, theme, notes]);
 
   const handleCopyLink = () => {
     if (!shareUrl) return;

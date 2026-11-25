@@ -16,6 +16,7 @@ import {
   Flame,
   Plus,
   X,
+  StickyNote,
 } from 'lucide-react';
 import { GraphData, GraphSettings, AlgorithmType, GraphTab } from '../types/graph';
 import { detectMultiTestcases } from '../utils/contestParser';
@@ -49,6 +50,7 @@ interface LeftPanelProps {
   onCloseTab?: (id: string) => void;
   onSplitMultiTestcases?: (cases: { name: string; text: string }[]) => void;
   onOpenImportModal?: () => void;
+  onAddNote?: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -71,6 +73,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onCloseTab,
   onSplitMultiTestcases,
   onOpenImportModal,
+  onAddNote,
 }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'editor' | 'algorithms' | 'presets'>('editor');
@@ -179,6 +182,18 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           title="Graph Generators"
         >
           <Sparkles size={18} />
+        </button>
+        <div className={`w-5 h-[1px] ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
+        <button
+          onClick={() => onAddNote?.()}
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            isLight
+              ? 'text-amber-600 hover:bg-amber-100'
+              : 'text-amber-400 hover:bg-amber-500/15'
+          }`}
+          title="Add Note Textbox on Canvas"
+        >
+          <StickyNote size={18} />
         </button>
       </aside>
     );
@@ -406,35 +421,51 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
           </div>
 
-          {/* Quick Add Single Node Input */}
-          <div className={`flex items-center gap-1.5 mb-2 p-1.5 rounded-lg border ${
-            isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-neutral-950 border-neutral-800'
-          }`}>
-            <input
-              type="text"
-              value={singleNodeInput}
-              onChange={e => setSingleNodeInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
+          {/* Quick Add Single Node & Add Note Row */}
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className={`flex-1 min-w-0 flex items-center gap-1 p-1.5 rounded-lg border ${
+              isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-neutral-950 border-neutral-800'
+            }`}>
+              <input
+                type="text"
+                value={singleNodeInput}
+                onChange={e => setSingleNodeInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    onAddSingleNode?.(singleNodeInput);
+                    setSingleNodeInput('');
+                  }
+                }}
+                placeholder="Add node (A, A: 10, 42)"
+                className={`flex-1 bg-transparent text-xs font-mono px-1.5 py-0.5 focus:outline-none min-w-0 ${
+                  isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
+                }`}
+              />
+              <button
+                onClick={() => {
                   onAddSingleNode?.(singleNodeInput);
                   setSingleNodeInput('');
-                }
-              }}
-              placeholder="Add node (e.g. A, A: 10, 42, city)"
-              className={`flex-1 bg-transparent text-xs font-mono px-2 py-0.5 focus:outline-none min-w-0 ${
-                isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
-              }`}
-            />
+                }}
+                className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm cursor-pointer"
+                title="Add Single Node (Supports weights e.g. A: 10, A [10])"
+              >
+                <Plus size={12} />
+                <span>Node</span>
+              </button>
+            </div>
+
             <button
-              onClick={() => {
-                onAddSingleNode?.(singleNodeInput);
-                setSingleNodeInput('');
-              }}
-              className="px-2 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors flex items-center gap-1 shrink-0 shadow-sm cursor-pointer"
-              title="Add Single Node (Supports weights e.g. A: 10, A [10])"
+              type="button"
+              onClick={() => onAddNote?.()}
+              className={`px-2.5 py-2 text-[11px] font-semibold rounded-lg border transition-all flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95 ${
+                isLight
+                  ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300'
+              }`}
+              title="Add a draggable Note textbox on the canvas"
             >
-              <Plus size={12} />
-              <span>Node</span>
+              <StickyNote size={13} />
+              <span>Note</span>
             </button>
           </div>
 

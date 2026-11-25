@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode, GraphTab } from './types/graph';
+import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, AlgorithmType, LayoutMode, GraphTab, GraphNote } from './types/graph';
 import { parseGraphInput, serializeGraphToCPInput, toggleGraphIndexing, detectNodeType, parseAndMergeTabs } from './utils/parser';
 import {
   computeGraphStats,
@@ -109,6 +109,10 @@ export function App() {
   const [data, setData] = useState<GraphData>(() => {
     return savedInitial?.data || { nodes: [], edges: [] };
   });
+  const [notes, setNotes] = useState<GraphNote[]>(() => {
+    return savedInitial?.notes || [];
+  });
+  const [newlyAddedNoteId, setNewlyAddedNoteId] = useState<string | null>(null);
 
   // Track auto-save status: 'saved' | 'saving'
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
@@ -116,6 +120,7 @@ export function App() {
   // Undo / Redo History Stack
   const { canUndo, canRedo, pushState, undo, redo, initHistory } = useGraphHistory();
   const rawTextDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isElectron) return;
@@ -127,12 +132,13 @@ export function App() {
         setCurrentView('editor');
         if (hash.startsWith('#graph=') || hash.startsWith('#data=')) {
           const shared = await parseGraphFromHash(hash);
-          if (shared && shared.data.nodes.length > 0) {
+          if (shared && (shared.data.nodes.length > 0 || (shared.notes && shared.notes.length > 0))) {
             setData(shared.data);
             setSettings(shared.settings);
             setRawText(shared.rawText);
+            setNotes(shared.notes || []);
             if (shared.theme) setTheme(shared.theme);
-            initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText });
+            initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText, notes: shared.notes || [] });
             setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
             setTimeout(() => setToastMessage(null), 3500);
           }
@@ -248,6 +254,7 @@ export function App() {
       setRawText(prevState.rawText);
       if (prevState.tabs) setTabs(prevState.tabs);
       if (prevState.activeTabId) setActiveTabId(prevState.activeTabId);
+      if (prevState.notes !== undefined) setNotes(prevState.notes);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
@@ -264,6 +271,7 @@ export function App() {
       setRawText(nextState.rawText);
       if (nextState.tabs) setTabs(nextState.tabs);
       if (nextState.activeTabId) setActiveTabId(nextState.activeTabId);
+      if (nextState.notes !== undefined) setNotes(nextState.notes);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
@@ -281,18 +289,20 @@ export function App() {
       const hash = typeof window !== 'undefined' ? window.location.hash : '';
       if (hash && (hash.startsWith('#graph=') || hash.startsWith('#data='))) {
         const shared = await parseGraphFromHash(hash);
-        if (shared && shared.data.nodes.length > 0) {
+        if (shared && (shared.data.nodes.length > 0 || (shared.notes && shared.notes.length > 0))) {
           setData(shared.data);
           setSettings(shared.settings);
           setRawText(shared.rawText);
+          const sharedNotes = shared.notes || [];
+          setNotes(sharedNotes);
           const initialTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: shared.rawText }];
           setTabs(initialTabs);
           setActiveTabId('g1');
           if (shared.theme) {
             setTheme(shared.theme);
           }
-          initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText, tabs: initialTabs, activeTabId: 'g1' });
-          saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: shared.rawText, data: shared.data, settings: shared.settings });
+          initHistory({ data: shared.data, settings: shared.settings, rawText: shared.rawText, tabs: initialTabs, activeTabId: 'g1', notes: sharedNotes });
+          saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: shared.rawText, data: shared.data, settings: shared.settings, notes: sharedNotes });
           setToastMessage(`Loaded shared graph (${shared.data.nodes.length} nodes, ${shared.data.edges.length} edges)`);
           setTimeout(() => setToastMessage(null), 3500);
           isInitialLoadDoneRef.current = true;
@@ -308,6 +318,7 @@ export function App() {
           rawText: savedInitial.rawText,
           tabs: savedInitial.tabs,
           activeTabId: savedInitial.activeTabId,
+          notes: savedInitial.notes || [],
         });
         isInitialLoadDoneRef.current = true;
         return;
@@ -320,8 +331,8 @@ export function App() {
       const initialTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: INITIAL_CP_TEXT }];
       setTabs(initialTabs);
       setActiveTabId('g1');
-      initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT, tabs: initialTabs, activeTabId: 'g1' });
-      saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: INITIAL_CP_TEXT, data: positioned, settings });
+      initHistory({ data: positioned, settings, rawText: INITIAL_CP_TEXT, tabs: initialTabs, activeTabId: 'g1', notes: [] });
+      saveStateToStorage({ tabs: initialTabs, activeTabId: 'g1', rawText: INITIAL_CP_TEXT, data: positioned, settings, notes: [] });
       isInitialLoadDoneRef.current = true;
     };
 
@@ -329,8 +340,8 @@ export function App() {
   }, []);
 
   // Ref tracking latest state for synchronous saving
-  const stateRef = useRef({ tabs, activeTabId, rawText, data, settings });
-  stateRef.current = { tabs, activeTabId, rawText, data, settings };
+  const stateRef = useRef({ tabs, activeTabId, rawText, data, settings, notes });
+  stateRef.current = { tabs, activeTabId, rawText, data, settings, notes };
 
   // Debounced auto-save to localStorage
   useEffect(() => {
@@ -341,7 +352,7 @@ export function App() {
       setSaveStatus('saved');
     }, 350);
     return () => clearTimeout(timer);
-  }, [tabs, activeTabId, rawText, data, settings]);
+  }, [tabs, activeTabId, rawText, data, settings, notes]);
 
   // Synchronous auto-save on page refresh/close (beforeunload / pagehide)
   useEffect(() => {
@@ -1038,12 +1049,13 @@ export function App() {
       setActiveTabId('g1');
       setRawText('');
       setData(empty);
+      setNotes([]);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
       setSelectedEdgeIds([]);
       setAlgorithmSteps(null);
-      pushState({ data: empty, settings, rawText: '', tabs: resetTabs, activeTabId: 'g1' });
+      pushState({ data: empty, settings, rawText: '', tabs: resetTabs, activeTabId: 'g1', notes: [] });
     } else {
       // Multiple tabs: clear the active tab's edges
       const nextTabs = tabs.map((t, idx) => idx === activeIdx ? { ...t, text: '' } : t);
@@ -1063,6 +1075,84 @@ export function App() {
     setToastMessage('Cleared graph');
     setTimeout(() => setToastMessage(null), 2000);
   };
+
+  // Canvas Notes CRUD Handlers
+  const handleAddNote = useCallback(() => {
+    const center = canvasRef.current?.getVisibleCenter() ?? { x: 400, y: 300 };
+    let targetX = center.x - 120;
+    let targetY = center.y - 65;
+
+    // Stagger if another note already sits right at this position
+    let attempts = 0;
+    while (
+      attempts < 12 &&
+      notes.some(n => Math.abs(n.x - targetX) < 30 && Math.abs(n.y - targetY) < 30)
+    ) {
+      targetX += 26;
+      targetY += 26;
+      attempts++;
+    }
+
+    const newNote: GraphNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      x: targetX,
+      y: targetY,
+      width: 240,
+      title: 'Note',
+      text: '',
+      color: 'amber',
+    };
+
+    const nextNotes = [...notes, newNote];
+    setNotes(nextNotes);
+    setNewlyAddedNoteId(newNote.id);
+    pushState({ data, settings, rawText, notes: nextNotes });
+  }, [notes, data, settings, rawText, pushState]);
+
+  const handleUpdateNote = useCallback((noteId: string, updates: Partial<GraphNote>) => {
+    setNotes(prev => {
+      const nextNotes = prev.map(n => (n.id === noteId ? { ...n, ...updates } : n));
+      if (noteDebounceTimerRef.current) {
+        clearTimeout(noteDebounceTimerRef.current);
+      }
+      noteDebounceTimerRef.current = setTimeout(() => {
+        const s = stateRef.current;
+        pushState({ data: s.data, settings: s.settings, rawText: s.rawText, notes: s.notes });
+      }, 450);
+      return nextNotes;
+    });
+  }, [pushState]);
+
+  const handleCommitNoteHistory = useCallback(() => {
+    if (noteDebounceTimerRef.current) {
+      clearTimeout(noteDebounceTimerRef.current);
+      noteDebounceTimerRef.current = null;
+    }
+    const s = stateRef.current;
+    pushState({ data: s.data, settings: s.settings, rawText: s.rawText, notes: s.notes });
+  }, [pushState]);
+
+  const handleDeleteNote = useCallback((noteId: string) => {
+    if (noteDebounceTimerRef.current) {
+      clearTimeout(noteDebounceTimerRef.current);
+      noteDebounceTimerRef.current = null;
+    }
+    const nextNotes = notes.filter(n => n.id !== noteId);
+    setNotes(nextNotes);
+    if (newlyAddedNoteId === noteId) {
+      setNewlyAddedNoteId(null);
+    }
+    pushState({ data, settings, rawText, notes: nextNotes });
+  }, [notes, newlyAddedNoteId, data, settings, rawText, pushState]);
+
+  const handleBringNoteToFront = useCallback((noteId: string) => {
+    setNotes(prev => {
+      if (prev.length <= 1 || prev[prev.length - 1].id === noteId) return prev;
+      const target = prev.find(n => n.id === noteId);
+      if (!target) return prev;
+      return [...prev.filter(n => n.id !== noteId), target];
+    });
+  }, []);
 
   // Run CP Algorithm
   const handleRunAlgorithm = (algo: AlgorithmType, startNodeId: string) => {
@@ -1376,6 +1466,7 @@ export function App() {
           onCloseTab={handleCloseTab}
           onSplitMultiTestcases={handleSplitMultiTestcases}
           onOpenImportModal={() => openModal('import')}
+          onAddNote={handleAddNote}
         />
 
         {/* Center Workspace (Canvas + Bottom Docked Inspector + Floating Algorithm Controls) */}
@@ -1407,6 +1498,12 @@ export function App() {
               theme={theme}
               activeGraphIndex={activeGraphIndex}
               onSelectGraphTab={handleSelectGraphTab}
+              notes={notes}
+              newlyAddedNoteId={newlyAddedNoteId}
+              onUpdateNote={handleUpdateNote}
+              onCommitNoteHistory={handleCommitNoteHistory}
+              onDeleteNote={handleDeleteNote}
+              onBringNoteToFront={handleBringNoteToFront}
             />
 
             {/* Batch Action Toolbar: Floats over canvas when nodes/edges are lasso/multi-selected */}
@@ -1512,6 +1609,7 @@ export function App() {
         <ExportModal
           data={data}
           settings={settings}
+          notes={notes}
           onClose={closeModal}
           theme={theme}
         />
@@ -1521,6 +1619,7 @@ export function App() {
         <ShareModal
           data={data}
           settings={settings}
+          notes={notes}
           theme={theme}
           onClose={closeModal}
         />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Copy, Check, Download, FileCode2, Image as ImageIcon, Terminal, Link2, ExternalLink } from 'lucide-react';
-import { GraphData, GraphSettings } from '../types/graph';
+import { GraphData, GraphSettings, GraphNote } from '../types/graph';
 import {
   generateCppAdjacencyList,
   generatePythonAdjacencyList,
@@ -15,12 +15,13 @@ import { buildShareUrl } from '../utils/share';
 interface ExportModalProps {
   data: GraphData;
   settings: GraphSettings;
+  notes?: GraphNote[];
   onClose: () => void;
   theme?: 'dark' | 'light';
   initialTab?: 'cpp' | 'python' | 'text' | 'leetcode' | 'image' | 'share';
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClose, theme = 'dark', initialTab = 'cpp' }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, notes, onClose, theme = 'dark', initialTab = 'cpp' }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'cpp' | 'python' | 'text' | 'leetcode' | 'image' | 'share'>(initialTab);
   const [includeHeader, setIncludeHeader] = useState(true);
@@ -48,8 +49,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ data, settings, onClos
   }, [onClose]);
 
   useEffect(() => {
-    buildShareUrl(data, settings, theme).then(setShareUrl);
-  }, [data, settings, theme]);
+    buildShareUrl(data, settings, theme, notes).then(setShareUrl);
+  }, [data, settings, theme, notes]);
 
   const cppCode = generateCppAdjacencyList(data, settings);
   const pythonCode = generatePythonAdjacencyList(data, settings);

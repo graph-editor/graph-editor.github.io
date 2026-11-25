@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
-import { GraphData, GraphSettings, GraphTab } from '../types/graph';
+import { GraphData, GraphSettings, GraphTab, GraphNote } from '../types/graph';
 
 export interface HistoryState {
   data: GraphData;
@@ -7,6 +7,11 @@ export interface HistoryState {
   rawText: string;
   tabs?: GraphTab[];
   activeTabId?: string;
+  notes?: GraphNote[];
+}
+
+function cloneNotes(notes?: GraphNote[]): GraphNote[] | undefined {
+  return notes ? notes.map(n => ({ ...n })) : undefined;
 }
 
 function cloneData(data: GraphData): GraphData {
@@ -71,6 +76,26 @@ function isStateEqual(a: HistoryState, b: HistoryState): boolean {
       return false;
     }
   }
+  const naList = a.notes || [];
+  const nbList = b.notes || [];
+  if (naList.length !== nbList.length) return false;
+  for (let i = 0; i < naList.length; i++) {
+    const na = naList[i];
+    const nb = nbList[i];
+    if (
+      na.id !== nb.id ||
+      Math.abs(na.x - nb.x) > 0.5 ||
+      Math.abs(na.y - nb.y) > 0.5 ||
+      na.width !== nb.width ||
+      na.height !== nb.height ||
+      na.title !== nb.title ||
+      na.text !== nb.text ||
+      na.color !== nb.color ||
+      na.graphIndex !== nb.graphIndex
+    ) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -84,6 +109,7 @@ export function useGraphHistory(initialState?: HistoryState) {
             rawText: initialState.rawText,
             tabs: initialState.tabs ? initialState.tabs.map(t => ({ ...t })) : undefined,
             activeTabId: initialState.activeTabId,
+            notes: cloneNotes(initialState.notes),
           },
         ]
       : []
@@ -105,6 +131,7 @@ export function useGraphHistory(initialState?: HistoryState) {
         rawText: state.rawText,
         tabs: state.tabs ? state.tabs.map(t => ({ ...t })) : undefined,
         activeTabId: state.activeTabId,
+        notes: cloneNotes(state.notes),
       };
       historyRef.current = [cloned];
       indexRef.current = 0;
@@ -116,16 +143,23 @@ export function useGraphHistory(initialState?: HistoryState) {
   const pushState = useCallback(
     (state: HistoryState) => {
       const current = historyRef.current[indexRef.current];
-      if (current && isStateEqual(current, state)) {
+      const resolvedState: HistoryState = {
+        ...state,
+        notes: state.notes !== undefined ? state.notes : current?.notes,
+        tabs: state.tabs !== undefined ? state.tabs : current?.tabs,
+        activeTabId: state.activeTabId !== undefined ? state.activeTabId : current?.activeTabId,
+      };
+      if (current && isStateEqual(current, resolvedState)) {
         return;
       }
 
       const nextEntry: HistoryState = {
-        data: cloneData(state.data),
-        settings: { ...state.settings },
-        rawText: state.rawText,
-        tabs: state.tabs ? state.tabs.map(t => ({ ...t })) : undefined,
-        activeTabId: state.activeTabId,
+        data: cloneData(resolvedState.data),
+        settings: { ...resolvedState.settings },
+        rawText: resolvedState.rawText,
+        tabs: resolvedState.tabs ? resolvedState.tabs.map(t => ({ ...t })) : undefined,
+        activeTabId: resolvedState.activeTabId,
+        notes: cloneNotes(resolvedState.notes),
       };
 
       // Discard any redo states ahead of the current pointer
@@ -153,6 +187,9 @@ export function useGraphHistory(initialState?: HistoryState) {
         data: cloneData(target.data),
         settings: { ...target.settings },
         rawText: target.rawText,
+        tabs: target.tabs ? target.tabs.map(t => ({ ...t })) : undefined,
+        activeTabId: target.activeTabId,
+        notes: cloneNotes(target.notes),
       };
     }
     return null;
@@ -167,6 +204,9 @@ export function useGraphHistory(initialState?: HistoryState) {
         data: cloneData(target.data),
         settings: { ...target.settings },
         rawText: target.rawText,
+        tabs: target.tabs ? target.tabs.map(t => ({ ...t })) : undefined,
+        activeTabId: target.activeTabId,
+        notes: cloneNotes(target.notes),
       };
     }
     return null;

@@ -1,4 +1,4 @@
-import { GraphData, GraphSettings, GraphTab } from '../types/graph';
+import { GraphData, GraphSettings, GraphTab, GraphNote } from '../types/graph';
 
 export const STORAGE_KEY = 'cp_graph_saved_state_v1';
 
@@ -8,6 +8,7 @@ export interface SavedGraphState {
   rawText: string;
   data: GraphData;
   settings: GraphSettings;
+  notes?: GraphNote[];
   timestamp: number;
 }
 
@@ -72,12 +73,30 @@ export function loadSavedState(): SavedGraphState | null {
       ...(parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : {}),
     };
 
+    // Validate notes
+    const notes: GraphNote[] = Array.isArray(parsed.notes)
+      ? parsed.notes
+          .filter((nt: any) => nt && typeof nt === 'object' && typeof nt.id === 'string')
+          .map((nt: any) => ({
+            id: nt.id,
+            x: typeof nt.x === 'number' && Number.isFinite(nt.x) ? nt.x : 300,
+            y: typeof nt.y === 'number' && Number.isFinite(nt.y) ? nt.y : 200,
+            width: typeof nt.width === 'number' && Number.isFinite(nt.width) ? nt.width : undefined,
+            height: typeof nt.height === 'number' && Number.isFinite(nt.height) ? nt.height : undefined,
+            title: typeof nt.title === 'string' ? nt.title : undefined,
+            text: typeof nt.text === 'string' ? nt.text : '',
+            color: typeof nt.color === 'string' ? nt.color : 'amber',
+            graphIndex: typeof nt.graphIndex === 'number' ? nt.graphIndex : undefined,
+          }))
+      : [];
+
     return {
       tabs,
       activeTabId,
       rawText,
       data,
       settings,
+      notes,
       timestamp: typeof parsed.timestamp === 'number' ? parsed.timestamp : Date.now(),
     };
   } catch (err) {
@@ -95,6 +114,7 @@ export function saveStateToStorage(state: {
   rawText: string;
   data: GraphData;
   settings: GraphSettings;
+  notes?: GraphNote[];
 }): void {
   if (typeof window === 'undefined') return;
   try {

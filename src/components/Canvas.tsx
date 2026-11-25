@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep } from '../types/graph';
+import { GraphData, GraphNode, GraphEdge, GraphSettings, AlgorithmStep, GraphNote } from '../types/graph';
 import { applyForceLayoutStep } from '../utils/layout';
 import { CP_PALETTE } from '../utils/parser';
+import { CanvasNoteCard } from './CanvasNoteCard';
 
 // ---------------------------------------------------------------------
 // Geometry helpers for Lasso polygon testing & edge intersection
@@ -171,6 +172,12 @@ interface CanvasProps {
   theme?: 'dark' | 'light';
   activeGraphIndex?: number;
   onSelectGraphTab?: (graphIndex: number) => void;
+  notes?: GraphNote[];
+  newlyAddedNoteId?: string | null;
+  onUpdateNote?: (id: string, updates: Partial<GraphNote>) => void;
+  onCommitNoteHistory?: () => void;
+  onDeleteNote?: (id: string) => void;
+  onBringNoteToFront?: (id: string) => void;
 }
 
 const CANVAS_MONO_FONT = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace";
@@ -199,6 +206,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   theme = 'dark',
   activeGraphIndex = 0,
   onSelectGraphTab,
+  notes = [],
+  newlyAddedNoteId = null,
+  onUpdateNote,
+  onCommitNoteHistory,
+  onDeleteNote,
+  onBringNoteToFront,
 }, ref) => {
   const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1889,6 +1902,30 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           )}
         </g>
       </svg>
+
+      {/* World-Space Canvas Notes Overlay (Zooms & Pans smoothly with the SVG canvas) */}
+      {notes.length > 0 && (
+        <div
+          className="absolute top-0 left-0 origin-top-left pointer-events-none z-20"
+          style={{
+            transform: `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`,
+          }}
+        >
+          {notes.map(note => (
+            <CanvasNoteCard
+              key={note.id}
+              note={note}
+              viewScale={viewTransform.scale}
+              theme={theme}
+              autoFocus={note.id === newlyAddedNoteId}
+              onUpdateNote={(id, updates) => onUpdateNote?.(id, updates)}
+              onCommitHistory={onCommitNoteHistory}
+              onDeleteNote={id => onDeleteNote?.(id)}
+              onBringToFront={onBringNoteToFront}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Interactive Toast Notification (cleanly centered top banner that fades) */}
       {toastMessage && (
