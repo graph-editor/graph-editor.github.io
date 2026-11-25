@@ -567,6 +567,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
 
     if (activeTool === 'node' && e.button === 0) {
+      lastAddedNodeTimeRef.current = performance.now();
       const { x, y } = screenToWorld(e.clientX, e.clientY);
       onAddNode(x, y);
       showToast('Added new node');

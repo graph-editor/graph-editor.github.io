@@ -173,9 +173,15 @@ export function parseGraphInput(
     .filter(line => line.length > 0 && !line.startsWith('#') && !line.startsWith('//'));
 
   if (cleanLines.length === 0) {
+    if (currentSettings.nodeCountPreserved && currentSettings.nodeCountPreserved > 0) {
+      return parseEdgeList([], currentSettings, existingNodes);
+    }
     return {
       data: { nodes: [], edges: [] },
-      settings: currentSettings,
+      settings: {
+        ...currentSettings,
+        nodeCountPreserved: undefined,
+      },
     };
   }
 
@@ -219,7 +225,7 @@ function parseEdgeList(
   let declaredM: number | null = null;
   let edgeStartIndex = 0;
 
-  const firstTokens = splitLineTokens(lines[0]);
+  const firstTokens = lines.length > 0 ? splitLineTokens(lines[0]) : [];
 
   // Only parse first line as N M header if explicitly enabled by settings.hasHeader === true.
   // In CP, users routinely paste ONLY edges (e.g. 1 2, 4 5, 10 20) without an N M header.
@@ -306,14 +312,36 @@ function parseEdgeList(
     }
   }
 
-  // If declaredN was given or settings.nodeCountPreserved is set, ensure nodes exist
+  // If declaredN was given (explicit N M header), ensure vertices 1..N (or 0..N-1) exist.
+  // If settings.nodeCountPreserved was set (e.g. Nodes (N) field), only fill missing count up to N
+  // without injecting unexpected 0 or 1 nodes when the graph already has custom/higher-numbered nodes.
   const effectiveN = declaredN ?? settings.nodeCountPreserved;
   const isZeroIndexed = foundZero || settings.isZeroIndexed;
   if (effectiveN !== undefined && effectiveN !== null && effectiveN > 0) {
-    const start = isZeroIndexed ? 0 : 1;
-    const end = isZeroIndexed ? effectiveN - 1 : effectiveN;
-    for (let k = start; k <= end; k++) {
-      nodeIds.add(String(k));
+    if (declaredN !== null) {
+      const start = isZeroIndexed ? 0 : 1;
+      const end = isZeroIndexed ? effectiveN - 1 : effectiveN;
+      for (let k = start; k <= end; k++) {
+        nodeIds.add(String(k));
+      }
+    } else if (nodeIds.size < effectiveN) {
+      const existingNums = Array.from(nodeIds)
+        .filter(id => /^-?\d+$/.test(id))
+        .map(Number)
+        .filter(n => !isNaN(n));
+      let nextNum =
+        nodeIds.size === 0
+          ? (isZeroIndexed ? 0 : 1)
+          : existingNums.length > 0
+          ? Math.max(...existingNums) + 1
+          : (isZeroIndexed ? nodeIds.size : nodeIds.size + 1);
+      while (nodeIds.size < effectiveN) {
+        while (nodeIds.has(String(nextNum))) {
+          nextNum++;
+        }
+        nodeIds.add(String(nextNum));
+        nextNum++;
+      }
     }
   }
 

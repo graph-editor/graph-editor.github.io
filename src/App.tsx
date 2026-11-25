@@ -388,16 +388,20 @@ export function App() {
     const existingNodeMap = new Map<string, GraphNode>();
     data.nodes.forEach(n => existingNodeMap.set(n.id, n));
 
-    const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+    const effectiveSettings = text.trim() === ''
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+
+    const { data: mergedData, settings: parsedSettings } = parseAndMergeTabs(nextTabs, effectiveSettings, existingNodeMap);
     const center = canvasRef.current?.getVisibleCenter();
-    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, settings, center);
+    const finalData = positionNewNodesPreservingExisting(mergedData, existingNodeMap, effectiveSettings, center);
 
     setData(finalData);
 
     const nextSettings = {
-      ...settings,
+      ...effectiveSettings,
       ...parsedSettings,
-      nodeCountPreserved: parsedSettings.nodeCountPreserved ?? settings.nodeCountPreserved,
+      nodeCountPreserved: text.trim() === '' ? undefined : parsedSettings.nodeCountPreserved,
     };
     setSettings(nextSettings);
 
@@ -534,7 +538,16 @@ export function App() {
     const center = canvasRef.current?.getVisibleCenter();
     const finalData = positionNewNodesPreservingExisting(parsed.data, existingNodeMap, newSettings, center);
     setData(finalData);
-    pushState({ data: finalData, settings: newSettings, rawText });
+
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    const nextText = count !== null && finalData.nodes.length > data.nodes.length
+      ? serializeGraphToCPInput(finalData, newSettings, false, tabs.length > 1 ? activeIdx : undefined)
+      : rawText;
+    if (nextText !== rawText) {
+      setRawText(nextText);
+      setTabs(prev => prev.map((t, idx) => idx === activeIdx ? { ...t, text: nextText } : t));
+    }
+    pushState({ data: finalData, settings: newSettings, rawText: nextText });
 
     if (finalData.nodes.length > data.nodes.length) {
       const lastNewNode = finalData.nodes[finalData.nodes.length - 1];
@@ -582,19 +595,29 @@ export function App() {
       color: '#3b82f6',
     };
 
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextData = {
       ...data,
       nodes: [...data.nodes, newNode],
     };
     setData(nextData);
-    syncGraphToText(nextData, settings);
+    syncGraphToText(nextData, nextSettings);
     handleSelectNode(newNode.id);
-    const text = serializeGraphToCPInput(nextData, settings, false, tabs.length > 1 ? activeIdx : undefined);
-    pushState({ data: nextData, settings, rawText: text, tabs, activeTabId });
+    const text = serializeGraphToCPInput(nextData, nextSettings, false, tabs.length > 1 ? activeIdx : undefined);
+    pushState({ data: nextData, settings: nextSettings, rawText: text, tabs, activeTabId });
   };
 
   // Add single node by custom label/identifier (e.g. from LeftPanel)
   const handleAddSingleNode = (name?: string, explicitWeight?: string | number) => {
+    const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
+    const activeTab = tabs[activeIdx];
+    const prefix = tabs.length > 1 ? `${activeTab.id}:` : '';
+    const tabNodes = data.nodes.filter(n => (n.graphIndex ?? 0) === activeIdx);
+
     let raw = name?.trim();
     let weight: string | number | undefined = explicitWeight;
 
@@ -612,28 +635,33 @@ export function App() {
       }
     }
 
+    const existingLabels = new Set(
+      tabNodes.map(n => n.label || (n.id.includes(':') ? n.id.slice(n.id.indexOf(':') + 1) : n.id))
+    );
+
     if (!raw) {
-      const existingNums = data.nodes
-        .filter(n => /^-?\d+$/.test(n.id))
-        .map(n => Number(n.id))
+      const existingNums = tabNodes
+        .map(n => n.label || (n.id.includes(':') ? n.id.slice(n.id.indexOf(':') + 1) : n.id))
+        .filter(id => /^-?\d+$/.test(id))
+        .map(Number)
         .filter(n => !isNaN(n));
       let nextNum = settings.isZeroIndexed ? 0 : 1;
       if (existingNums.length > 0) {
         nextNum = Math.max(...existingNums) + 1;
       }
-      const existingIds = new Set(data.nodes.map(n => n.id));
-      while (existingIds.has(String(nextNum))) {
+      while (existingLabels.has(String(nextNum))) {
         nextNum++;
       }
       raw = String(nextNum);
     }
 
     // Ensure uniqueness if collision occurs
-    let finalId = raw;
+    let finalLabel = raw;
     let counter = 1;
-    while (data.nodes.some(n => n.id === finalId)) {
-      finalId = `${raw}_${counter++}`;
+    while (existingLabels.has(finalLabel)) {
+      finalLabel = `${raw}_${counter++}`;
     }
+    const finalId = `${prefix}${finalLabel}`;
 
     const center = canvasRef.current?.getVisibleCenter() ?? { x: 400, y: 300 };
     let posX = center.x + (Math.random() - 0.5) * 60;
@@ -659,25 +687,31 @@ export function App() {
 
     const newNode: GraphNode = {
       id: finalId,
-      label: finalId,
-      nodeType: detectNodeType(finalId),
+      label: finalLabel,
+      nodeType: detectNodeType(finalLabel),
       weight,
       value: weight,
-      index: data.nodes.length + (settings.isZeroIndexed ? 0 : 1),
+      index: tabNodes.length + (settings.isZeroIndexed ? 0 : 1),
+      graphIndex: activeIdx,
       x: posX,
       y: posY,
       color: '#3b82f6',
     };
+
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
 
     const nextData = {
       ...data,
       nodes: [...data.nodes, newNode],
     };
     setData(nextData);
-    syncGraphToText(nextData, settings);
+    syncGraphToText(nextData, nextSettings);
     handleSelectNode(newNode.id);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    const text = serializeGraphToCPInput(nextData, nextSettings, false, tabs.length > 1 ? activeIdx : undefined);
+    pushState({ data: nextData, settings: nextSettings, rawText: text, tabs, activeTabId });
 
     setTimeout(() => {
       canvasRef.current?.ensureNodeVisible(newNode.id);
@@ -851,11 +885,16 @@ export function App() {
         }))
       : data.edges;
 
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
 
     if (selectedNodeId === nodeId && targetId !== nodeId) {
       setSelectedNodeId(targetId);
@@ -864,14 +903,19 @@ export function App() {
 
   // Delete Node
   const handleDeleteNode = (nodeId: string) => {
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextNodes = data.nodes.filter(n => n.id !== nodeId);
     const nextEdges = data.edges.filter(e => e.source !== nodeId && e.target !== nodeId);
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
+    syncGraphToText(nextData, nextSettings);
     setSelectedNodeId(null);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
   };
 
   // Edge property update
@@ -930,11 +974,16 @@ export function App() {
       e => !edgeSet.has(e.id) && !nodeSet.has(e.source) && !nodeSet.has(e.target)
     );
 
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
 
     setSelectedNodeIds([]);
     setSelectedEdgeIds([]);
@@ -954,11 +1003,16 @@ export function App() {
     const nextNodes = data.nodes.map(n => (nodeSet.has(n.id) ? { ...n, color } : n));
     const nextEdges = data.edges.map(e => (edgeSet.has(e.id) ? { ...e, color } : e));
 
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
   }, [selectedNodeIds, selectedEdgeIds, selectedNodeId, selectedEdgeId, data, settings, syncGraphToText, pushState]);
 
   // Batch Add Value: Set weight/value for all selected nodes and edges together
@@ -993,11 +1047,16 @@ export function App() {
       return e;
     });
 
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const nextData = { nodes: nextNodes, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
   }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, pushState]);
 
   // Change indexing mode (0-based vs 1-based)
@@ -1030,7 +1089,7 @@ export function App() {
 
   // Load Preset
   const handleLoadPreset = (newData: GraphData, newSettings: Partial<GraphSettings>) => {
-    const mergedSettings = { ...settings, ...newSettings };
+    const mergedSettings = { ...settings, ...newSettings, nodeCountPreserved: newSettings.nodeCountPreserved };
     setSettings(mergedSettings);
     setData(newData);
     syncGraphToText(newData, mergedSettings);
@@ -1042,6 +1101,11 @@ export function App() {
   // Clear Graph
   const handleClearGraph = () => {
     const empty = { nodes: [], edges: [] };
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
     const activeIdx = Math.max(0, tabs.findIndex(t => t.id === activeTabId));
     if (tabs.length <= 1) {
       const resetTabs: GraphTab[] = [{ id: 'g1', name: 'Graph 1', text: '' }];
@@ -1055,7 +1119,7 @@ export function App() {
       setSelectedNodeIds([]);
       setSelectedEdgeIds([]);
       setAlgorithmSteps(null);
-      pushState({ data: empty, settings, rawText: '', tabs: resetTabs, activeTabId: 'g1', notes: [] });
+      pushState({ data: empty, settings: nextSettings, rawText: '', tabs: resetTabs, activeTabId: 'g1', notes: [] });
     } else {
       // Multiple tabs: clear the active tab's edges
       const nextTabs = tabs.map((t, idx) => idx === activeIdx ? { ...t, text: '' } : t);
@@ -1063,14 +1127,14 @@ export function App() {
       setRawText('');
       const existingNodeMap = new Map<string, GraphNode>();
       data.nodes.filter(n => (n.graphIndex ?? 0) !== activeIdx).forEach(n => existingNodeMap.set(n.id, n));
-      const { data: mergedData } = parseAndMergeTabs(nextTabs, settings, existingNodeMap);
+      const { data: mergedData } = parseAndMergeTabs(nextTabs, nextSettings, existingNodeMap);
       setData(mergedData);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedNodeIds([]);
       setSelectedEdgeIds([]);
       setAlgorithmSteps(null);
-      pushState({ data: mergedData, settings, rawText: '', tabs: nextTabs, activeTabId });
+      pushState({ data: mergedData, settings: nextSettings, rawText: '', tabs: nextTabs, activeTabId });
     }
     setToastMessage('Cleared graph');
     setTimeout(() => setToastMessage(null), 2000);
