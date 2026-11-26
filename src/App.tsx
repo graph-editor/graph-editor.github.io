@@ -33,7 +33,6 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { LandingPage } from './components/LandingPage';
 import { DownloadModal } from './components/DownloadModal';
 import { ImportModal } from './components/ImportModal';
-import { BatchActionToolbar } from './components/BatchActionToolbar';
 import { ShareModal } from './components/ShareModal';
 import { useGraphHistory } from './hooks/useGraphHistory';
 import { parseGraphFromHash } from './utils/share';
@@ -951,15 +950,10 @@ export function App() {
     pushState({ data: nextData, settings, rawText: text });
   };
 
-  // Batch Multi-Selection Handlers (Lasso / Shift-select)
+  // Batch Multi-Selection Handlers (Lasso / Ctrl-select)
   const handleBatchSelect = useCallback((nodeIds: string[], edgeIds: string[]) => {
     setSelectedNodeIds(nodeIds);
     setSelectedEdgeIds(edgeIds);
-  }, []);
-
-  const handleClearBatchSelection = useCallback(() => {
-    setSelectedNodeIds([]);
-    setSelectedEdgeIds([]);
   }, []);
 
   // Batch Delete: Delete all selected nodes and edges together
@@ -991,73 +985,6 @@ export function App() {
     if (selectedEdgeId && edgeSet.has(selectedEdgeId)) setSelectedEdgeId(null);
     setIsInspectorOpen(false);
   }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, selectedNodeId, selectedEdgeId, pushState]);
-
-  // Batch Color: Color all selected nodes and edges together
-  const handleBatchColor = useCallback((color: string) => {
-    const nodeSet = new Set(selectedNodeIds);
-    const edgeSet = new Set(selectedEdgeIds);
-    if (selectedNodeId) nodeSet.add(selectedNodeId);
-    if (selectedEdgeId) edgeSet.add(selectedEdgeId);
-    if (nodeSet.size === 0 && edgeSet.size === 0) return;
-
-    const nextNodes = data.nodes.map(n => (nodeSet.has(n.id) ? { ...n, color } : n));
-    const nextEdges = data.edges.map(e => (edgeSet.has(e.id) ? { ...e, color } : e));
-
-    const nextSettings = settings.nodeCountPreserved !== undefined
-      ? { ...settings, nodeCountPreserved: undefined }
-      : settings;
-    if (nextSettings !== settings) setSettings(nextSettings);
-
-    const nextData = { nodes: nextNodes, edges: nextEdges };
-    setData(nextData);
-    syncGraphToText(nextData, nextSettings);
-    const text = serializeGraphToCPInput(nextData, nextSettings, false);
-    pushState({ data: nextData, settings: nextSettings, rawText: text });
-  }, [selectedNodeIds, selectedEdgeIds, selectedNodeId, selectedEdgeId, data, settings, syncGraphToText, pushState]);
-
-  // Batch Add Value: Set weight/value for all selected nodes and edges together
-  const handleBatchAddValue = useCallback((val: string | number | undefined) => {
-    const nodeSet = new Set(selectedNodeIds);
-    const edgeSet = new Set(selectedEdgeIds);
-    if (selectedNodeId) nodeSet.add(selectedNodeId);
-    if (selectedEdgeId) edgeSet.add(selectedEdgeId);
-    if (nodeSet.size === 0 && edgeSet.size === 0) return;
-
-    const nextNodes = data.nodes.map(n => {
-      if (nodeSet.has(n.id)) {
-        return {
-          ...n,
-          weight: val,
-          value: val,
-        };
-      }
-      return n;
-    });
-
-    const nextEdges = data.edges.map(e => {
-      if (edgeSet.has(e.id)) {
-        let edgeWeight: number | undefined = undefined;
-        if (typeof val === 'number') {
-          edgeWeight = val;
-        } else if (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val))) {
-          edgeWeight = Number(val);
-        }
-        return { ...e, weight: edgeWeight };
-      }
-      return e;
-    });
-
-    const nextSettings = settings.nodeCountPreserved !== undefined
-      ? { ...settings, nodeCountPreserved: undefined }
-      : settings;
-    if (nextSettings !== settings) setSettings(nextSettings);
-
-    const nextData = { nodes: nextNodes, edges: nextEdges };
-    setData(nextData);
-    syncGraphToText(nextData, nextSettings);
-    const text = serializeGraphToCPInput(nextData, nextSettings, false);
-    pushState({ data: nextData, settings: nextSettings, rawText: text });
-  }, [selectedNodeIds, selectedEdgeIds, data, settings, syncGraphToText, pushState]);
 
   // Change indexing mode (0-based vs 1-based)
   const handleToggleIndexMode = () => {
@@ -1568,17 +1495,6 @@ export function App() {
               onCommitNoteHistory={handleCommitNoteHistory}
               onDeleteNote={handleDeleteNote}
               onBringNoteToFront={handleBringNoteToFront}
-            />
-
-            {/* Batch Action Toolbar: Floats over canvas when nodes/edges are lasso/multi-selected */}
-            <BatchActionToolbar
-              selectedNodeIds={selectedNodeIds}
-              selectedEdgeIds={selectedEdgeIds}
-              onBatchDelete={handleBatchDelete}
-              onBatchColor={handleBatchColor}
-              onBatchAddValue={handleBatchAddValue}
-              onClearSelection={handleClearBatchSelection}
-              theme={theme}
             />
 
             {/* Algorithm Controls Card: Floating at BOTTOM CENTER matching user screenshot */}
