@@ -1841,7 +1841,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                     dy="4.5"
                     fill="#ffffff"
                     fontSize="11"
-                    fontFamily="sans-serif"
+                    fontFamily={CANVAS_MONO_FONT}
                     fontWeight="700"
                   >
                     ✥ Move Area

@@ -266,7 +266,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
               ? { height: `${note.height}px` }
               : { fieldSizing: 'content' as any, minHeight: '82px', maxHeight: '380px' }),
           }}
-          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent leading-relaxed font-sans text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
+          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent leading-relaxed font-mono text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
         />
 
         {/* Clear Classic Corner Resize Grip */}
