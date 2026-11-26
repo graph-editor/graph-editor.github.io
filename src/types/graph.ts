@@ -43,6 +43,7 @@ export interface GraphNote {
   y: number;
   width?: number;
   height?: number;
+  fontSize?: number;
   title?: string;
   text: string;
   color?: NoteColor;

@@ -83,6 +83,7 @@ export function loadSavedState(): SavedGraphState | null {
             y: typeof nt.y === 'number' && Number.isFinite(nt.y) ? nt.y : 200,
             width: typeof nt.width === 'number' && Number.isFinite(nt.width) ? nt.width : undefined,
             height: typeof nt.height === 'number' && Number.isFinite(nt.height) ? nt.height : undefined,
+            fontSize: typeof nt.fontSize === 'number' && Number.isFinite(nt.fontSize) ? nt.fontSize : undefined,
             title: typeof nt.title === 'string' ? nt.title : undefined,
             text: typeof nt.text === 'string' ? nt.text : '',
             color: typeof nt.color === 'string' ? nt.color : 'amber',

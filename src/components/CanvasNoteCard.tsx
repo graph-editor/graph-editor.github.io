@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Move, X } from 'lucide-react';
+import { Move, X, Plus, Minus } from 'lucide-react';
 import { GraphNote } from '../types/graph';
+
+const DEFAULT_FONT_SIZE = 13;
+const MIN_FONT_SIZE = 10;
+const MAX_FONT_SIZE = 28;
 
 interface CanvasNoteCardProps {
   note: GraphNote;
@@ -27,6 +31,14 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const width = note.width ?? 236;
+  const fontSize = note.fontSize ?? DEFAULT_FONT_SIZE;
+
+  const handleChangeFontSize = (delta: number) => {
+    const nextSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, fontSize + delta));
+    if (nextSize === fontSize) return;
+    onUpdateNote(note.id, { fontSize: nextSize });
+    onCommitHistory?.();
+  };
 
   // Auto-focus newly created note
   useEffect(() => {
@@ -45,7 +57,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
     if (typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content')) return;
     el.style.height = 'auto';
     el.style.height = `${Math.max(82, Math.min(380, el.scrollHeight))}px`;
-  }, [note.text, note.height, width]);
+  }, [note.text, note.height, width, fontSize]);
 
   // Dragging handler
   const handleStartDrag = (clientX: number, clientY: number) => {
@@ -194,15 +206,43 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           />
         </div>
 
-        <button
-          type="button"
+        <div
+          className="flex items-center gap-0.5 shrink-0 ml-1"
           onMouseDown={e => e.stopPropagation()}
-          onClick={() => onDeleteNote(note.id)}
-          className="p-1 ml-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
-          title="Delete Note"
         >
-          <X size={14} strokeWidth={2.25} />
-        </button>
+          <div className="flex items-center rounded-md border border-neutral-800/90 bg-black/60 overflow-hidden mr-1">
+            <button
+              type="button"
+              onClick={() => handleChangeFontSize(-2)}
+              disabled={fontSize <= MIN_FONT_SIZE}
+              className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+              title="Decrease text size (-)"
+            >
+              <Minus size={11} strokeWidth={2.5} />
+            </button>
+            <span className="px-1 text-[10px] font-mono text-neutral-400 select-none min-w-[20px] text-center">
+              {fontSize}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleChangeFontSize(2)}
+              disabled={fontSize >= MAX_FONT_SIZE}
+              className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+              title="Increase text size (+)"
+            >
+              <Plus size={11} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onDeleteNote(note.id)}
+            className="p-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            title="Delete Note"
+          >
+            <X size={14} strokeWidth={2.25} />
+          </button>
+        </div>
       </div>
 
       {/* Minimal Classic Dark Black Textbox */}
@@ -221,11 +261,12 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           placeholder="Write a note..."
           spellCheck={false}
           style={{
+            fontSize: `${fontSize}px`,
             ...(note.height !== undefined
               ? { height: `${note.height}px` }
               : { fieldSizing: 'content' as any, minHeight: '82px', maxHeight: '380px' }),
           }}
-          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent text-[12.5px] leading-relaxed font-sans text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
+          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent leading-relaxed font-sans text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
         />
 
         {/* Clear Classic Corner Resize Grip */}

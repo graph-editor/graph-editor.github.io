@@ -88,6 +88,7 @@ function isStateEqual(a: HistoryState, b: HistoryState): boolean {
       Math.abs(na.y - nb.y) > 0.5 ||
       na.width !== nb.width ||
       na.height !== nb.height ||
+      na.fontSize !== nb.fontSize ||
       na.title !== nb.title ||
       na.text !== nb.text ||
       na.color !== nb.color ||
