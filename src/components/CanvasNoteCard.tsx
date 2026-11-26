@@ -156,7 +156,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
       }}
       onDoubleClick={e => e.stopPropagation()}
       onTouchStart={e => e.stopPropagation()}
-      className={`group pointer-events-auto absolute rounded-lg border bg-black/95 border-neutral-800 text-neutral-100 backdrop-blur-md shadow-[0_14px_38px_rgba(0,0,0,0.85)] ring-1 ring-white/5 transition-shadow flex flex-col overflow-hidden focus-within:border-neutral-600 focus-within:ring-neutral-700/40 ${
+      className={`group pointer-events-auto absolute rounded-lg border bg-black/70 border-neutral-800/80 text-neutral-100 backdrop-blur-md shadow-[0_14px_38px_rgba(0,0,0,0.85)] ring-1 ring-white/5 transition-shadow flex flex-col overflow-hidden focus-within:border-neutral-600 focus-within:ring-neutral-700/40 ${
         isDragging || isResizing ? 'shadow-[0_20px_50px_rgba(0,0,0,0.95)] border-neutral-500 z-30' : 'z-10'
       }`}
     >
@@ -172,7 +172,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           e.stopPropagation();
           handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
         }}
-        className="flex items-center justify-between px-2.5 py-1.5 border-b border-neutral-800/90 bg-neutral-950/90 select-none cursor-grab active:cursor-grabbing"
+        className="flex items-center justify-between px-2.5 py-1.5 border-b border-neutral-800/80 bg-neutral-950/70 select-none cursor-grab active:cursor-grabbing"
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span
@@ -206,7 +206,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
       </div>
 
       {/* Minimal Classic Dark Black Textbox */}
-      <div className="relative flex-1 flex flex-col bg-black">
+      <div className="relative flex-1 flex flex-col bg-transparent">
         <textarea
           ref={textareaRef}
           value={note.text}
