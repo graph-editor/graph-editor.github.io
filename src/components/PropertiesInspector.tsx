@@ -27,12 +27,17 @@ export interface PropertiesInspectorProps {
   onPositionChange?: (position: 'right' | 'bottom') => void;
   selectedNode: GraphNode | null;
   selectedEdge: GraphEdge | null;
+  selectedNodeIds?: string[];
+  selectedEdgeIds?: string[];
   settings: GraphSettings;
   data?: GraphData;
   onUpdateNode: (nodeId: string, updates: Partial<GraphNode>) => void;
   onDeleteNode: (nodeId: string) => void;
   onUpdateEdge: (edgeId: string, updates: Partial<GraphEdge>) => void;
   onDeleteEdge: (edgeId: string) => void;
+  onBatchUpdateNodes?: (updates: Partial<GraphNode>) => void;
+  onBatchUpdateEdges?: (updates: Partial<GraphEdge>) => void;
+  onBatchDelete?: () => void;
   onSetTreeRoot: (nodeId: string) => void;
   onRunAlgorithm?: (algo: AlgorithmType, startNodeId: string) => void;
   onSelectNode?: (nodeId: string | null) => void;
@@ -45,12 +50,17 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   onPositionChange,
   selectedNode,
   selectedEdge,
+  selectedNodeIds = [],
+  selectedEdgeIds = [],
   settings,
   data,
   onUpdateNode,
   onDeleteNode,
   onUpdateEdge,
   onDeleteEdge,
+  onBatchUpdateNodes,
+  onBatchUpdateEdges,
+  onBatchDelete,
   onSetTreeRoot,
   onRunAlgorithm,
   onSelectNode,
@@ -210,8 +220,64 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         }[weightType] || 'bg-slate-800 border-slate-700 text-slate-300'
     : '';
 
+  const selectedNodesCount = selectedNodeIds.length > 0 ? selectedNodeIds.length : (selectedNode ? 1 : 0);
+  const selectedEdgesCount = selectedEdgeIds.length > 0 ? selectedEdgeIds.length : (selectedEdge ? 1 : 0);
+  const isMultiMode = selectedNodesCount > 1 || selectedEdgesCount > 1 || (selectedNodesCount > 0 && selectedEdgesCount > 0);
+
+  const selectedNodesList = useMemo(() => {
+    if (!data) return selectedNode ? [selectedNode] : [];
+    if (selectedNodeIds.length > 0) {
+      const idSet = new Set(selectedNodeIds);
+      return data.nodes.filter(n => idSet.has(n.id));
+    }
+    return selectedNode ? [selectedNode] : [];
+  }, [data, selectedNodeIds, selectedNode]);
+
+  const selectedEdgesList = useMemo(() => {
+    if (!data) return selectedEdge ? [selectedEdge] : [];
+    if (selectedEdgeIds.length > 0) {
+      const idSet = new Set(selectedEdgeIds);
+      return data.edges.filter(e => idSet.has(e.id));
+    }
+    return selectedEdge ? [selectedEdge] : [];
+  }, [data, selectedEdgeIds, selectedEdge]);
+
+  const [batchNodeWeightInput, setBatchNodeWeightInput] = useState<string>('');
+  const [batchEdgeWeightInput, setBatchEdgeWeightInput] = useState<string>('');
+
+  const nodeSelectionSignature = selectedNodeIds.join(',') || (selectedNode?.id ?? '');
+  const edgeSelectionSignature = selectedEdgeIds.join(',') || (selectedEdge?.id ?? '');
+
+  useEffect(() => {
+    if (selectedNodesList.length === 0) {
+      setBatchNodeWeightInput('');
+      return;
+    }
+    const vals = selectedNodesList.map(n => n.weight ?? n.value);
+    const first = vals[0];
+    const allSame = vals.every(v => v === first);
+    setBatchNodeWeightInput(allSame && first !== undefined && first !== null ? String(first) : '');
+  }, [nodeSelectionSignature]);
+
+  useEffect(() => {
+    if (selectedEdgesList.length === 0) {
+      setBatchEdgeWeightInput('');
+      return;
+    }
+    const vals = selectedEdgesList.map(e => e.weight);
+    const first = vals[0];
+    const allSame = vals.every(v => v === first);
+    setBatchEdgeWeightInput(allSame && first !== undefined && first !== null ? String(first) : '');
+  }, [edgeSelectionSignature]);
+
   // Header Title formatter (avoids truncation in side dock)
   const headerTitle = useMemo(() => {
+    if (isMultiMode) {
+      const parts: string[] = [];
+      if (selectedNodesCount > 0) parts.push(`${selectedNodesCount} ${selectedNodesCount === 1 ? 'Node' : 'Nodes'}`);
+      if (selectedEdgesCount > 0) parts.push(`${selectedEdgesCount} ${selectedEdgesCount === 1 ? 'Edge' : 'Edges'}`);
+      return isBottom ? `Batch Tracer • ${parts.join(', ')}` : parts.join(' • ');
+    }
     if (selectedNode) {
       return isBottom ? `Node Tracer • ${selectedNode.label}` : `Node ${selectedNode.label}`;
     }
@@ -221,7 +287,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         : `Edge ${selectedEdge.source}→${selectedEdge.target}`;
     }
     return isBottom ? 'Node Tracer' : 'Tracer';
-  }, [selectedNode, selectedEdge, isBottom]);
+  }, [isMultiMode, selectedNodesCount, selectedEdgesCount, selectedNode, selectedEdge, isBottom]);
 
   // Common Header Content
   const renderHeader = () => (
@@ -236,7 +302,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         <h4 className={`text-xs font-bold uppercase tracking-wider truncate ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>
           {headerTitle}
         </h4>
-        {selectedNode && (
+        {!isMultiMode && selectedNode && (
           <span
             className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase font-bold tracking-wider shrink-0 ${typeBadgeStyles}`}
           >
@@ -400,8 +466,240 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     </div>
   );
 
+  // Shared Batch Selection Cards (reused across Bottom and Right docks)
+  const applyBatchNodeWeight = (valStr: string) => {
+    setBatchNodeWeightInput(valStr);
+    const trimmed = valStr.trim();
+    const num = Number(trimmed);
+    const resolved = trimmed === '' ? undefined : !isNaN(num) ? num : trimmed;
+    onBatchUpdateNodes?.({ weight: resolved, value: resolved });
+  };
+
+  const applyBatchEdgeWeight = (valStr: string) => {
+    setBatchEdgeWeightInput(valStr);
+    const trimmed = valStr.trim();
+    if (trimmed === '') {
+      onBatchUpdateEdges?.({ weight: undefined });
+      return;
+    }
+    const num = Number(trimmed);
+    if (!isNaN(num) && trimmed !== '-' && !trimmed.endsWith('.')) {
+      onBatchUpdateEdges?.({ weight: num });
+    }
+  };
+
+  const batchSummaryText = [
+    selectedNodesCount > 0 ? `${selectedNodesCount} ${selectedNodesCount === 1 ? 'Node' : 'Nodes'}` : '',
+    selectedEdgesCount > 0 ? `${selectedEdgesCount} ${selectedEdgesCount === 1 ? 'Edge' : 'Edges'}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const renderBatchNodesWeightCard = () => (
+    <div className={`border rounded-xl p-3 space-y-2 ${
+      isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+    }`}>
+      <div className="flex items-center justify-between">
+        <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+          <Scale size={12} className={isLight ? 'text-indigo-600' : 'text-indigo-400'} />
+          <span>Nodes Weight / Value ({selectedNodesCount})</span>
+        </span>
+      </div>
+      <input
+        type="text"
+        value={batchNodeWeightInput}
+        placeholder="Assign value/weight to selected nodes..."
+        onChange={e => applyBatchNodeWeight(e.target.value)}
+        className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-indigo-500 ${
+          isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+        }`}
+      />
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="text-[10px] mr-0.5 text-slate-500">Presets:</span>
+        <button
+          type="button"
+          onClick={() => applyBatchNodeWeight('10')}
+          className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+            isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+          }`}
+        >
+          10
+        </button>
+        <button
+          type="button"
+          onClick={() => applyBatchNodeWeight('A')}
+          className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+            isLight ? 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100' : 'bg-purple-950/40 border-purple-800/40 text-purple-300 hover:bg-purple-900/50'
+          }`}
+        >
+          'A'
+        </button>
+        <button
+          type="button"
+          onClick={() => applyBatchNodeWeight('val')}
+          className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+            isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-emerald-950/40 border-emerald-800/40 text-emerald-300 hover:bg-emerald-900/50'
+          }`}
+        >
+          Text
+        </button>
+        <button
+          type="button"
+          onClick={() => applyBatchNodeWeight('')}
+          className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+            isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+          }`}
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderBatchNodesColorCard = () => {
+    const activeNodeColor = selectedNodesList[0]?.color || '#3b82f6';
+    return (
+      <div className={`border rounded-xl p-3 space-y-2 ${
+        isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+      }`}>
+        <div className="flex items-center justify-between">
+          <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            <Palette size={12} className="text-pink-500" />
+            <span>Nodes Color ({selectedNodesCount})</span>
+          </span>
+          <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+            isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+          }`} title="Pick any custom live color">
+            <input
+              type="color"
+              value={activeNodeColor}
+              onInput={e => onBatchUpdateNodes?.({ color: (e.target as HTMLInputElement).value })}
+              onChange={e => onBatchUpdateNodes?.({ color: (e.target as HTMLInputElement).value })}
+              className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+            />
+            <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {CP_PALETTE.map(p => (
+            <button
+              type="button"
+              key={p.color}
+              onClick={() => onBatchUpdateNodes?.({ color: p.color })}
+              className={`h-6 rounded-lg transition-transform border cursor-pointer ${
+                isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
+              }`}
+              style={{ backgroundColor: p.color }}
+              title={p.name}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBatchEdgesWeightCard = () => (
+    <div className={`border rounded-xl p-3 space-y-2 ${
+      isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+    }`}>
+      <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+        <Scale size={12} className={isLight ? 'text-blue-600' : 'text-blue-400'} />
+        <span>Edges Weight ({selectedEdgesCount})</span>
+      </span>
+      <input
+        type="number"
+        value={batchEdgeWeightInput}
+        placeholder="Assign weight to selected edges..."
+        onChange={e => applyBatchEdgeWeight(e.target.value)}
+        className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${
+          isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
+        }`}
+      />
+      <div className="flex items-center gap-1 flex-wrap">
+        <span className="text-[10px] mr-0.5 text-slate-500">Quick:</span>
+        {[1, 5, 10].map(w => (
+          <button
+            type="button"
+            key={w}
+            onClick={() => applyBatchEdgeWeight(String(w))}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+              isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+            }`}
+          >
+            {w}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => applyBatchEdgeWeight('')}
+          className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+            isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+          }`}
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderBatchEdgesColorCard = () => {
+    const activeEdgeColor = selectedEdgesList[0]?.color || '#64748b';
+    return (
+      <div className={`border rounded-xl p-3 space-y-2 ${
+        isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+      }`}>
+        <div className="flex items-center justify-between">
+          <span className={`text-[11px] font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            <Palette size={12} className="text-pink-500" />
+            <span>Edges Color ({selectedEdgesCount})</span>
+          </span>
+          <label className={`flex items-center gap-1.5 cursor-pointer px-1.5 py-0.5 rounded border ${
+            isLight ? 'bg-slate-100 border-slate-300 hover:border-slate-400' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+          }`} title="Pick any custom live color">
+            <input
+              type="color"
+              value={activeEdgeColor}
+              onInput={e => onBatchUpdateEdges?.({ color: (e.target as HTMLInputElement).value })}
+              onChange={e => onBatchUpdateEdges?.({ color: (e.target as HTMLInputElement).value })}
+              className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent p-0 block"
+            />
+            <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Custom</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {CP_PALETTE.map(p => (
+            <button
+              type="button"
+              key={p.color}
+              onClick={() => onBatchUpdateEdges?.({ color: p.color })}
+              className={`h-6 rounded-lg transition-transform border cursor-pointer ${
+                isLight ? 'border-slate-200 hover:scale-105' : 'border-slate-800 hover:scale-105'
+              }`}
+              style={{ backgroundColor: p.color }}
+              title={p.name}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderBatchDeleteButton = () => (
+    <button
+      type="button"
+      onClick={() => onBatchDelete?.()}
+      className={`w-full py-2 px-3 rounded-xl transition-colors border flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer ${
+        isLight ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'text-red-400 hover:bg-red-950/40 border-red-500/25'
+      }`}
+      title="Delete All Selected (Del)"
+    >
+      <Trash2 size={14} />
+      <span>Delete ({batchSummaryText}) (Del)</span>
+    </button>
+  );
+
   // Fallback if neither node nor edge is selected
-  if (!selectedNode && !selectedEdge) {
+  if (!selectedNode && !selectedEdge && selectedNodesCount === 0 && selectedEdgesCount === 0) {
     return (
       <>
         {!isBottom && (
@@ -477,6 +775,24 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
         {/* 4-Card Grid Container */}
         <div className="flex-1 p-3 overflow-y-auto">
+          {isMultiMode ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+              {selectedNodesCount > 0 && renderBatchNodesWeightCard()}
+              {selectedNodesCount > 0 && renderBatchNodesColorCard()}
+              {selectedEdgesCount > 0 && renderBatchEdgesWeightCard()}
+              {selectedEdgesCount > 0 && renderBatchEdgesColorCard()}
+              <div className={`border rounded-xl p-3 flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
+              }`}>
+                <div className="space-y-1">
+                  <span className={`text-[11px] font-semibold block ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Selection Summary</span>
+                  <p className={`text-xs font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>{batchSummaryText}</p>
+                </div>
+                <div className="mt-2">{renderBatchDeleteButton()}</div>
+              </div>
+            </div>
+          ) : (
+          <>
           {selectedNode && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 h-full items-stretch">
               {/* Card 1: Identity & Pinning */}
@@ -838,10 +1154,36 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         weight: e.target.value === '' ? undefined : Number(e.target.value),
                       })
                     }
-                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-2 border focus:outline-none focus:border-blue-500 ${
                       isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
                     }`}
                   />
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] mr-0.5 text-slate-500">Quick:</span>
+                    {[1, 5, 10].map(w => (
+                      <button
+                        type="button"
+                        key={w}
+                        onClick={() => onUpdateEdge(selectedEdge.id, { weight: w })}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                          isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                        }`}
+                      >
+                        {w}
+                      </button>
+                    ))}
+                    {selectedEdge.weight !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateEdge(selectedEdge.id, { weight: undefined })}
+                        className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+                          isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+                        }`}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -899,6 +1241,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
       </aside>
     );
@@ -923,6 +1267,16 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
       {/* Docked Body: Scrollable Cards */}
       <div className="flex-1 p-3.5 overflow-y-auto space-y-3">
+        {isMultiMode ? (
+          <div className="space-y-3">
+            {selectedNodesCount > 0 && renderBatchNodesWeightCard()}
+            {selectedNodesCount > 0 && renderBatchNodesColorCard()}
+            {selectedEdgesCount > 0 && renderBatchEdgesWeightCard()}
+            {selectedEdgesCount > 0 && renderBatchEdgesColorCard()}
+            {renderBatchDeleteButton()}
+          </div>
+        ) : (
+        <>
         {/* NODE PROPERTIES */}
         {selectedNode && (
           <>
@@ -1277,6 +1631,32 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
                 }`}
               />
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] mr-0.5 text-slate-500">Quick:</span>
+                {[1, 5, 10].map(w => (
+                  <button
+                    type="button"
+                    key={w}
+                    onClick={() => onUpdateEdge(selectedEdge.id, { weight: w })}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                      isLight ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100' : 'bg-blue-950/40 border-blue-800/40 text-blue-300 hover:bg-blue-900/50'
+                    }`}
+                  >
+                    {w}
+                  </button>
+                ))}
+                {selectedEdge.weight !== undefined && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateEdge(selectedEdge.id, { weight: undefined })}
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+                      isLight ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' : 'bg-red-950/40 border-red-800/40 text-red-300 hover:bg-red-900/50'
+                    }`}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className={`border rounded-xl p-3 space-y-2 ${
@@ -1330,6 +1710,8 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               <span>Delete Edge (Del)</span>
             </button>
           </div>
+        )}
+        </>
         )}
       </div>
       </aside>

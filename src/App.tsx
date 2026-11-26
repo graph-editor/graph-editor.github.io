@@ -846,14 +846,19 @@ export function App() {
       }
     }
 
-    const isBatchColor = updates.color !== undefined && selectedNodeIds.includes(nodeId) && selectedNodeIds.length > 1;
-    const batchNodeSet = isBatchColor ? new Set(selectedNodeIds) : null;
+    const isBatchUpdate =
+      (updates.color !== undefined || 'weight' in updates || 'value' in updates) &&
+      selectedNodeIds.includes(nodeId) &&
+      selectedNodeIds.length > 1;
+    const batchNodeSet = isBatchUpdate ? new Set(selectedNodeIds) : null;
 
     const nextNodes = data.nodes.map(n => {
       if (batchNodeSet && batchNodeSet.has(n.id)) {
         return {
           ...n,
-          color: updates.color ?? n.color,
+          ...(updates.color !== undefined ? { color: updates.color } : {}),
+          ...('weight' in updates ? { weight: updates.weight } : {}),
+          ...('value' in updates ? { value: updates.value } : {}),
           ...(n.id === nodeId
             ? {
                 ...updates,
@@ -919,14 +924,23 @@ export function App() {
 
   // Edge property update
   const handleUpdateEdge = (edgeId: string, updates: Partial<GraphEdge>) => {
-    const isBatchColor = updates.color !== undefined && selectedEdgeIds.includes(edgeId) && selectedEdgeIds.length > 1;
-    const batchEdgeSet = isBatchColor ? new Set(selectedEdgeIds) : null;
+    const isBatchUpdate =
+      (updates.color !== undefined || 'weight' in updates || updates.style !== undefined) &&
+      selectedEdgeIds.includes(edgeId) &&
+      selectedEdgeIds.length > 1;
+    const batchEdgeSet = isBatchUpdate ? new Set(selectedEdgeIds) : null;
+
+    const shouldEnableWeighted = 'weight' in updates && updates.weight !== undefined && !settings.isWeighted;
+    const nextSettings = shouldEnableWeighted ? { ...settings, isWeighted: true } : settings;
+    if (shouldEnableWeighted) setSettings(nextSettings);
 
     const nextEdges = data.edges.map(e => {
       if (batchEdgeSet && batchEdgeSet.has(e.id)) {
         return {
           ...e,
-          color: updates.color ?? e.color,
+          ...(updates.color !== undefined ? { color: updates.color } : {}),
+          ...('weight' in updates ? { weight: updates.weight } : {}),
+          ...(updates.style !== undefined ? { style: updates.style } : {}),
           ...(e.id === edgeId ? updates : {}),
         };
       }
@@ -934,9 +948,9 @@ export function App() {
     });
     const nextData = { ...data, edges: nextEdges };
     setData(nextData);
-    syncGraphToText(nextData, settings);
-    const text = serializeGraphToCPInput(nextData, settings, false);
-    pushState({ data: nextData, settings, rawText: text });
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
   };
 
   // Delete Edge
@@ -954,7 +968,63 @@ export function App() {
   const handleBatchSelect = useCallback((nodeIds: string[], edgeIds: string[]) => {
     setSelectedNodeIds(nodeIds);
     setSelectedEdgeIds(edgeIds);
+    if (nodeIds.length > 0 || edgeIds.length > 0) {
+      setIsInspectorOpen(true);
+    }
   }, []);
+
+  const handleBatchUpdateNodes = useCallback((updates: Partial<GraphNode>) => {
+    const targetIds = selectedNodeIds.length > 0 ? selectedNodeIds : (selectedNodeId ? [selectedNodeId] : []);
+    if (targetIds.length === 0) return;
+    const nodeSet = new Set(targetIds);
+
+    const nextNodes = data.nodes.map(n => {
+      if (!nodeSet.has(n.id)) return n;
+      return {
+        ...n,
+        ...(updates.color !== undefined ? { color: updates.color } : {}),
+        ...('weight' in updates ? { weight: updates.weight } : {}),
+        ...('value' in updates ? { value: updates.value } : {}),
+      };
+    });
+
+    const nextSettings = settings.nodeCountPreserved !== undefined
+      ? { ...settings, nodeCountPreserved: undefined }
+      : settings;
+    if (nextSettings !== settings) setSettings(nextSettings);
+
+    const nextData = { ...data, nodes: nextNodes };
+    setData(nextData);
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
+  }, [selectedNodeIds, selectedNodeId, data, settings, syncGraphToText, pushState]);
+
+  const handleBatchUpdateEdges = useCallback((updates: Partial<GraphEdge>) => {
+    const targetIds = selectedEdgeIds.length > 0 ? selectedEdgeIds : (selectedEdgeId ? [selectedEdgeId] : []);
+    if (targetIds.length === 0) return;
+    const edgeSet = new Set(targetIds);
+
+    const shouldEnableWeighted = 'weight' in updates && updates.weight !== undefined && !settings.isWeighted;
+    const nextSettings = shouldEnableWeighted ? { ...settings, isWeighted: true } : settings;
+    if (shouldEnableWeighted) setSettings(nextSettings);
+
+    const nextEdges = data.edges.map(e => {
+      if (!edgeSet.has(e.id)) return e;
+      return {
+        ...e,
+        ...(updates.color !== undefined ? { color: updates.color } : {}),
+        ...('weight' in updates ? { weight: updates.weight } : {}),
+        ...(updates.style !== undefined ? { style: updates.style } : {}),
+      };
+    });
+
+    const nextData = { ...data, edges: nextEdges };
+    setData(nextData);
+    syncGraphToText(nextData, nextSettings);
+    const text = serializeGraphToCPInput(nextData, nextSettings, false);
+    pushState({ data: nextData, settings: nextSettings, rawText: text });
+  }, [selectedEdgeIds, selectedEdgeId, data, settings, syncGraphToText, pushState]);
 
   // Batch Delete: Delete all selected nodes and edges together
   const handleBatchDelete = useCallback(() => {
@@ -1521,11 +1591,16 @@ export function App() {
               data={data}
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
+              selectedNodeIds={selectedNodeIds}
+              selectedEdgeIds={selectedEdgeIds}
               settings={settings}
               onUpdateNode={handleUpdateNode}
               onDeleteNode={handleDeleteNode}
               onUpdateEdge={handleUpdateEdge}
               onDeleteEdge={handleDeleteEdge}
+              onBatchUpdateNodes={handleBatchUpdateNodes}
+              onBatchUpdateEdges={handleBatchUpdateEdges}
+              onBatchDelete={handleBatchDelete}
               onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
               onRunAlgorithm={handleRunAlgorithm}
               onSelectNode={handleSelectNode}
@@ -1549,11 +1624,16 @@ export function App() {
             data={data}
             selectedNode={selectedNode}
             selectedEdge={selectedEdge}
+            selectedNodeIds={selectedNodeIds}
+            selectedEdgeIds={selectedEdgeIds}
             settings={settings}
             onUpdateNode={handleUpdateNode}
             onDeleteNode={handleDeleteNode}
             onUpdateEdge={handleUpdateEdge}
             onDeleteEdge={handleDeleteEdge}
+            onBatchUpdateNodes={handleBatchUpdateNodes}
+            onBatchUpdateEdges={handleBatchUpdateEdges}
+            onBatchDelete={handleBatchDelete}
             onSetTreeRoot={id => setSettings(s => ({ ...s, treeRootId: id }))}
             onRunAlgorithm={handleRunAlgorithm}
             onSelectNode={handleSelectNode}

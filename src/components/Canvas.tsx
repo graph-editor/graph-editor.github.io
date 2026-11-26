@@ -601,11 +601,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     if (isMultiSelect) {
       setIsLassoSelected(false);
       nodeClickStartPosRef.current = { x: e.clientX, y: e.clientY, nodeId: node.id };
-      const isAlreadySelected = selectedNodeIds.includes(node.id);
+      const baseNodes = selectedNodeId && !selectedNodeIds.includes(selectedNodeId)
+        ? [...selectedNodeIds, selectedNodeId]
+        : selectedNodeIds;
+      const baseEdges = selectedEdgeId && !selectedEdgeIds.includes(selectedEdgeId)
+        ? [...selectedEdgeIds, selectedEdgeId]
+        : selectedEdgeIds;
+      const isAlreadySelected = baseNodes.includes(node.id);
       const nextNodes = isAlreadySelected
-        ? selectedNodeIds.filter(id => id !== node.id)
-        : [...selectedNodeIds, node.id];
-      onBatchSelect?.(nextNodes, selectedEdgeIds);
+        ? baseNodes.filter(id => id !== node.id)
+        : [...baseNodes, node.id];
+      onBatchSelect?.(nextNodes, baseEdges);
       onSelectNode(isAlreadySelected ? (nextNodes[nextNodes.length - 1] || null) : node.id);
 
       // Prepare batch drag positions in case user drags while holding modifier
@@ -892,6 +898,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             }
           });
 
+          onSelectNode(newlySelectedNodeIds.length > 0 ? newlySelectedNodeIds[newlySelectedNodeIds.length - 1] : null);
+          onSelectEdge(newlySelectedEdgeIds.length > 0 ? newlySelectedEdgeIds[newlySelectedEdgeIds.length - 1] : null);
           onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
           if (newlySelectedNodeIds.length > 0) {
             setIsLassoSelected(true);
@@ -1162,10 +1170,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         setIsLassoSelected(false);
         const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
         if (isMulti) {
-          const nextEdges = selectedEdgeIds.includes(edge.id)
-            ? selectedEdgeIds.filter(id => id !== edge.id)
-            : [...selectedEdgeIds, edge.id];
-          onBatchSelect?.(selectedNodeIds, nextEdges);
+          const baseNodes = selectedNodeId && !selectedNodeIds.includes(selectedNodeId)
+            ? [...selectedNodeIds, selectedNodeId]
+            : selectedNodeIds;
+          const baseEdges = selectedEdgeId && !selectedEdgeIds.includes(selectedEdgeId)
+            ? [...selectedEdgeIds, selectedEdgeId]
+            : selectedEdgeIds;
+          const nextEdges = baseEdges.includes(edge.id)
+            ? baseEdges.filter(id => id !== edge.id)
+            : [...baseEdges, edge.id];
+          onBatchSelect?.(baseNodes, nextEdges);
           onSelectEdge(nextEdges[nextEdges.length - 1] || null);
           return;
         }
@@ -1351,10 +1365,16 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
       setIsLassoSelected(false);
       if (isMulti) {
-        const nextEdges = selectedEdgeIds.includes(targetEdge.id)
-          ? selectedEdgeIds.filter(id => id !== targetEdge.id)
-          : [...selectedEdgeIds, targetEdge.id];
-        onBatchSelect?.(selectedNodeIds, nextEdges);
+        const baseNodes = selectedNodeId && !selectedNodeIds.includes(selectedNodeId)
+          ? [...selectedNodeIds, selectedNodeId]
+          : selectedNodeIds;
+        const baseEdges = selectedEdgeId && !selectedEdgeIds.includes(selectedEdgeId)
+          ? [...selectedEdgeIds, selectedEdgeId]
+          : selectedEdgeIds;
+        const nextEdges = baseEdges.includes(targetEdge.id)
+          ? baseEdges.filter(id => id !== targetEdge.id)
+          : [...baseEdges, targetEdge.id];
+        onBatchSelect?.(baseNodes, nextEdges);
         onSelectEdge(nextEdges[nextEdges.length - 1] || null);
         return;
       }
