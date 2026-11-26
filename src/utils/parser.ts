@@ -95,23 +95,46 @@ export function isAdjacencyMatrix(lines: string[]): boolean {
 }
 
 /**
- * Splits a line into tokens, respecting double and single quotes.
- * e.g. `A true 5` -> `['A', 'true', '5']`
- * e.g. `"node 1" false` -> `['node 1', 'false']`
+ * Splits a line into string tokens separated by whitespace.
+ * Double/single quotes only act as wrappers when surrounding an entire token
+ * (e.g. `"node 1" false` or `'A' 'B' 5`), while primes/apostrophes inside or
+ * at the end of identifiers (e.g. `1'`, `2'`, `x'`, `Alice's`) are preserved verbatim.
  */
 export function splitLineTokens(line: string): string[] {
   const tokens: string[] = [];
-  const regex = /"([^"]*)"|'([^']*)'|[^\s"']+/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(line)) !== null) {
-    if (match[1] !== undefined) {
-      tokens.push(match[1]);
-    } else if (match[2] !== undefined) {
-      tokens.push(match[2]);
-    } else {
-      tokens.push(match[0]);
+  let i = 0;
+  const len = line.length;
+
+  while (i < len) {
+    while (i < len && /\s/.test(line[i])) i++;
+    if (i >= len) break;
+
+    const ch = line[i];
+    if (ch === '"' || ch === "'") {
+      let closeIdx = i + 1;
+      let foundClosing = false;
+      while (closeIdx < len) {
+        if (line[closeIdx] === ch && (closeIdx + 1 === len || /\s/.test(line[closeIdx + 1]))) {
+          foundClosing = true;
+          break;
+        }
+        closeIdx++;
+      }
+      if (foundClosing) {
+        const inner = line.slice(i + 1, closeIdx);
+        if (inner.length > 0) {
+          tokens.push(inner);
+        }
+        i = closeIdx + 1;
+        continue;
+      }
     }
+
+    const start = i;
+    while (i < len && !/\s/.test(line[i])) i++;
+    tokens.push(line.slice(start, i));
   }
+
   return tokens;
 }
 
@@ -191,10 +214,10 @@ export function parseGraphInput(
   // Only slice line 0 if line 1 explicitly starts a CP header `N M` matching following lines count AND hasHeader is enabled
   if (currentSettings.hasHeader && lines.length > 2 && lines[0] === '1') {
     const headerTokens = splitLineTokens(lines[1]);
-    if (headerTokens.length === 2) {
+    if (headerTokens.length === 2 && /^\d+$/.test(headerTokens[0]) && /^\d+$/.test(headerTokens[1])) {
       const n = parseInt(headerTokens[0], 10);
       const m = parseInt(headerTokens[1], 10);
-      if (!isNaN(n) && !isNaN(m) && lines.length - 2 === m) {
+      if (lines.length - 2 === m) {
         lines = lines.slice(1);
       }
     }
@@ -229,10 +252,16 @@ function parseEdgeList(
 
   // Only parse first line as N M header if explicitly enabled by settings.hasHeader === true.
   // In CP, users routinely paste ONLY edges (e.g. 1 2, 4 5, 10 20) without an N M header.
-  if (settings.hasHeader && lines.length > 1 && firstTokens.length === 2) {
+  if (
+    settings.hasHeader &&
+    lines.length > 1 &&
+    firstTokens.length === 2 &&
+    /^\d+$/.test(firstTokens[0]) &&
+    /^\d+$/.test(firstTokens[1])
+  ) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
-    if (!isNaN(n) && !isNaN(m) && n >= 1 && m >= 0) {
+    if (n >= 1 && m >= 0) {
       hasHeader = true;
       declaredN = n;
       declaredM = m;
@@ -241,10 +270,10 @@ function parseEdgeList(
   }
 
   // Parent array check: strictly when line 0 is N (integer >= 2) and line 1 has exactly N-1 integer parents
-  if (!hasHeader && lines.length === 2 && firstTokens.length === 1) {
+  if (!hasHeader && lines.length === 2 && firstTokens.length === 1 && /^\d+$/.test(firstTokens[0])) {
     const n = parseInt(firstTokens[0], 10);
     const secondTokens = splitLineTokens(lines[1]);
-    if (!isNaN(n) && n >= 2 && secondTokens.length === n - 1 && secondTokens.every(t => /^-?\d+$/.test(t))) {
+    if (n >= 2 && secondTokens.length === n - 1 && secondTokens.every(t => /^-?\d+$/.test(t))) {
       return parseParentArray(lines, settings, existingNodes);
     }
   }
@@ -297,7 +326,7 @@ function parseEdgeList(
       const vStr = parts[1];
       let weight: number | undefined = undefined;
 
-      if (parts.length >= 3 && !isNaN(Number(parts[2]))) {
+      if (parts.length >= 3 && parts[2] !== '' && !isNaN(Number(parts[2]))) {
         weight = parseFloat(parts[2]);
         hasWeights = true;
       }
@@ -661,9 +690,8 @@ export function serializeGraphToCPInput(
 
   const cleanNodeLabel = (id: string): string => {
     const node = nodeMap.get(id);
-    if (node?.label) return node.label;
-    if (id.includes(':')) return id.slice(id.indexOf(':') + 1);
-    return id;
+    const raw = node?.label || (id.includes(':') ? id.slice(id.indexOf(':') + 1) : id);
+    return /\s/.test(raw) ? JSON.stringify(raw) : raw;
   };
 
   const relevantEdges = targetGraphIndex !== undefined
@@ -893,10 +921,10 @@ export function findEdgeLineIndicesInInput(
   // Match parseGraphInput header-skipping rules when hasHeader is enabled
   if (settings.hasHeader && lines.length > 2 && lines[0].trimmed === '1') {
     const headerTokens = splitLineTokens(lines[1].trimmed);
-    if (headerTokens.length === 2) {
+    if (headerTokens.length === 2 && /^\d+$/.test(headerTokens[0]) && /^\d+$/.test(headerTokens[1])) {
       const n = parseInt(headerTokens[0], 10);
       const m = parseInt(headerTokens[1], 10);
-      if (!isNaN(n) && !isNaN(m) && lines.length - 2 === m) {
+      if (lines.length - 2 === m) {
         lines = lines.slice(1);
       }
     }
@@ -928,10 +956,16 @@ export function findEdgeLineIndicesInInput(
   // Standard Edge List parsing with 0-based raw line tracking
   let startIdx = 0;
   const firstTokens = splitLineTokens(lines[0].trimmed);
-  if (settings.hasHeader && lines.length > 1 && firstTokens.length === 2) {
+  if (
+    settings.hasHeader &&
+    lines.length > 1 &&
+    firstTokens.length === 2 &&
+    /^\d+$/.test(firstTokens[0]) &&
+    /^\d+$/.test(firstTokens[1])
+  ) {
     const n = parseInt(firstTokens[0], 10);
     const m = parseInt(firstTokens[1], 10);
-    if (!isNaN(n) && !isNaN(m) && n >= 1 && m >= 0) {
+    if (n >= 1 && m >= 0) {
       startIdx = 1;
     }
   }

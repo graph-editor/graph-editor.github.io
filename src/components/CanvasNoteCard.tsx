@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Move, X, Plus, Minus } from 'lucide-react';
+import { Move, X, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { GraphNote } from '../types/graph';
 
 const DEFAULT_FONT_SIZE = 13;
@@ -32,6 +32,12 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
 
   const width = note.width ?? 236;
   const fontSize = note.fontSize ?? DEFAULT_FONT_SIZE;
+  const isMinimized = Boolean(note.isMinimized);
+
+  const handleToggleMinimize = () => {
+    onUpdateNote(note.id, { isMinimized: !isMinimized });
+    onCommitHistory?.();
+  };
 
   const handleChangeFontSize = (delta: number) => {
     const nextSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, fontSize + delta));
@@ -184,7 +190,9 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           e.stopPropagation();
           handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
         }}
-        className="flex items-center justify-between px-2.5 py-1.5 border-b border-neutral-800/80 bg-neutral-950/70 select-none cursor-grab active:cursor-grabbing"
+        className={`flex items-center justify-between px-2.5 py-1.5 bg-neutral-950/70 select-none cursor-grab active:cursor-grabbing ${
+          isMinimized ? '' : 'border-b border-neutral-800/80'
+        }`}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span
@@ -210,29 +218,40 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           className="flex items-center gap-0.5 shrink-0 ml-1"
           onMouseDown={e => e.stopPropagation()}
         >
-          <div className="flex items-center rounded-md border border-neutral-800/90 bg-black/60 overflow-hidden mr-1">
-            <button
-              type="button"
-              onClick={() => handleChangeFontSize(-2)}
-              disabled={fontSize <= MIN_FONT_SIZE}
-              className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              title="Decrease text size (-)"
-            >
-              <Minus size={11} strokeWidth={2.5} />
-            </button>
-            <span className="px-1 text-[10px] font-mono text-neutral-400 select-none min-w-[20px] text-center">
-              {fontSize}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleChangeFontSize(2)}
-              disabled={fontSize >= MAX_FONT_SIZE}
-              className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-              title="Increase text size (+)"
-            >
-              <Plus size={11} strokeWidth={2.5} />
-            </button>
-          </div>
+          {!isMinimized && (
+            <div className="flex items-center rounded-md border border-neutral-800/90 bg-black/60 overflow-hidden mr-1">
+              <button
+                type="button"
+                onClick={() => handleChangeFontSize(-2)}
+                disabled={fontSize <= MIN_FONT_SIZE}
+                className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                title="Decrease text size (-)"
+              >
+                <Minus size={11} strokeWidth={2.5} />
+              </button>
+              <span className="px-1 text-[10px] font-mono text-neutral-400 select-none min-w-[20px] text-center">
+                {fontSize}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleChangeFontSize(2)}
+                disabled={fontSize >= MAX_FONT_SIZE}
+                className="px-1.5 py-0.5 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                title="Increase text size (+)"
+              >
+                <Plus size={11} strokeWidth={2.5} />
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleToggleMinimize}
+            className="p-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            title={isMinimized ? 'Restore Note' : 'Minimize Note'}
+          >
+            {isMinimized ? <ChevronDown size={14} strokeWidth={2.25} /> : <ChevronUp size={14} strokeWidth={2.25} />}
+          </button>
 
           <button
             type="button"
@@ -246,43 +265,45 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
       </div>
 
       {/* Minimal Classic Dark Black Textbox */}
-      <div className="relative flex-1 flex flex-col bg-transparent">
-        <textarea
-          ref={textareaRef}
-          value={note.text}
-          onChange={e => onUpdateNote(note.id, { text: e.target.value })}
-          onBlur={() => onCommitHistory?.()}
-          onMouseDown={e => e.stopPropagation()}
-          onWheel={e => {
-            if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
-              e.stopPropagation();
-            }
-          }}
-          placeholder="Write a note..."
-          spellCheck={false}
-          style={{
-            fontSize: `${fontSize}px`,
-            ...(note.height !== undefined
-              ? { height: `${note.height}px` }
-              : { fieldSizing: 'content' as any, minHeight: '82px', maxHeight: '380px' }),
-          }}
-          className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent leading-relaxed font-mono text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
-        />
+      {!isMinimized && (
+        <div className="relative flex-1 flex flex-col bg-transparent">
+          <textarea
+            ref={textareaRef}
+            value={note.text}
+            onChange={e => onUpdateNote(note.id, { text: e.target.value })}
+            onBlur={() => onCommitHistory?.()}
+            onMouseDown={e => e.stopPropagation()}
+            onWheel={e => {
+              if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
+                e.stopPropagation();
+              }
+            }}
+            placeholder="Write a note..."
+            spellCheck={false}
+            style={{
+              fontSize: `${fontSize}px`,
+              ...(note.height !== undefined
+                ? { height: `${note.height}px` }
+                : { fieldSizing: 'content' as any, minHeight: '82px', maxHeight: '380px' }),
+            }}
+            className="w-full px-3 pt-2.5 pb-4 pr-5 bg-transparent leading-relaxed font-mono text-neutral-200 placeholder:text-neutral-600 focus:outline-none resize-none select-text overflow-y-auto"
+          />
 
-        {/* Clear Classic Corner Resize Grip */}
-        <div
-          onMouseDown={handleStartResize}
-          onTouchStart={handleStartResizeTouch}
-          className="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize text-neutral-400 hover:text-white hover:bg-neutral-800/75 rounded-tl-md transition-colors flex items-end justify-end p-1"
-          title="Drag to resize note"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M10.5 2.5L2.5 10.5" />
-            <path d="M10.5 6.5L6.5 10.5" />
-            <path d="M10.5 10L10 10.5" />
-          </svg>
+          {/* Clear Classic Corner Resize Grip */}
+          <div
+            onMouseDown={handleStartResize}
+            onTouchStart={handleStartResizeTouch}
+            className="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize text-neutral-400 hover:text-white hover:bg-neutral-800/75 rounded-tl-md transition-colors flex items-end justify-end p-1"
+            title="Drag to resize note"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M10.5 2.5L2.5 10.5" />
+              <path d="M10.5 6.5L6.5 10.5" />
+              <path d="M10.5 10L10 10.5" />
+            </svg>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -245,7 +245,7 @@ export function detectMultiTestcases(rawText: string): MultiTestCaseResult | nul
     lineIdx++;
 
     // Format A: N M header
-    if (headerTokens.length >= 2 && !isNaN(Number(headerTokens[0])) && !isNaN(Number(headerTokens[1]))) {
+    if (headerTokens.length >= 2 && /^\d+$/.test(headerTokens[0]) && /^\d+$/.test(headerTokens[1])) {
       const m = parseInt(headerTokens[1], 10);
       if (lineIdx + m > cleanLines.length) return null;
 
@@ -257,7 +257,7 @@ export function detectMultiTestcases(rawText: string): MultiTestCaseResult | nul
       });
     }
     // Format B: Tree single N header (where M = N - 1)
-    else if (headerTokens.length === 1 && !isNaN(Number(headerTokens[0]))) {
+    else if (headerTokens.length === 1 && /^\d+$/.test(headerTokens[0])) {
       const n = parseInt(headerTokens[0], 10);
       const m = n - 1;
       if (m < 0 || lineIdx + m > cleanLines.length) return null;

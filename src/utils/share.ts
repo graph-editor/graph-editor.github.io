@@ -30,6 +30,7 @@ export interface SerializedGraphPayload {
     width?: number;
     height?: number;
     fontSize?: number;
+    isMinimized?: boolean;
     title?: string;
     text: string;
     color?: NoteColor;
@@ -234,6 +235,7 @@ export async function buildShareUrl(
           width: nt.width ? Math.round(nt.width) : undefined,
           height: nt.height ? Math.round(nt.height) : undefined,
           fontSize: nt.fontSize && nt.fontSize !== 13 ? nt.fontSize : undefined,
+          isMinimized: nt.isMinimized ? true : undefined,
           title: nt.title || undefined,
           text: nt.text,
           color: nt.color !== 'amber' ? nt.color : undefined,
@@ -317,6 +319,7 @@ export async function parseGraphFromHash(hash: string): Promise<{
         width: nt.width,
         height: nt.height,
         fontSize: nt.fontSize,
+        isMinimized: nt.isMinimized,
         title: nt.title,
         text: nt.text || '',
         color: nt.color || 'amber',

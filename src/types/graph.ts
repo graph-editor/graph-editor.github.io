@@ -44,6 +44,7 @@ export interface GraphNote {
   width?: number;
   height?: number;
   fontSize?: number;
+  isMinimized?: boolean;
   title?: string;
   text: string;
   color?: NoteColor;

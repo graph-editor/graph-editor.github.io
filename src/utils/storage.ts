@@ -84,6 +84,7 @@ export function loadSavedState(): SavedGraphState | null {
             width: typeof nt.width === 'number' && Number.isFinite(nt.width) ? nt.width : undefined,
             height: typeof nt.height === 'number' && Number.isFinite(nt.height) ? nt.height : undefined,
             fontSize: typeof nt.fontSize === 'number' && Number.isFinite(nt.fontSize) ? nt.fontSize : undefined,
+            isMinimized: typeof nt.isMinimized === 'boolean' ? nt.isMinimized : undefined,
             title: typeof nt.title === 'string' ? nt.title : undefined,
             text: typeof nt.text === 'string' ? nt.text : '',
             color: typeof nt.color === 'string' ? nt.color : 'amber',
