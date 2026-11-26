@@ -544,53 +544,34 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </button>
           </div>
 
-          {/* Edges Header & Quick Templates */}
-          <div className="flex items-center justify-between mb-1.5">
-            <span className={`text-[11px] font-medium flex items-center gap-1.5 ${
-              isLight ? 'text-slate-700' : 'text-neutral-300'
-            }`}>
-              <span>Edges List</span>
-              <span className={`text-[10px] font-mono ${isLight ? 'text-slate-400' : 'text-neutral-500'}`}>(u v [w])</span>
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => onOpenImportModal?.()}
-                className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans flex items-center gap-1 ${
-                  isLight
-                    ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 shadow-2xs font-medium'
-                    : 'bg-blue-950/40 border-blue-500/30 text-blue-300 hover:bg-blue-900/40 font-medium'
-                }`}
-                title="Import LeetCode [[u,v]], Parent Array, or Multi-Testcase CP Input"
-              >
-                <FileCode2 size={11} />
-                <span>Import</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onToggleHeaderMode?.(!settings.hasHeader)}
-                className={`text-[9.5px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer font-sans ${
-                  settings.hasHeader
-                    ? (isLight ? 'bg-amber-100 border-amber-300 text-amber-800 font-semibold shadow-2xs' : 'bg-amber-950/70 border-amber-500/40 text-amber-300 font-semibold')
-                    : (isLight ? 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 shadow-2xs' : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-neutral-200')
-                }`}
-                title={settings.hasHeader ? "Header Mode is ON: First line is treated as 'N M'. Click to switch to Edges-Only" : "Edges-Only Mode (Default): All lines are parsed as edges. Click if your input includes an 'N M' header"}
-              >
-                {settings.hasHeader ? 'N M Header: ON' : 'Edges Only'}
-              </button>
-              <button
-                type="button"
-                onClick={() => insertTemplate('clear')}
-                className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors whitespace-nowrap cursor-pointer ${
-                  isLight
-                    ? 'text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 hover:border-red-200'
-                    : 'text-neutral-400 hover:text-red-400 bg-neutral-950 hover:bg-red-950/30 border-neutral-800 hover:border-red-500/30'
-                }`}
-                title="Clear input"
-              >
-                Clear
-              </button>
+          {/* Edges List Header */}
+          <div className="flex items-center justify-between gap-2 mb-1.5 px-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`text-[11px] font-semibold tracking-tight whitespace-nowrap ${
+                isLight ? 'text-slate-700' : 'text-neutral-200'
+              }`}>
+                Edges List
+              </span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border whitespace-nowrap ${
+                isLight
+                  ? 'bg-slate-100 border-slate-200 text-slate-500'
+                  : 'bg-neutral-900/90 border-neutral-800 text-neutral-400'
+              }`}>
+                u v [w]
+              </span>
             </div>
+            <button
+              type="button"
+              onClick={() => insertTemplate('clear')}
+              className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-colors whitespace-nowrap cursor-pointer shrink-0 ${
+                isLight
+                  ? 'text-slate-600 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 hover:border-red-200 shadow-2xs'
+                  : 'text-neutral-400 hover:text-red-400 bg-neutral-950 hover:bg-red-950/30 border-neutral-800 hover:border-red-500/30'
+              }`}
+              title="Clear input"
+            >
+              Clear
+            </button>
           </div>
 
           {/* Multi-Testcase Auto-Detection Banner */}
@@ -618,8 +599,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           )}
 
           {/* Monospace Code Editor Area for Pure Edges & Single Nodes */}
-          <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden focus-within:border-blue-500 ${
-            isLight ? 'bg-white border-slate-300 shadow-inner' : 'bg-neutral-950 border-neutral-800'
+          <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden transition-colors focus-within:ring-1 ${
+            isLight
+              ? 'bg-white border-slate-200 focus-within:border-blue-500 focus-within:ring-blue-500/20 shadow-xs'
+              : 'bg-neutral-950/90 border-neutral-800/90 focus-within:border-blue-500/80 focus-within:ring-blue-500/20'
           }`}>
             {/* Synced Highlight Layer for Edges Selected on Canvas */}
             <div
@@ -653,7 +636,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
               onScroll={syncBackdropScroll}
-              placeholder={`# Edges (u v [w]):\n1 2\n2 3 5\n\n# Weighted nodes (u [w] or u: w):\n1 [10]\n2: 'A'\n3: "goal"\n\n# Isolated node:\nSingleNode`}
+              placeholder={`# Edges (u v [w]):\n1 2\n2 3 5\n\n# Weighted node:\n1 [10]\n\n# Single node:\nA`}
               spellCheck={false}
               className={`relative z-10 flex-1 w-full p-3 bg-transparent text-xs font-mono focus:outline-none resize-none leading-relaxed whitespace-pre-wrap break-words ${
                 isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
@@ -673,7 +656,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                       .join(', ')}${highlightedLineIndices.length > 4 ? '...' : ''}`}
               </span>
             ) : (
-              <span className="truncate">Supports Weighted Nodes, Chars, Strings &amp; CP inputs</span>
+              <>
+                <span className="truncate">Nodes, strings &amp; weights</span>
+                <span className={`shrink-0 ${isLight ? 'text-slate-400' : 'text-neutral-600'}`}>
+                  {rawLines.filter(l => l.trim().length > 0).length} ln
+                </span>
+              </>
             )}
           </div>
         </div>

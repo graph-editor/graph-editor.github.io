@@ -9,12 +9,12 @@ interface DownloadModalProps {
 }
 
 const RELEASES_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases';
-const WIN_EXE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
-const WIN_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
-const MAC_DMG_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
-const MAC_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
-const LINUX_APPIMAGE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
-const LINUX_DEB_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
+const WIN_EXE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_2.2.0_x64-setup.exe';
+const WIN_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_2.2.0_x64_en-US.msi';
+const MAC_DMG_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_2.2.0_universal.dmg';
+const MAC_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_universal.app.tar.gz';
+const LINUX_APPIMAGE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_2.2.0_amd64.AppImage';
+const LINUX_DEB_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.2.0/CP.Graph.Editor_2.2.0_amd64.deb';
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, theme = 'dark' }) => {
   // Body scroll lock & Escape listener
@@ -255,7 +255,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, t
         <div className={`p-4 border-t flex items-center justify-between text-xs shrink-0 ${
           isLight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-neutral-800 bg-neutral-950/80 text-neutral-500'
         }`}>
-          <span>Version 2.1.0 • Free & Open Source</span>
+          <span>Version 2.2.0 • Free & Open Source</span>
           <a 
             href={RELEASES_URL}
             target="_blank"

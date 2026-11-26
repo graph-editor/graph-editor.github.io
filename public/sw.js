@@ -1,5 +1,5 @@
 // CP Graph Visualizer Service Worker for 1-Click PWA Installation & Offline Support
-const CACHE_NAME = 'cp-graph-v2.1.0-pages';
+const CACHE_NAME = 'cp-graph-v2.2.0-pages';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

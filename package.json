@@ -1,6 +1,6 @@
 {
   "name": "cp-graph-editor",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "main": "electron/main.cjs",
   "description": "Ultra-clean Graph Visualizer & Editor tailored for Competitive Programming",

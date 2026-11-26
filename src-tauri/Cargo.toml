@@ -1,6 +1,6 @@
 [package]
 name = "cp-graph-editor"
-version = "2.0.0"
+version = "2.2.0"
 description = "CP Graph Visualizer & Editor"
 authors = ["Mostafa <https://github.com/mostafa-cse>"]
 license = "MIT"

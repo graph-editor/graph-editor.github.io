@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "CP Graph Editor",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "identifier": "com.cpgraph.editor",
   "build": {
     "frontendDist": "../dist",

@@ -7,27 +7,32 @@ import {
   Monitor,
   Apple,
   Terminal,
-  Globe,
   CheckCircle,
   Code,
   Layers,
   Sparkles,
-  Zap,
-  Cpu,
-  Compass,
-  Pin,
-  RefreshCw,
   GitBranch,
-  ShieldCheck,
   ChevronDown,
   ChevronUp,
   Star,
-  ExternalLink
+  ExternalLink,
+  StickyNote,
+  MousePointerClick,
+  Copy,
+  Check,
+  Move,
+  Minus,
+  Plus,
+  X,
 } from 'lucide-react';
 
-const GithubIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+const GithubIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+    />
   </svg>
 );
 
@@ -36,103 +41,193 @@ interface LandingPageProps {
   onOpenDownloadModal: () => void;
 }
 
+const GITHUB_REPO = 'https://github.com/graph-editor/graph-editor.github.io';
+const RELEASES_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases';
+const VERSION = '2.2.0';
+const WIN_EXE_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_${VERSION}_x64-setup.exe`;
+const WIN_MSI_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_${VERSION}_x64_en-US.msi`;
+const MAC_DMG_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_${VERSION}_universal.dmg`;
+const MAC_TAR_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_universal.app.tar.gz`;
+const LINUX_APPIMAGE_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_${VERSION}_amd64.AppImage`;
+const LINUX_DEB_URL = `https://github.com/graph-editor/graph-editor.github.io/releases/download/v${VERSION}/CP.Graph.Editor_${VERSION}_amd64.deb`;
+const INSTALL_CMD = 'curl -fsSL https://raw.githubusercontent.com/graph-editor/graph-editor.github.io/master/install.sh | bash';
+
+const FEATURES = [
+  {
+    icon: Sparkles,
+    accent: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
+    badge: 'v2.2 New',
+    title: 'Zero-Overlap Nodes & Weight Badges',
+    desc: 'Collision-aware placement automatically steers edge and node weights clear of crossings, nodes, and Notes across all 6 layouts and live physics.',
+  },
+  {
+    icon: StickyNote,
+    accent: 'text-neutral-200 bg-neutral-800/70 border-neutral-700/80',
+    badge: 'v2.2 New',
+    title: 'Dark Black Canvas Notes',
+    desc: 'Pin translucent minimal scratchpads directly onto the canvas with live font sizing (+/-), corner resizing, drag handles, and minimize/restore controls.',
+  },
+  {
+    icon: Code,
+    accent: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    badge: 'Mixed Types',
+    title: 'String Nodes & String Edge Weights',
+    desc: 'Supports integers, primed IDs (1\', 2\'), arbitrary strings (SRC, DEST), booleans, and text/numeric edge weights with smart edge-line selection sync.',
+  },
+  {
+    icon: MousePointerClick,
+    accent: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    badge: 'Workflow',
+    title: 'Lasso / Ctrl Batch Inspector',
+    desc: 'Lasso or Ctrl-click multiple nodes and edges to auto-open the Inspector sidebar and update colors, styles, or batch weights in one keystroke.',
+  },
+  {
+    icon: GitBranch,
+    accent: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    badge: '6 Engines',
+    title: 'Adaptive Physics & Layouts',
+    desc: 'Switch seamlessly between density-adaptive Force Physics, Hierarchical Tree, Topological DAG, Bipartite Columns, Circular Ring, and Grid Lattice.',
+  },
+  {
+    icon: Layers,
+    accent: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    badge: 'Offline Ready',
+    title: 'Bundled JetBrains Mono & 2x Export',
+    desc: '100% offline JetBrains Mono font bundle baked into the UI and embedded directly into high-res PNG, SVG, C++, and Python exports.',
+  },
+];
+
+const ALGORITHMS = [
+  { tag: 'Traversal', name: 'BFS', desc: 'Level-order discovery, queue trace, and unweighted shortest distances.' },
+  { tag: 'Traversal', name: 'DFS', desc: 'Recursion stack, tin[]/tout[] timestamps, and cycle detection.' },
+  { tag: 'Shortest Path', name: 'Dijkstra', desc: 'Priority queue relaxations and shortest-path tree highlighting.' },
+  { tag: 'Shortest Path', name: 'Bellman-Ford', desc: 'V-1 edge passes supporting negative weights and cycle checks.' },
+  { tag: 'DAG', name: "Kahn's Topo Sort", desc: 'In-degree tracking and directed cycle verification.' },
+  { tag: 'Connectivity', name: "Tarjan's SCC", desc: 'Low-link values and component-colored SCC condensation.' },
+  { tag: 'Connectivity', name: 'Bridges & Cuts', desc: 'Highlights articulation vertices and critical cut edges.' },
+  { tag: 'Spanning Tree', name: "Kruskal's & Prim's", desc: 'Sorted edge list with DSU and cut-property MST builders.' },
+  { tag: 'Matching', name: 'Bipartite & Kuhn', desc: '2-coloring odd-cycle finder and max bipartite matching.' },
+  { tag: 'Paths', name: 'Eulerian Trail', desc: "Hierholzer's circuit and path reconstruction." },
+  { tag: 'Tree DP', name: 'Diameter & LCA', desc: 'Double-BFS diameter, center nodes, and Binary Lifting LCA.' },
+  { tag: 'Tree DP', name: 'Subtree, MIS & Centroid', desc: 'Bottom-up subtree sizes, Tree MIS DP, and centroid decomposition.' },
+];
+
+const INPUT_FORMATS = [
+  {
+    title: 'Edge List + String Weights',
+    sub: 'Numbers, strings, primed IDs',
+    code: `SRC 1 cost\n1 2' "fast"\n2' DEST 0`,
+  },
+  {
+    title: 'Weighted Nodes',
+    sub: 'Brackets or key assignments',
+    code: `1 [10]\nA: 'root'\nGoal: "end"\nIsolatedNode`,
+  },
+  {
+    title: 'Tree Parent Array',
+    sub: 'AtCoder & Codeforces',
+    code: `5\n1 1 2 2`,
+  },
+  {
+    title: 'Adjacency Matrix',
+    sub: 'N × N weighted or binary',
+    code: `0 1 1 0\n1 0 0 5\n1 0 0 1\n0 5 1 0`,
+  },
+  {
+    title: 'LeetCode & Multi-Testcases',
+    sub: '2D arrays or T testcases',
+    code: `[[0,1,4],[1,2,"ok"],[2,0,2]]`,
+  },
+];
+
+const COMPARISON_ROWS = [
+  ['Headerless Edge List & Auto-Count (N, M)', 'Instant auto-detect', 'Manual format rules', 'No', 'DOT syntax'],
+  ['String Edge Weights & Primed IDs (1\', SRC)', 'Full string/number/primed', 'Numbers only', 'Numbers only', 'Manual quotes'],
+  ['Overlap-Free Badges & Node Spacing', 'Dynamic solver + Notes', 'Midpoint collisions', 'Fixed circles', 'Static'],
+  ['Floating Canvas Notes (Minimize & Resize)', 'Built-in Dark Black Notes', 'No', 'No', 'No'],
+  ['Lasso Multi-Select & Edge-to-Line Sync', 'Auto Inspector + scroll', 'No', 'No', 'No'],
+  ['Offline Desktop Apps & Embedded Exports', 'Win / Mac / Linux + PNG', 'Web only', 'Web only', 'CLI'],
+];
+
+const FAQS = [
+  {
+    q: 'What is new in CP Graph Editor v2.2?',
+    a: 'v2.2 brings Dark Black transparent Canvas Notes (with resize, font +/- sizing, and minimize), collision-free edge/node weight placement, non-overlapping spacing across all 6 layouts, string edge weights, primed node IDs (like 1\' and 2\'), automatic Edge List line highlighting on canvas selection, Lasso/Ctrl batch weight editing, and offline bundled JetBrains Mono fonts.',
+  },
+  {
+    q: 'Can edges and nodes hold text/string weights as well as numbers?',
+    a: 'Yes! Both edges and nodes support numbers (integers, floats, 0, negatives), primed tokens like 1\' and 2\', characters, booleans, and arbitrary strings like "cost" or "fast lane". Algorithms fall back cleanly to weight 1 for non-numeric weights while visuals, serialization, sharing, and C++/Python exports preserve exact strings.',
+  },
+  {
+    q: 'How does selecting edges highlight them in the input box?',
+    a: 'Whenever you click, Ctrl-click, or Lasso-select edges on the canvas, the Edges List editor highlights their corresponding lines in blue and smoothly scrolls them into view without stealing keyboard focus.',
+  },
+  {
+    q: 'Can I run CP Graph Editor offline with zero internet?',
+    a: 'Yes. Both the bundled JetBrains Mono typography and the lightweight native desktop apps (Windows .exe/.msi, macOS .dmg/.tar.gz, Linux .AppImage/.deb) work 100% offline, and PNG/SVG exports embed the font directly.',
+  },
+  {
+    q: 'Is CP Graph Editor free and open-source?',
+    a: '100% free and open-source under the MIT license with zero accounts, paywalls, or tracking.',
+  },
+];
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDownloadModal }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [previewTab, setPreviewTab] = useState<'weights' | 'notes' | 'algo'>('weights');
+  const [copiedCmd, setCopiedCmd] = useState(false);
 
-  const toggleFaq = (index: number) => {
-    setOpenFaqIndex(openFaqIndex === index ? null : index);
+  const handleCopyInstall = () => {
+    navigator.clipboard.writeText(INSTALL_CMD);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 1600);
   };
 
-  const GITHUB_REPO = 'https://github.com/graph-editor/graph-editor.github.io';
-  const RELEASES_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases';
-  const WIN_EXE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64-setup.exe';
-  const WIN_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_x64_en-US.msi';
-  const MAC_DMG_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_universal.dmg';
-  const MAC_ZIP_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_universal.app.tar.gz';
-  const LINUX_APPIMAGE_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.AppImage';
-  const LINUX_DEB_URL = 'https://github.com/graph-editor/graph-editor.github.io/releases/download/v2.1.0/CP.Graph.Editor_2.1.0_amd64.deb';
-
-  const faqs = [
-    {
-      q: 'What is CP Graph Editor?',
-      a: 'CP Graph Editor is an ultra-clean, high-performance graph visualizer and drawing tool built specifically for competitive programmers (Codeforces, CSES, LeetCode, AtCoder) and computer science students. It allows you to paste raw edge lists or test cases and visually inspect, drag, and simulate graph algorithms.'
-    },
-    {
-      q: 'Can nodes have weights, values, or non-numeric identifiers (like strings or characters)?',
-      a: 'Yes! CP Graph Editor v2.0 introduces full support for weighted nodes and mixed data types. You can assign values (integers, floats, single characters like \'A\', strings like "goal", or booleans) using bracket syntax (e.g. 1 [10]) or assignment (e.g. A: 42). Weights are rendered cleanly on the canvas with a dedicated badge and exported directly into C++ and Python templates.'
-    },
-    {
-      q: 'How does it auto-detect edges and nodes?',
-      a: 'Unlike other graph editors that require manually typing node count N and edge count M, CP Graph Editor automatically scans your edge list (e.g., "1 2", "2 3 5"), detects all unique vertices, counts edges, and creates isolated nodes when declared in N M headers.'
-    },
-    {
-      q: 'Can I visualize standard algorithms like BFS, DFS, and Dijkstra?',
-      a: 'Yes! CP Graph Editor features a built-in step-by-step algorithm engine with full playback controls. You can run Breadth-First Search (BFS), Depth-First Search (DFS), Dijkstra’s shortest path with a priority queue inspector, Kahn’s Topological Sort, Tarjan’s SCC, Bridges & Cut Vertices, Kruskal’s MST, and Bipartite 2-coloring.'
-    },
-    {
-      q: 'Can I use CP Graph Editor offline without an internet connection?',
-      a: 'Yes! CP Graph Editor is fully packaged as native desktop apps for Windows (.exe installer and portable .zip), macOS (.dmg disk image), and Linux (.AppImage and .deb package). All algorithm simulations and physics run 100% locally with zero internet dependency.'
-    },
-    {
-      q: 'How does Lasso multi-selection and drag-and-drop work?',
-      a: 'Use the Lasso tool (or Shift + drag) to draw a freehand loop around any nodes and edges. All enclosed items are selected simultaneously, displaying a glowing selection enclosure. You can drag and reposition them together, batch change their colors, assign weights, or delete them in one click.'
-    },
-    {
-      q: 'Is CP Graph Editor completely free and open-source?',
-      a: 'Yes, CP Graph Editor is 100% free and open-source under the MIT license with no paywalls, accounts, or telemetry. You can view the full source code and contribute on GitHub.'
-    }
-  ];
-
   return (
-    <div className="min-h-screen w-full bg-[#070b14] text-gray-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden">
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-gray-800/80 bg-[#070b14]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
-              <Share2 className="w-5 h-5" />
+    <div
+      className="min-h-screen w-full bg-black text-neutral-200 selection:bg-blue-600 selection:text-white font-mono overflow-x-hidden"
+      style={{
+        backgroundImage: 'radial-gradient(#1f1f23 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }}
+    >
+      {/* Top Sticky Monochrome Navigation */}
+      <header className="sticky top-0 z-40 w-full border-b border-neutral-800/80 bg-black/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
+              <Share2 className="w-4 h-4" />
             </div>
-            <div>
-              <span className="font-extrabold text-lg text-white tracking-tight">CP Graph</span>
-              <span className="text-xs px-2 py-0.5 ml-2 font-mono rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v2.1</span>
-            </div>
+            <span className="font-bold text-sm sm:text-base text-white tracking-tight">CP Graph</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-sky-400 border border-blue-500/30 font-semibold">
+              v{VERSION}
+            </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-gray-300">
-            <a href="#features" className="hover:text-blue-400 transition-colors">Features</a>
-            <a href="#algorithms" className="hover:text-blue-400 transition-colors">Algorithms</a>
-            <a href="#formats" className="hover:text-blue-400 transition-colors">Input Formats</a>
-            <a href="#comparison" className="hover:text-blue-400 transition-colors">Comparison</a>
-            <a href="#downloads" className="hover:text-blue-400 transition-colors">Downloads</a>
-            <a href="#faq" className="hover:text-blue-400 transition-colors">FAQ</a>
+          <nav className="hidden md:flex items-center gap-6 text-xs text-neutral-400">
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#algorithms" className="hover:text-white transition-colors">Algorithms</a>
+            <a href="#formats" className="hover:text-white transition-colors">Formats</a>
+            <a href="#comparison" className="hover:text-white transition-colors">Compare</a>
+            <a href="#downloads" className="hover:text-white transition-colors">Downloads</a>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <a
-              href="https://github.com/mostafa-cse"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-700/80 bg-gray-900/40 hover:bg-gray-800 text-xs font-medium text-gray-300 hover:text-white transition-colors"
-              title="Author: Mostafa (@mostafa-cse)"
-            >
-              <GithubIcon className="w-3.5 h-3.5 text-blue-400" />
-              <span>@mostafa-cse</span>
-            </a>
-
+          <div className="flex items-center gap-2 shrink-0">
             <a
               href={GITHUB_REPO}
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-900/60 hover:bg-gray-800 text-xs font-medium text-gray-300 hover:text-white transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 hover:border-neutral-700 text-xs text-neutral-300 hover:text-white transition-colors"
             >
               <GithubIcon className="w-3.5 h-3.5" />
               <span>GitHub</span>
-              <Star className="w-3 h-3 text-amber-400 ml-0.5" />
+              <Star className="w-3 h-3 text-amber-400" />
             </a>
 
             <button
               onClick={onOpenEditor}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/25 transition-all transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/25 transition-all cursor-pointer active:scale-95"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
               <span>Launch Editor</span>
@@ -142,456 +237,492 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-24 overflow-hidden border-b border-gray-800/60">
-        {/* Glow background effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-blue-600/15 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 right-1/4 w-[350px] h-[250px] bg-purple-600/10 blur-[100px] rounded-full pointer-events-none" />
+      <section className="relative pt-16 sm:pt-20 pb-20 border-b border-neutral-800/80 overflow-hidden">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[680px] h-[280px] bg-blue-600/15 blur-[130px] rounded-full pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-6">
-            <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-            <span>The Premier Graph Editor & Visualizer</span>
-          </div>
+          <a
+            href={`${RELEASES_URL}/tag/v${VERSION}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-950/90 border border-neutral-800 hover:border-blue-500/40 text-[11px] text-neutral-300 transition-colors mb-6"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Release v{VERSION} • Pitch Black OLED Workspace</span>
+            <ArrowRight className="w-3 h-3 text-sky-400" />
+          </a>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.15] max-w-4xl mx-auto">
-            Visualize, Edit, and Simulate Graphs <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">in Real-Time</span>
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-4xl mx-auto">
+            Precision Graph Editor for{' '}
+            <span className="bg-gradient-to-r from-sky-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
+              Competitive Programming
+            </span>
           </h1>
 
-          <p className="mt-6 text-base sm:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            The fastest, cleanest graph visualizer tailored for <strong>Competitive Programming</strong>, algorithm design, and CS education. Paste edge lists directly from Codeforces or CSES, adjust 60fps physics, and step through BFS, DFS, and Dijkstra.
+          <p className="mt-5 text-sm sm:text-base text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+            Paste edge lists with integers, primed IDs (<code className="text-sky-300">1&apos;</code>), or string weights. Draw notes on the canvas, batch-edit with Lasso/Ctrl, and trace 17+ graph &amp; Tree DP algorithms in crisp offline JetBrains Mono.
           </p>
 
-          {/* Action CTAs */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={onOpenEditor}
-              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-blue-600/25 transition-all cursor-pointer active:scale-95"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>Open Online Graph Editor (Free)</span>
+              <span>Open Online Editor</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
             <button
               onClick={onOpenDownloadModal}
-              className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl border border-gray-700 bg-gray-900/80 hover:bg-gray-800 text-gray-200 hover:text-white font-semibold text-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-xs sm:text-sm transition-all cursor-pointer"
             >
-              <Download className="w-4 h-4 text-blue-400" />
-              <span>Download Desktop App (Win / Mac / Linux)</span>
+              <Download className="w-4 h-4 text-sky-400" />
+              <span>Download v{VERSION} Desktop</span>
             </button>
           </div>
 
-          {/* Trust badges */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-gray-400 font-medium">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>100% Free & Open Source</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Zero-Install Web App</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Cross-Platform Desktop Binaries</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Preserves Isolated Vertices</span>
-            </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] text-neutral-400">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Zero-Overlap Layouts
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> String &amp; Numeric Weights
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Dark Black &amp; Clean White Themes
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Win / macOS / Linux Offline
+            </span>
           </div>
 
-          {/* Visual Interactive Demo Banner */}
-          <div className="mt-14 max-w-5xl mx-auto rounded-2xl border border-blue-500/20 bg-[#0d1424] shadow-2xl p-4 sm:p-6 text-left relative group">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-800 text-xs">
+          {/* Interactive Workspace Showcase */}
+          <div className="mt-12 max-w-5xl mx-auto rounded-2xl border border-neutral-800 bg-black/95 shadow-[0_24px_90px_rgba(0,0,0,0.9)] overflow-hidden text-left">
+            {/* Showcase Window Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-neutral-800/90 bg-neutral-950/90 text-[11px]">
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                <span className="ml-2 font-mono text-gray-400 font-medium">CP Graph Editor — Interactive Workspace</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                <span className="ml-2 text-neutral-400">CP Graph v{VERSION} — Live Workspace</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="hidden sm:inline-block px-2.5 py-1 rounded bg-blue-500/10 text-blue-400 font-mono text-[11px] border border-blue-500/20">
-                  Auto-Detect: Active (4 Nodes, 4 Edges)
-                </span>
-                <button
-                  onClick={onOpenEditor}
-                  className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-1"
-                >
-                  <span>Launch Full App</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
+
+              <div className="flex items-center gap-1 p-0.5 rounded-lg border border-neutral-800 bg-black">
+                {(
+                  [
+                    ['weights', 'Strings & Sync'],
+                    ['notes', 'Notes & Batch'],
+                    ['algo', 'Dijkstra Trace'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPreviewTab(key)}
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] transition-colors cursor-pointer ${
+                      previewTab === key
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Mock Editor Canvas Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 h-72 sm:h-80 bg-[#080d1a] rounded-xl border border-gray-800 p-4 font-mono text-xs overflow-hidden relative">
-              {/* Left Code Area Mock */}
-              <div className="hidden md:flex flex-col justify-between p-3 bg-[#0d1424] rounded-lg border border-gray-800 text-gray-300">
+            {/* Showcase Split View */}
+            <div className="grid grid-cols-1 md:grid-cols-12 min-h-[320px]">
+              {/* Left Input Panel Mock */}
+              <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-neutral-800 bg-black p-3.5 flex flex-col justify-between text-xs">
                 <div>
-                  <div className="text-[11px] text-gray-400 font-semibold mb-2 uppercase tracking-wider flex items-center gap-1">
-                    <Code className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Edge List Input</span>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="p-2 rounded-lg border border-neutral-800 bg-neutral-950">
+                      <div className="text-[9px] text-neutral-500 uppercase">Nodes (N)</div>
+                      <div className="text-sm font-bold text-blue-400">
+                        {previewTab === 'weights' ? '5' : previewTab === 'notes' ? '6' : '4'}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded-lg border border-neutral-800 bg-neutral-950">
+                      <div className="text-[9px] text-neutral-500 uppercase">Edges (M)</div>
+                      <div className="text-sm font-bold text-emerald-400">
+                        {previewTab === 'weights' ? '5' : previewTab === 'notes' ? '6' : '4'}
+                      </div>
+                    </div>
                   </div>
-                  <pre className="text-blue-300 leading-relaxed font-mono">
-                    {`1 2 5\n1 3 2\n2 4 1\n3 4 8\n\n# Isolated node\n5`}
-                  </pre>
+
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-semibold text-neutral-200">Edges List</span>
+                      <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-400">
+                        u v [w]
+                      </span>
+                    </div>
+                    <span className="text-[9.5px] text-neutral-500">Clear</span>
+                  </div>
+
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-950/90 py-2 text-[11px] leading-relaxed">
+                    {previewTab === 'weights' && (
+                      <>
+                        <div className="px-3 text-neutral-300">SRC 1 0</div>
+                        <div className="px-3 bg-blue-500/20 shadow-[inset_3px_0_0_#38bdf8] text-sky-200">
+                          1 2&apos; cost
+                        </div>
+                        <div className="px-3 text-neutral-300">1 2&apos; fast</div>
+                        <div className="px-3 text-neutral-300">2&apos; DEST 6</div>
+                        <div className="px-3 text-neutral-300">SRC DEST 12</div>
+                      </>
+                    )}
+                    {previewTab === 'notes' && (
+                      <>
+                        <div className="px-3 text-neutral-300">A [8]</div>
+                        <div className="px-3 text-neutral-300">A D 1</div>
+                        <div className="px-3 bg-blue-500/20 shadow-[inset_3px_0_0_#38bdf8] text-sky-200">
+                          A F 100
+                        </div>
+                        <div className="px-3 bg-blue-500/20 shadow-[inset_3px_0_0_#38bdf8] text-sky-200">
+                          B E 1
+                        </div>
+                        <div className="px-3 text-neutral-300">C F 5</div>
+                      </>
+                    )}
+                    {previewTab === 'algo' && (
+                      <>
+                        <div className="px-3 text-neutral-300">1 2 4</div>
+                        <div className="px-3 text-neutral-300">1 3 2</div>
+                        <div className="px-3 bg-emerald-500/15 shadow-[inset_3px_0_0_#10b981] text-emerald-300">
+                          3 2 1
+                        </div>
+                        <div className="px-3 bg-emerald-500/15 shadow-[inset_3px_0_0_#10b981] text-emerald-300">
+                          2 4 3
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[10px] text-emerald-400 bg-emerald-500/10 p-2 rounded border border-emerald-500/20">
-                  ✓ 1-based indexing detected<br />
-                  ✓ Weighted edges parsed
+
+                <div className="mt-3 pt-2 border-t border-neutral-900 flex items-center justify-between text-[10px] text-sky-400">
+                  <span>
+                    {previewTab === 'weights'
+                      ? 'Selected edge: Line 2'
+                      : previewTab === 'notes'
+                      ? 'Selected 2 edges: Lines 3, 4'
+                      : 'Dijkstra step 4/8 • dist[4] = 6'}
+                  </span>
+                  <button onClick={onOpenEditor} className="text-neutral-300 hover:text-white underline cursor-pointer">
+                    Try Live →
+                  </button>
                 </div>
               </div>
 
-              {/* Right Graph Canvas Representation */}
-              <div className="col-span-2 relative flex items-center justify-center bg-[#070b14] rounded-lg border border-gray-800/80 overflow-hidden">
-                <svg className="w-full h-full" viewBox="0 0 500 300">
-                  <defs>
-                    <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
-                    </marker>
-                  </defs>
-                  {/* Edges */}
-                  <line x1="120" y1="150" x2="250" y2="70" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="175" y="100" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=5</text>
+              {/* Right Canvas Mock */}
+              <div
+                className="md:col-span-8 relative bg-black flex items-center justify-center p-4 overflow-hidden min-h-[260px]"
+                style={{
+                  backgroundImage: 'radial-gradient(#262626 1px, transparent 1px)',
+                  backgroundSize: '24px 24px',
+                }}
+              >
+                <svg className="w-full h-60 sm:h-64" viewBox="0 0 560 260">
+                  {previewTab === 'weights' && (
+                    <>
+                      <line x1="85" y1="130" x2="215" y2="75" stroke="#94a3b8" strokeWidth="2.8" />
+                      <path d="M 215 75 Q 290 25 365 75" fill="none" stroke="#38bdf8" strokeWidth="4" />
+                      <path d="M 215 75 Q 290 125 365 75" fill="none" stroke="#94a3b8" strokeWidth="2.8" />
+                      <line x1="365" y1="75" x2="480" y2="130" stroke="#94a3b8" strokeWidth="2.8" />
+                      <line x1="85" y1="130" x2="480" y2="130" stroke="#94a3b8" strokeWidth="2.8" />
 
-                  <line x1="120" y1="150" x2="250" y2="230" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="175" y="200" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=2</text>
+                      {/* Collision-free badges */}
+                      <g transform="translate(150, 102)">
+                        <rect x="-14" y="-10" width="28" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">0</text>
+                      </g>
+                      <g transform="translate(290, 48)">
+                        <rect x="-24" y="-10" width="48" height="20" rx="6" fill="#0b0f19" stroke="#38bdf8" strokeWidth="1.8" />
+                        <text textAnchor="middle" dy="4" fill="#38bdf8" fontSize="11" fontWeight="800">cost</text>
+                      </g>
+                      <g transform="translate(290, 102)">
+                        <rect x="-24" y="-10" width="48" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">fast</text>
+                      </g>
+                      <g transform="translate(422, 102)">
+                        <rect x="-14" y="-10" width="28" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">6</text>
+                      </g>
+                      <g transform="translate(282, 145)">
+                        <rect x="-18" y="-10" width="36" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">12</text>
+                      </g>
 
-                  <line x1="250" y1="70" x2="380" y2="150" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="325" y="100" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=1</text>
+                      {[
+                        { x: 85, y: 130, r: 23, label: 'SRC', fill: '#3b82f6' },
+                        { x: 215, y: 75, r: 20, label: '1', fill: '#3b82f6' },
+                        { x: 365, y: 75, r: 20, label: "2'", fill: '#3b82f6' },
+                        { x: 480, y: 130, r: 24, label: 'DEST', fill: '#10b981' },
+                      ].map(n => (
+                        <g key={n.label} transform={`translate(${n.x}, ${n.y})`}>
+                          <circle r={n.r} fill={n.fill} stroke="#000000" strokeWidth="2.5" />
+                          <text textAnchor="middle" dy="4.5" fill="#ffffff" fontSize="12" fontWeight="900">{n.label}</text>
+                        </g>
+                      ))}
+                    </>
+                  )}
 
-                  <line x1="250" y1="230" x2="380" y2="150" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.8" />
-                  <text x="325" y="200" fill="#93c5fd" fontSize="11" fontFamily="'JetBrains Mono', 'Fira Code', monospace">w=8</text>
+                  {previewTab === 'notes' && (
+                    <>
+                      {/* Crossing edges with non-overlapping weight pills */}
+                      <line x1="120" y1="60" x2="310" y2="60" stroke="#94a3b8" strokeWidth="2.8" />
+                      <line x1="120" y1="60" x2="310" y2="195" stroke="#38bdf8" strokeWidth="3.8" />
+                      <line x1="120" y1="140" x2="310" y2="140" stroke="#38bdf8" strokeWidth="3.8" />
+                      <line x1="120" y1="200" x2="310" y2="195" stroke="#94a3b8" strokeWidth="2.8" />
 
-                  {/* Nodes */}
-                  <g className="cursor-pointer">
-                    <circle cx="120" cy="150" r="22" fill="#1e3a8a" stroke="#60a5fa" strokeWidth="2" />
-                    <text x="120" y="155" fill="#ffffff" textAnchor="middle" fontWeight="bold" fontSize="14">1</text>
-                  </g>
+                      <g transform="translate(215, 60)">
+                        <rect x="-14" y="-10" width="28" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">1</text>
+                      </g>
+                      {/* Non-overlapping A->F (at t=0.34) vs B->E (at t=0.66) */}
+                      <g transform="translate(185, 106)">
+                        <rect x="-20" y="-10" width="40" height="20" rx="6" fill="#0b0f19" stroke="#38bdf8" strokeWidth="1.8" />
+                        <text textAnchor="middle" dy="4" fill="#38bdf8" fontSize="11" fontWeight="800">100</text>
+                      </g>
+                      <g transform="translate(245, 140)">
+                        <rect x="-14" y="-10" width="28" height="20" rx="6" fill="#0b0f19" stroke="#38bdf8" strokeWidth="1.8" />
+                        <text textAnchor="middle" dy="4" fill="#38bdf8" fontSize="11" fontWeight="800">1</text>
+                      </g>
+                      <g transform="translate(215, 198)">
+                        <rect x="-14" y="-10" width="28" height="20" rx="6" fill="#0b0f19" stroke="#475569" strokeWidth="1.6" />
+                        <text textAnchor="middle" dy="4" fill="#f8fafc" fontSize="11" fontWeight="800">5</text>
+                      </g>
 
-                  <g className="cursor-pointer">
-                    <circle cx="250" cy="70" r="22" fill="#1e3a8a" stroke="#60a5fa" strokeWidth="2" />
-                    <text x="250" y="75" fill="#ffffff" textAnchor="middle" fontWeight="bold" fontSize="14">2</text>
-                  </g>
+                      {[
+                        { x: 120, y: 60, l: 'A', w: 'w:8' },
+                        { x: 120, y: 140, l: 'B' },
+                        { x: 120, y: 200, l: 'C' },
+                        { x: 310, y: 60, l: 'D' },
+                        { x: 310, y: 140, l: 'E' },
+                        { x: 310, y: 195, l: 'F' },
+                      ].map(n => (
+                        <g key={n.l} transform={`translate(${n.x}, ${n.y})`}>
+                          <circle r="19" fill="#3b82f6" stroke="#000000" strokeWidth="2.5" />
+                          <text textAnchor="middle" dy="4.5" fill="#ffffff" fontSize="12" fontWeight="900">{n.l}</text>
+                          {n.w && (
+                            <g transform="translate(0, 31)">
+                              <rect x="-20" y="-9" width="40" height="18" rx="9" fill="#0a0a0a" stroke="#475569" strokeWidth="1.6" />
+                              <text textAnchor="middle" dy="4" fill="#e0e7ff" fontSize="10" fontWeight="800">{n.w}</text>
+                            </g>
+                          )}
+                        </g>
+                      ))}
+                    </>
+                  )}
 
-                  <g className="cursor-pointer">
-                    <circle cx="250" cy="230" r="22" fill="#1e3a8a" stroke="#60a5fa" strokeWidth="2" />
-                    <text x="250" y="235" fill="#ffffff" textAnchor="middle" fontWeight="bold" fontSize="14">3</text>
-                  </g>
+                  {previewTab === 'algo' && (
+                    <>
+                      <line x1="120" y1="130" x2="260" y2="65" stroke="#475569" strokeWidth="2.8" />
+                      <line x1="120" y1="130" x2="260" y2="195" stroke="#10b981" strokeWidth="4" />
+                      <line x1="260" y1="195" x2="260" y2="65" stroke="#10b981" strokeWidth="4" />
+                      <line x1="260" y1="65" x2="420" y2="130" stroke="#10b981" strokeWidth="4" />
 
-                  <g className="cursor-pointer">
-                    <circle cx="380" cy="150" r="22" fill="#047857" stroke="#34d399" strokeWidth="2" />
-                    <text x="380" y="155" fill="#ffffff" textAnchor="middle" fontWeight="bold" fontSize="14">4</text>
-                  </g>
+                      {[
+                        { x: 190, y: 97, w: '4', active: false },
+                        { x: 190, y: 162, w: '2', active: true },
+                        { x: 260, y: 130, w: '1', active: true },
+                        { x: 340, y: 97, w: '3', active: true },
+                      ].map((b, i) => (
+                        <g key={i} transform={`translate(${b.x}, ${b.y})`}>
+                          <rect
+                            x="-14"
+                            y="-10"
+                            width="28"
+                            height="20"
+                            rx="6"
+                            fill="#0b0f19"
+                            stroke={b.active ? '#10b981' : '#475569'}
+                            strokeWidth="1.8"
+                          />
+                          <text textAnchor="middle" dy="4" fill={b.active ? '#34d399' : '#f8fafc'} fontSize="11" fontWeight="800">
+                            {b.w}
+                          </text>
+                        </g>
+                      ))}
 
-                  {/* Isolated node */}
-                  <g className="cursor-pointer">
-                    <circle cx="440" cy="60" r="18" fill="#374151" stroke="#9ca3af" strokeWidth="2" />
-                    <text x="440" y="65" fill="#ffffff" textAnchor="middle" fontWeight="bold" fontSize="12">5</text>
-                    <text x="440" y="92" fill="#9ca3af" textAnchor="middle" fontSize="9">isolated</text>
-                  </g>
+                      {[
+                        { x: 120, y: 130, l: '1', dist: 'd:0', c: '#10b981' },
+                        { x: 260, y: 65, l: '2', dist: 'd:3', c: '#10b981' },
+                        { x: 260, y: 195, l: '3', dist: 'd:2', c: '#10b981' },
+                        { x: 420, y: 130, l: '4', dist: 'd:6', c: '#f59e0b' },
+                      ].map(n => (
+                        <g key={n.l} transform={`translate(${n.x}, ${n.y})`}>
+                          <circle r="20" fill={n.c} stroke="#000000" strokeWidth="2.5" />
+                          <text textAnchor="middle" dy="4.5" fill="#ffffff" fontSize="13" fontWeight="900">{n.l}</text>
+                          <g transform="translate(0, 32)">
+                            <rect x="-22" y="-9" width="44" height="18" rx="5" fill="#0a0a0a" stroke="#38bdf8" strokeWidth="1.6" />
+                            <text textAnchor="middle" dy="4" fill="#38bdf8" fontSize="10" fontWeight="800">{n.dist}</text>
+                          </g>
+                        </g>
+                      ))}
+                    </>
+                  )}
                 </svg>
 
-                <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                  <span className="text-[11px] bg-blue-900/60 text-blue-200 px-2.5 py-1 rounded border border-blue-700/50 backdrop-blur">
-                    💡 Click "Launch Editor" to interact live
-                  </span>
-                </div>
+                {/* Authentic Dark Black Note Card Mock in Notes Tab */}
+                {previewTab === 'notes' && (
+                  <div className="hidden sm:flex flex-col absolute right-4 top-4 w-48 rounded-lg border border-neutral-800/90 bg-black/75 backdrop-blur-md shadow-2xl overflow-hidden text-[11px]">
+                    <div className="flex items-center justify-between px-2 py-1 border-b border-neutral-800/80 bg-neutral-950/70">
+                      <div className="flex items-center gap-1 text-neutral-300">
+                        <Move size={11} />
+                        <span className="text-[10px]">Note</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-neutral-400">
+                        <Minus size={10} />
+                        <span className="text-[9px]">13</span>
+                        <Plus size={10} />
+                        <ChevronUp size={11} />
+                        <X size={11} />
+                      </div>
+                    </div>
+                    <div className="p-2.5 text-[10.5px] text-neutral-200 leading-relaxed">
+                      <div>Min-cut test #2</div>
+                      <div className="text-neutral-400">Cap(A→F) = 100</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Grid Section */}
-      <section id="features" className="py-20 border-b border-gray-800/80 bg-[#090e1b]">
+      {/* Bento Features Section */}
+      <section id="features" className="py-20 border-b border-neutral-800/80 bg-neutral-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-3">Key Features</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Engineered for Speed, Precision & Competitive Programming
-            </p>
-            <p className="mt-4 text-gray-400 text-sm sm:text-base">
-              Say goodbye to clunky graph editors that crash with multi-edges or lose isolated vertices. Everything competitive programmers need is built in.
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-sky-400">Capabilities</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Built for Competitive Programmers
+            </h2>
+            <p className="mt-3 text-xs sm:text-sm text-neutral-400">
+              Every detail tuned for fast debugging during contests — zero clutter, exact string fidelity, and instant visual clarity.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Smart Auto-Detection & Input</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Paste raw edge pairs without needing to type <code>N</code> and <code>M</code> counts. Handles 0-indexed and 1-based graphs with a live 1-click toggle that instantly renumbers nodes.
-              </p>
-            </article>
-
-            {/* Feature 2 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Pin className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Double-Click Node Pinning</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Fix nodes permanently in place by double-clicking. Fixed nodes show a distinct anchor ring while continuous spring physics rearranges other nodes dynamically around them.
-              </p>
-            </article>
-
-            {/* Feature 3 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Layers className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Curved Multi-Edges & Loops</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Graph problems often have multiple parallel edges and self-loops. CP Graph curves them gracefully with distinct bezier offsets so edge weights and directions never collide.
-              </p>
-            </article>
-
-            {/* Feature 4 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Weighted Nodes & Mixed Types</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Assign weights or arbitrary values (numbers, chars like <code>'A'</code>, strings like <code>"goal"</code>, booleans) to vertices. Supports bracket syntax <code>u [w]</code> and assignment <code>u: w</code> with real-time badges and C++/Python exports.
-              </p>
-            </article>
-
-            {/* Feature 5 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <GitBranch className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">6 Specialized Layout Engines</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Instantly switch layouts: Force-Directed Physics, Hierarchical Tree (Reingold-Tilford with root selector), Topological DAG, Bipartite Columns (Sets A & B), Circular Ring, and Grid Lattice.
-              </p>
-            </article>
-
-            {/* Feature 6 */}
-            <article className="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 hover:border-blue-500/40 transition-all group">
-              <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <RefreshCw className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Bidirectional Live Sync</h3>
-              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                Editing visually on canvas immediately updates the CP edge list, and typing or pasting testcases updates the visual canvas in real-time. Zero delays, 60fps performance.
-              </p>
-            </article>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {FEATURES.map((feat, i) => {
+              const Icon = feat.icon;
+              return (
+                <article
+                  key={i}
+                  className="p-6 rounded-2xl bg-black/90 border border-neutral-800/90 hover:border-neutral-600 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${feat.accent}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-neutral-800 bg-neutral-950 text-neutral-400">
+                      {feat.badge}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-2">{feat.title}</h3>
+                  <p className="text-neutral-400 text-xs leading-relaxed">{feat.desc}</p>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Algorithms Section */}
-      <section id="algorithms" className="py-20 border-b border-gray-800/80 bg-[#070b14]">
+      <section id="algorithms" className="py-20 border-b border-neutral-800/80 bg-black/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-400 mb-3">Algorithm Player</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Step-by-Step Graph Algorithm Visualizer
-            </p>
-            <p className="mt-4 text-gray-400 text-sm sm:text-base">
-              Trace execution with forward/backward steps, adjustable animation speed, queue/stack state inspection, and event logs in standard competitive programming terminology.
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400">Interactive Step Tracer</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              17+ Graph &amp; Tree Algorithms
+            </h2>
+            <p className="mt-3 text-xs sm:text-sm text-neutral-400">
+              Step forward/backward with live queue, priority queue, stack, DSU, and distance array state inspectors.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">BFS</span>
-              <h3 className="text-base font-bold text-white mt-1">Breadth-First Search</h3>
-              <p className="text-xs text-gray-400 mt-2">Level-by-level exploration, active queue display, and shortest unweighted path finding.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">DFS</span>
-              <h3 className="text-base font-bold text-white mt-1">Depth-First Search</h3>
-              <p className="text-xs text-gray-400 mt-2">Call stack tracking, discovery time tin[], finish time tout[], and back-edge cycle detection.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Dijkstra</span>
-              <h3 className="text-base font-bold text-white mt-1">Shortest Path</h3>
-              <p className="text-xs text-gray-400 mt-2">Priority queue state inspector, distance array dist[] relaxations, and path tree visualization.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Topo Sort</span>
-              <h3 className="text-base font-bold text-white mt-1">Kahn's Algorithm</h3>
-              <p className="text-xs text-gray-400 mt-2">In-degree tracking array in_degree[], topological order extraction, and directed cycle warning.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Tarjan SCC</span>
-              <h3 className="text-base font-bold text-white mt-1">Strongly Connected</h3>
-              <p className="text-xs text-gray-400 mt-2">Low-link value computation, DFS recursion stack, and condensation component identification.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Bridges & Cuts</span>
-              <h3 className="text-base font-bold text-white mt-1">Articulation Points</h3>
-              <p className="text-xs text-gray-400 mt-2">Identifies critical bridge edges and cut vertices whose removal disconnects the graph.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Kruskal MST</span>
-              <h3 className="text-base font-bold text-white mt-1">Minimum Spanning Tree</h3>
-              <p className="text-xs text-gray-400 mt-2">Sorted edge list scanning, Disjoint Set Union (DSU) operations, and total weight summation.</p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0c1221] border border-gray-800 hover:border-emerald-500/30 transition-all">
-              <span className="text-xs font-mono font-semibold text-emerald-400 uppercase">Bipartite</span>
-              <h3 className="text-base font-bold text-white mt-1">2-Coloring Check</h3>
-              <p className="text-xs text-gray-400 mt-2">Alternating 2-coloring test with instant detection of odd-length cycle violations.</p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {ALGORITHMS.map(algo => (
+              <div
+                key={algo.name}
+                className="p-4 rounded-xl bg-neutral-950/90 border border-neutral-800/90 hover:border-emerald-500/40 transition-colors"
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                  {algo.tag}
+                </span>
+                <h3 className="text-sm font-bold text-white mt-1">{algo.name}</h3>
+                <p className="text-[11px] text-neutral-400 mt-1.5 leading-relaxed">{algo.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Input Formats Section */}
-      <section id="formats" className="py-20 border-b border-gray-800/80 bg-[#090e1b]">
+      <section id="formats" className="py-20 border-b border-neutral-800/80 bg-neutral-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Universal Compatibility</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Supported Competitive Programming Formats
-            </p>
-            <p className="mt-4 text-gray-400 text-sm sm:text-base">
-              Copy test cases from any contest platform and paste directly into the editor.
-            </p>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-sky-400">Universal Input</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Paste Directly from Any Contest
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 font-mono text-xs">
-            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
-              <span className="text-cyan-400 font-bold block mb-2 font-sans text-sm">Edge List (Unweighted)</span>
-              <p className="text-gray-400 text-[11px] font-sans mb-3">Standard Codeforces / CSES edge pairs.</p>
-              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-blue-300">
-                1 2<br />
-                2 3<br />
-                3 1<br />
-                3 4
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 text-xs">
+            {INPUT_FORMATS.map(fmt => (
+              <div key={fmt.title} className="p-4 rounded-xl bg-black border border-neutral-800 flex flex-col justify-between">
+                <div>
+                  <div className="text-white font-bold text-xs mb-1">{fmt.title}</div>
+                  <p className="text-neutral-500 text-[10.5px] mb-3">{fmt.sub}</p>
+                </div>
+                <pre className="bg-neutral-950 p-3 rounded-lg border border-neutral-800/90 text-sky-300 text-[11px] leading-relaxed overflow-x-auto">
+                  {fmt.code}
+                </pre>
               </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
-              <span className="text-cyan-400 font-bold block mb-2 font-sans text-sm">Weighted Edge List</span>
-              <p className="text-gray-400 text-[11px] font-sans mb-3">Includes weight parameter <code>w</code>.</p>
-              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-blue-300">
-                1 2 5<br />
-                2 3 10<br />
-                3 4 2<br />
-                4 1 7
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
-              <span className="text-purple-400 font-bold block mb-2 font-sans text-sm">Weighted Nodes</span>
-              <p className="text-gray-400 text-[11px] font-sans mb-3">Assign weights (int, char, string).</p>
-              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-purple-300">
-                1 [10]<br />
-                2: 'A'<br />
-                3: "goal"<br />
-                SingleNode
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
-              <span className="text-cyan-400 font-bold block mb-2 font-sans text-sm">Tree Parent Array</span>
-              <p className="text-gray-400 text-[11px] font-sans mb-3">AtCoder & CF tree format (p2, p3... pn).</p>
-              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-blue-300">
-                1 1 2 2 3
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#0e1628] border border-gray-800">
-              <span className="text-cyan-400 font-bold block mb-2 font-sans text-sm">Adjacency Matrix</span>
-              <p className="text-gray-400 text-[11px] font-sans mb-3">Full N × N matrix representations.</p>
-              <div className="bg-[#070b14] p-3 rounded border border-gray-800 text-blue-300">
-                0 1 1 0<br />
-                1 0 0 1<br />
-                1 0 0 1<br />
-                0 1 1 0
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Comparison Section */}
-      <section id="comparison" className="py-20 border-b border-gray-800/80 bg-[#070b14]">
+      <section id="comparison" className="py-20 border-b border-neutral-800/80 bg-black/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Why Switch</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              CP Graph Editor vs Other Tools
-            </p>
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-400">Why CP Graph</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Built for Modern Contests
+            </h2>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-[#0c1221]">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+          <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/90">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-gray-800 bg-gray-900/50 text-gray-300">
+                <tr className="border-b border-neutral-800 bg-black/80 text-neutral-400">
                   <th className="p-4 font-semibold">Capability</th>
-                  <th className="p-4 font-semibold text-blue-400 bg-blue-500/10 border-x border-blue-500/20">CP Graph Editor</th>
-                  <th className="p-4 font-semibold text-gray-400">CS Academy</th>
-                  <th className="p-4 font-semibold text-gray-400">VisuAlgo</th>
-                  <th className="p-4 font-semibold text-gray-400">Graphviz</th>
+                  <th className="p-4 font-bold text-sky-400 bg-blue-500/10 border-x border-blue-500/20">
+                    CP Graph v{VERSION}
+                  </th>
+                  <th className="p-4 font-semibold">CS Academy</th>
+                  <th className="p-4 font-semibold">VisuAlgo</th>
+                  <th className="p-4 font-semibold">Graphviz</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800 text-gray-300">
-                <tr>
-                  <td className="p-4 font-medium">Automatic N M & Headerless Detection</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Instant)</td>
-                  <td className="p-4 text-gray-400">Requires manual lines</td>
-                  <td className="p-4 text-gray-500">✗ No</td>
-                  <td className="p-4 text-gray-500">✗ Strict DOT syntax</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Weighted Nodes & Mixed Types (Char, String, Bool, Int)</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Live badges & values)</td>
-                  <td className="p-4 text-gray-500">✗ Numbers only</td>
-                  <td className="p-4 text-gray-500">✗ Fixed values</td>
-                  <td className="p-4 text-amber-400">Manual label formatting</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Preserve Isolated Vertices (Degree 0)</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Header count preserved)</td>
-                  <td className="p-4 text-gray-500">✗ Drops isolated nodes</td>
-                  <td className="p-4 text-gray-500">✗ Drops isolated nodes</td>
-                  <td className="p-4 text-emerald-400">✓ Yes</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">0-Indexed vs 1-Indexed Live Toggle</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (1-Click live conversion)</td>
-                  <td className="p-4 text-gray-500">✗ Manual rewrite</td>
-                  <td className="p-4 text-gray-500">✗ No</td>
-                  <td className="p-4 text-gray-500">✗ No</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Double-Click Node Pinning (Anchor Physics)</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Rigid anchor rings)</td>
-                  <td className="p-4 text-gray-500">✗ Loose dragging</td>
-                  <td className="p-4 text-gray-500">✗ No</td>
-                  <td className="p-4 text-gray-500">✗ Static layout</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Parallel Multi-Edges & Self-Loops</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (Curved bezier offsets)</td>
-                  <td className="p-4 text-amber-400">Overlaps / collides</td>
-                  <td className="p-4 text-gray-500">✗ Limited</td>
-                  <td className="p-4 text-emerald-400">✓ Yes</td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-medium">Native Desktop Apps (Win / Mac / Linux)</td>
-                  <td className="p-4 font-bold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">✓ Yes (EXE, DMG, AppImage)</td>
-                  <td className="p-4 text-gray-500">✗ Web only</td>
-                  <td className="p-4 text-gray-500">✗ Web only</td>
-                  <td className="p-4 text-amber-400">CLI only</td>
-                </tr>
+              <tbody className="divide-y divide-neutral-800/80 text-neutral-300">
+                {COMPARISON_ROWS.map(([cap, ours, cs, va, gv]) => (
+                  <tr key={cap}>
+                    <td className="p-4 font-medium text-white">{cap}</td>
+                    <td className="p-4 font-semibold text-emerald-400 bg-blue-500/5 border-x border-blue-500/20">
+                      ✓ {ours}
+                    </td>
+                    <td className="p-4 text-neutral-400">{cs}</td>
+                    <td className="p-4 text-neutral-500">{va}</td>
+                    <td className="p-4 text-neutral-400">{gv}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -599,151 +730,113 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       </section>
 
       {/* Downloads Section */}
-      <section id="downloads" className="py-20 border-b border-gray-800/80 bg-[#090e1b]">
+      <section id="downloads" className="py-20 border-b border-neutral-800/80 bg-neutral-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-3">Install Everywhere</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              ⚡ 1-Click Install for Any Operating System
-            </p>
-            <p className="mt-4 text-gray-400 text-sm sm:text-base">
-              Ultra-lightweight native apps (only ~6-14 MB). Instant setup, zero bloat, runs 100% offline.
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-400">Offline Desktop</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Download CP Graph Editor v{VERSION}
+            </h2>
+            <p className="mt-3 text-xs sm:text-sm text-neutral-400">
+              Native Tauri &amp; Electron desktop builds with bundled offline JetBrains Mono — zero cloud dependency.
             </p>
           </div>
 
-          {/* 1-Click Terminal Command */}
-          <div className="max-w-3xl mx-auto mb-10 p-4 rounded-2xl bg-[#0c1426] border border-blue-500/30 text-left">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-blue-300 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-cyan-400" />
-                <span>⚡ 1-Click Instant Terminal Install (Linux &amp; macOS):</span>
+          <div className="max-w-3xl mx-auto mb-10 p-4 rounded-2xl bg-black border border-neutral-800">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-semibold text-neutral-200 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-sky-400" />
+                <span>1-Click Terminal Install (Linux &amp; macOS)</span>
               </span>
-              <span className="text-[10px] text-gray-400 font-mono">Auto-installs desktop icons &amp; launches</span>
+              <button
+                type="button"
+                onClick={handleCopyInstall}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 text-[10.5px] text-neutral-300 cursor-pointer"
+              >
+                {copiedCmd ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedCmd ? 'Copied' : 'Copy'}</span>
+              </button>
             </div>
-            <div className="bg-black/60 p-2.5 rounded-lg border border-gray-800 font-mono text-xs text-blue-300 select-all overflow-x-auto">
-              curl -fsSL https://raw.githubusercontent.com/graph-editor/graph-editor.github.io/master/install.sh | bash
+            <div className="bg-neutral-950 p-2.5 rounded-lg border border-neutral-800/90 text-[11px] text-sky-300 select-all overflow-x-auto">
+              {INSTALL_CMD}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {/* Windows Card */}
-            <div className="p-6 rounded-2xl bg-[#0e1628] border border-blue-500/20 flex flex-col justify-between hover:border-blue-500/50 transition-all">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {/* Windows */}
+            <div className="p-6 rounded-2xl bg-black border border-neutral-800 hover:border-blue-500/40 flex flex-col justify-between transition-colors">
               <div>
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
-                  <Monitor className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-4">
+                  <Monitor className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Windows</h3>
-                <p className="text-xs text-gray-400 mt-1 mb-4">Windows 10 / 11 (64-bit)</p>
-                <ul className="text-xs text-gray-300 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>⚡ 1-Click Auto Setup (6 MB)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>MSI Installer Package (.msi)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Automatic Desktop &amp; Start shortcuts</span>
-                  </li>
-                </ul>
+                <h3 className="text-lg font-bold text-white">Windows</h3>
+                <p className="text-xs text-neutral-500 mt-1 mb-4">Windows 10 / 11 (64-bit)</p>
               </div>
               <div className="space-y-2">
                 <a
                   href={WIN_EXE_URL}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-lg transition-colors"
-                  title="Single click to install and launch instantly"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>⚡ 1-Click Setup (.exe)</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Setup Installer (.exe)</span>
                 </a>
                 <a
-                  href={WIN_ZIP_URL}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                  href={WIN_MSI_URL}
+                  className="w-full flex items-center justify-center py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px] transition-colors"
                 >
-                  <span>MSI Installer (.msi)</span>
+                  MSI Package (.msi)
                 </a>
               </div>
             </div>
 
-            {/* macOS Card */}
-            <div className="p-6 rounded-2xl bg-[#0e1628] border border-purple-500/20 flex flex-col justify-between hover:border-purple-500/50 transition-all">
+            {/* macOS */}
+            <div className="p-6 rounded-2xl bg-black border border-neutral-800 hover:border-purple-500/40 flex flex-col justify-between transition-colors">
               <div>
-                <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4">
-                  <Apple className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4">
+                  <Apple className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white">macOS</h3>
-                <p className="text-xs text-gray-400 mt-1 mb-4">macOS 11+ (Intel &amp; Apple Silicon)</p>
-                <ul className="text-xs text-gray-300 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Universal Disk Image (14 MB)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>M1/M2/M3/M4 &amp; Intel native</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Portable App bundle (.tar.gz)</span>
-                  </li>
-                </ul>
+                <h3 className="text-lg font-bold text-white">macOS</h3>
+                <p className="text-xs text-neutral-500 mt-1 mb-4">Apple Silicon &amp; Intel</p>
               </div>
               <div className="space-y-2">
                 <a
                   href={MAC_DMG_URL}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-colors"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Universal Disk Image (.dmg)</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Universal DMG (.dmg)</span>
                 </a>
                 <a
-                  href={MAC_ZIP_URL}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                  href={MAC_TAR_URL}
+                  className="w-full flex items-center justify-center py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px] transition-colors"
                 >
-                  <span>Portable (.tar.gz)</span>
+                  App Archive (.tar.gz)
                 </a>
               </div>
             </div>
 
-            {/* Linux Card */}
-            <div className="p-6 rounded-2xl bg-[#0e1628] border border-cyan-500/20 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
+            {/* Linux */}
+            <div className="p-6 rounded-2xl bg-black border border-neutral-800 hover:border-sky-500/40 flex flex-col justify-between transition-colors">
               <div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-4">
-                  <Terminal className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center mb-4">
+                  <Terminal className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Linux</h3>
-                <p className="text-xs text-gray-400 mt-1 mb-4">Ubuntu, Debian, Fedora, Arch</p>
-                <ul className="text-xs text-gray-300 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>⚡ 1-Click AppImage (Run anywhere)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Debian / Ubuntu Package (7 MB)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Zero root or dependencies needed</span>
-                  </li>
-                </ul>
+                <h3 className="text-lg font-bold text-white">Linux</h3>
+                <p className="text-xs text-neutral-500 mt-1 mb-4">Ubuntu, Debian, Fedora, Arch</p>
               </div>
               <div className="space-y-2">
                 <a
                   href={LINUX_APPIMAGE_URL}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg transition-colors"
-                  title="Single-click executable for any Linux distro"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs transition-colors"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>⚡ 1-Click AppImage</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Portable AppImage</span>
                 </a>
                 <a
                   href={LINUX_DEB_URL}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 font-medium text-[11px] transition-colors"
+                  className="w-full flex items-center justify-center py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px] transition-colors"
                 >
-                  <span>Debian Package (.deb)</span>
+                  Debian Package (.deb)
                 </a>
               </div>
             </div>
@@ -752,32 +845,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 border-b border-gray-800/80 bg-[#070b14]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-3">Questions & Answers</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+      <section id="faq" className="py-20 border-b border-neutral-800/80 bg-black/70">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-400">FAQ</span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
               Frequently Asked Questions
-            </p>
+            </h2>
           </div>
 
-          <div className="space-y-4">
-            {faqs.map((faq, index) => {
+          <div className="space-y-3">
+            {FAQS.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
                 <div
-                  key={index}
-                  className="rounded-xl border border-gray-800 bg-[#0c1221] overflow-hidden transition-all"
+                  key={faq.q}
+                  className="rounded-xl border border-neutral-800 bg-neutral-950/90 overflow-hidden"
                 >
                   <button
-                    onClick={() => toggleFaq(index)}
-                    className="w-full p-5 text-left flex items-center justify-between font-semibold text-white text-sm sm:text-base hover:bg-gray-800/40 transition-colors"
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-white text-xs sm:text-sm hover:bg-neutral-900/60 transition-colors cursor-pointer"
                   >
                     <span>{faq.q}</span>
-                    {isOpen ? <ChevronUp className="w-5 h-5 text-blue-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-gray-500 shrink-0" />}
+                    {isOpen ? (
+                      <ChevronUp className="w-4 h-4 text-sky-400 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" />
+                    )}
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-5 text-gray-300 text-xs sm:text-sm leading-relaxed border-t border-gray-800/50 pt-3">
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 text-neutral-400 text-xs leading-relaxed border-t border-neutral-800/70 pt-3">
                       {faq.a}
                     </div>
                   )}
@@ -788,67 +886,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
         </div>
       </section>
 
-      {/* Call to Action Footer Banner */}
-      <section className="py-16 bg-gradient-to-b from-[#070b14] to-[#0c1221] border-b border-gray-800 text-center">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            Ready to Visualize Your First Graph?
-          </h2>
-          <p className="mt-4 text-gray-400 text-sm max-w-xl mx-auto">
-            Try the online editor right now in your browser with zero setup, or download the desktop app.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <button
-              onClick={onOpenEditor}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl shadow-blue-600/30 transition-all"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Launch Online Graph Editor</span>
-            </button>
-            <a
-              href={GITHUB_REPO}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl border border-gray-700 bg-gray-900/60 hover:bg-gray-800 text-gray-300 hover:text-white font-semibold text-sm transition-all"
-            >
-              <GithubIcon className="w-4 h-4" />
-              <span>Star on GitHub</span>
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="py-10 bg-[#050810] text-gray-500 text-xs">
+      <footer className="py-10 bg-black text-neutral-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Share2 className="w-4 h-4 text-blue-500" />
-            <span className="text-gray-300 font-semibold">CP Graph Editor</span>
-            <span>— The Modern Graph Visualizer & Editor</span>
+            <span className="text-neutral-200 font-semibold">CP Graph Editor</span>
+            <span className="text-neutral-600">•</span>
+            <span>v{VERSION}</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <a href="#features" className="hover:text-gray-300">Features</a>
-            <a href="#algorithms" className="hover:text-gray-300">Algorithms</a>
-            <a href="#downloads" className="hover:text-gray-300">Downloads</a>
-            <a href={GITHUB_REPO} target="_blank" rel="noreferrer" className="hover:text-gray-300 flex items-center gap-1">
-              <span>GitHub</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span>Built with ❤️ by</span>
+          <div className="flex items-center gap-5">
+            <a href="#features" className="hover:text-neutral-200 transition-colors">Features</a>
+            <a href="#algorithms" className="hover:text-neutral-200 transition-colors">Algorithms</a>
+            <a href="#downloads" className="hover:text-neutral-200 transition-colors">Downloads</a>
             <a
-              href="https://github.com/mostafa-cse"
+              href={RELEASES_URL}
               target="_blank"
               rel="noreferrer"
-              className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2 flex items-center gap-1"
+              className="hover:text-neutral-200 inline-flex items-center gap-1 transition-colors"
             >
-              <span>Mostafa (@mostafa-cse)</span>
+              <span>Releases</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
+
+          <a
+            href="https://github.com/mostafa-cse"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sky-400 hover:text-sky-300 font-semibold inline-flex items-center gap-1"
+          >
+            <span>Mostafa (@mostafa-cse)</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
       </footer>
     </div>
