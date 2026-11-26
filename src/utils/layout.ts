@@ -1,5 +1,142 @@
 import { GraphData, GraphNode, GraphSettings, LayoutMode } from '../types/graph';
 
+function getLayoutNodeRadius(node?: Pick<GraphNode, 'id' | 'label'>): number {
+  if (!node) return 20;
+  const len = String(node.label ?? node.id).length;
+  if (len <= 2) return 20;
+  if (len <= 4) return 23;
+  if (len <= 6) return 26;
+  return Math.min(45, 22 + len * 2.5);
+}
+
+function hasNodeWeightBadge(node: GraphNode): boolean {
+  const rawW = node.weight ?? node.value;
+  return rawW !== undefined && rawW !== null && String(rawW).trim() !== '';
+}
+
+function getMinNodeSeparation(a: GraphNode, b: GraphNode, padding = 28): number {
+  const base = getLayoutNodeRadius(a) + getLayoutNodeRadius(b) + padding;
+  // Extra vertical breathing room when nodes carry w:... badges underneath
+  if ((hasNodeWeightBadge(a) || hasNodeWeightBadge(b)) && Math.abs(a.x - b.x) < 50) {
+    return base + 14;
+  }
+  return base;
+}
+
+/**
+ * Iteratively pushes overlapping node pairs apart until no two nodes overlap.
+ * Respects pinned/dragged nodes (fx/fy) when possible.
+ */
+export function resolveNodeOverlaps(
+  inputNodes: GraphNode[],
+  iterations = 24,
+  padding = 28
+): GraphNode[] {
+  const n = inputNodes.length;
+  if (n <= 1) return inputNodes;
+
+  const nodes = inputNodes.map(node => ({ ...node }));
+
+  for (let it = 0; it < iterations; it++) {
+    let moved = false;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        const minDist = getMinNodeSeparation(a, b, padding);
+
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist >= minDist) continue;
+
+        moved = true;
+        if (dist < 0.001) {
+          const angle = ((i * 1.618 + j * 2.718) % 1) * Math.PI * 2;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          dist = 1;
+        }
+
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const overlap = minDist - dist + 0.5;
+
+        const aPinned = a.fx !== undefined && a.fx !== null;
+        const bPinned = b.fx !== undefined && b.fx !== null;
+
+        if (!aPinned && !bPinned) {
+          const shift = overlap * 0.5;
+          a.x -= ux * shift;
+          a.y -= uy * shift;
+          b.x += ux * shift;
+          b.y += uy * shift;
+        } else if (aPinned && !bPinned) {
+          b.x += ux * overlap;
+          b.y += uy * overlap;
+        } else if (!aPinned && bPinned) {
+          a.x -= ux * overlap;
+          a.y -= uy * overlap;
+        } else {
+          // If both pinned in static layout mode, separate evenly
+          const shift = overlap * 0.5;
+          a.x -= ux * shift;
+          a.y -= uy * shift;
+          b.x += ux * shift;
+          b.y += uy * shift;
+        }
+      }
+    }
+
+    if (!moved) break;
+  }
+
+  return nodes;
+}
+
+/**
+ * Finds the nearest coordinates to `(targetX, targetY)` that do not overlap any existing node.
+ */
+export function findClearNodePosition(
+  targetX: number,
+  targetY: number,
+  node: GraphNode,
+  existingNodes: GraphNode[],
+  padding = 28,
+  preferredAngle = 0
+): { x: number; y: number } {
+  const isColliding = (cx: number, cy: number): boolean => {
+    for (const other of existingNodes) {
+      if (other.id === node.id) continue;
+      const minDist = getMinNodeSeparation(node, other, padding);
+      if (Math.hypot(other.x - cx, other.y - cy) < minDist) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (!isColliding(targetX, targetY)) {
+    return { x: targetX, y: targetY };
+  }
+
+  for (let r = 68; r <= 1400; r += 34) {
+    const steps = Math.max(12, Math.min(36, Math.round((2 * Math.PI * r) / 56)));
+    for (let s = 0; s < steps; s++) {
+      const a = preferredAngle + (s * 2 * Math.PI) / steps;
+      const testX = targetX + r * Math.cos(a);
+      const testY = targetY + r * Math.sin(a);
+      if (!isColliding(testX, testY)) {
+        return { x: testX, y: testY };
+      }
+    }
+  }
+
+  return { x: targetX, y: targetY };
+}
+
 export function applyLayout(
   data: GraphData,
   mode: LayoutMode,
@@ -69,7 +206,7 @@ export function applyLayout(
       }));
 
       return {
-        nodes: [...otherNodes, ...shiftedTargetNodes],
+        nodes: resolveNodeOverlaps([...otherNodes, ...shiftedTargetNodes], 24, 28),
         edges: [...otherEdges, ...laidOutTarget.edges],
       };
     }
@@ -82,21 +219,33 @@ export function applyLayout(
     };
   }
 
+  let result: GraphData;
   switch (mode) {
     case 'tree':
-      return applyTreeLayout(data, options?.rootId, width, height);
+      result = applyTreeLayout(data, options?.rootId, width, height);
+      break;
     case 'dag':
-      return applyDAGLayout(data, width, height);
+      result = applyDAGLayout(data, width, height);
+      break;
     case 'bipartite':
-      return applyBipartiteLayout(data, width, height);
+      result = applyBipartiteLayout(data, width, height);
+      break;
     case 'circular':
-      return applyCircularLayout(data, centerX, centerY, Math.min(width, height) * 0.38);
+      result = applyCircularLayout(data, centerX, centerY, Math.min(width, height) * 0.38);
+      break;
     case 'grid':
-      return applyGridLayout(data, width, height);
+      result = applyGridLayout(data, width, height);
+      break;
     case 'force':
     default:
-      return applyForceLayoutStep(data, width, height, 50); // Run initial 50 iterations
+      result = applyForceLayoutStep(data, width, height, 50); // Run initial 50 iterations
+      break;
   }
+
+  return {
+    ...result,
+    nodes: resolveNodeOverlaps(result.nodes, 24, 28),
+  };
 }
 
 export function applyCircularLayout(
@@ -108,18 +257,20 @@ export function applyCircularLayout(
   const count = data.nodes.length;
   if (count === 0) return data;
 
+  const effectiveRadius = Math.max(radius, (count * 84) / (2 * Math.PI));
+
   const newNodes = data.nodes.map((node, i) => {
     const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
     return {
       ...node,
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle),
+      x: centerX + effectiveRadius * Math.cos(angle),
+      y: centerY + effectiveRadius * Math.sin(angle),
       vx: 0,
       vy: 0,
     };
   });
 
-  return { ...data, nodes: newNodes };
+  return { ...data, nodes: resolveNodeOverlaps(newNodes, 20, 28) };
 }
 
 export function applyGridLayout(data: GraphData, width: number, height: number): GraphData {
@@ -131,22 +282,27 @@ export function applyGridLayout(data: GraphData, width: number, height: number):
 
   const paddingX = 100;
   const paddingY = 100;
-  const stepX = (width - 2 * paddingX) / Math.max(1, cols - 1);
-  const stepY = (height - 2 * paddingY) / Math.max(1, rows - 1);
+  const stepX = Math.max(96, (width - 2 * paddingX) / Math.max(1, cols - 1));
+  const stepY = Math.max(96, (height - 2 * paddingY) / Math.max(1, rows - 1));
+
+  const totalW = (cols - 1) * stepX;
+  const totalH = (rows - 1) * stepY;
+  const startX = width / 2 - totalW / 2;
+  const startY = height / 2 - totalH / 2;
 
   const newNodes = data.nodes.map((node, i) => {
     const r = Math.floor(i / cols);
     const c = i % cols;
     return {
       ...node,
-      x: cols === 1 ? width / 2 : paddingX + c * stepX,
-      y: rows === 1 ? height / 2 : paddingY + r * stepY,
+      x: cols === 1 ? width / 2 : startX + c * stepX,
+      y: rows === 1 ? height / 2 : startY + r * stepY,
       vx: 0,
       vy: 0,
     };
   });
 
-  return { ...data, nodes: newNodes };
+  return { ...data, nodes: resolveNodeOverlaps(newNodes, 20, 28) };
 }
 
 export function applyTreeLayout(
@@ -209,26 +365,29 @@ export function applyTreeLayout(
     }
   });
 
-  // Calculate layout coordinates side-by-side for each tree
+  // Calculate layout coordinates side-by-side for each tree with guaranteed spacing
   const totalMaxWidth = trees.reduce((sum, t) => sum + Math.max(1, t.maxWidth), 0);
-  const gap = 80;
-  const availableWidth = Math.max(width - 160 - (trees.length - 1) * gap, trees.length * 120);
+  const gap = 90;
+  const minTotalWidth = totalMaxWidth * 84;
+  const availableWidth = Math.max(width - 160 - (trees.length - 1) * gap, trees.length * 120, minTotalWidth);
   const topY = 80;
 
   const positions = new Map<string, { x: number; y: number }>();
   let currentStartX = 80;
 
   trees.forEach(tree => {
-    const treeWidth = (Math.max(1, tree.maxWidth) / totalMaxWidth) * availableWidth;
-    const rowHeight = Math.min(100, (height - 160) / Math.max(1, tree.maxDepth));
+    const treeWidth = Math.max(tree.maxWidth * 84, (Math.max(1, tree.maxWidth) / totalMaxWidth) * availableWidth);
+    const rowHeight = Math.max(92, Math.min(115, (height - 160) / Math.max(1, tree.maxDepth)));
 
     tree.levels.forEach((nodeIds, lvl) => {
       const y = topY + lvl * rowHeight;
       const count = nodeIds.length;
-      const stepX = treeWidth / (count + 1);
+      const stepX = Math.max(82, treeWidth / (count + 1));
+      const rowTotalW = stepX * (count + 1);
+      const offsetX = currentStartX + (treeWidth - rowTotalW) / 2;
       nodeIds.forEach((id, idx) => {
         positions.set(id, {
-          x: currentStartX + (idx + 1) * stepX,
+          x: offsetX + (idx + 1) * stepX,
           y,
         });
       });
@@ -245,7 +404,7 @@ export function applyTreeLayout(
     vy: 0,
   }));
 
-  return { ...data, nodes: newNodes };
+  return { ...data, nodes: resolveNodeOverlaps(newNodes, 24, 28) };
 }
 
 function buildTreeComponent(
@@ -333,18 +492,20 @@ export function applyDAGLayout(data: GraphData, width: number, height: number): 
   });
 
   const maxL = Math.max(...Array.from(layers.keys()), 0);
-  const colWidth = Math.min(180, (width - 160) / Math.max(1, maxL));
+  const colWidth = Math.max(120, Math.min(200, (width - 160) / Math.max(1, maxL)));
   const leftX = 80;
 
   const positions = new Map<string, { x: number; y: number }>();
   layers.forEach((nodeIds, l) => {
     const x = leftX + l * colWidth;
     const count = nodeIds.length;
-    const stepY = (height - 140) / (count + 1);
+    const stepY = Math.max(88, (height - 140) / (count + 1));
+    const colH = (count + 1) * stepY;
+    const startY = Math.max(70, height / 2 - colH / 2);
     nodeIds.forEach((id, idx) => {
       positions.set(id, {
         x,
-        y: 70 + (idx + 1) * stepY,
+        y: startY + (idx + 1) * stepY,
       });
     });
   });
@@ -357,7 +518,7 @@ export function applyDAGLayout(data: GraphData, width: number, height: number): 
     vy: 0,
   }));
 
-  return { ...data, nodes: newNodes };
+  return { ...data, nodes: resolveNodeOverlaps(newNodes, 24, 28) };
 }
 
 export function applyBipartiteLayout(data: GraphData, width: number, height: number): GraphData {
@@ -396,18 +557,21 @@ export function applyBipartiteLayout(data: GraphData, width: number, height: num
     else setB.push(n.id);
   });
 
-  const leftX = width * 0.25;
-  const rightX = width * 0.75;
+  const span = Math.max(300, width * 0.5);
+  const leftX = width / 2 - span / 2;
+  const rightX = width / 2 + span / 2;
   const positions = new Map<string, { x: number; y: number }>();
 
-  const stepA = (height - 140) / Math.max(1, setA.length + 1);
+  const stepA = Math.max(88, (height - 140) / Math.max(1, setA.length + 1));
+  const topA = Math.max(70, height / 2 - ((setA.length + 1) * stepA) / 2);
   setA.forEach((id, idx) => {
-    positions.set(id, { x: leftX, y: 70 + (idx + 1) * stepA });
+    positions.set(id, { x: leftX, y: topA + (idx + 1) * stepA });
   });
 
-  const stepB = (height - 140) / Math.max(1, setB.length + 1);
+  const stepB = Math.max(88, (height - 140) / Math.max(1, setB.length + 1));
+  const topB = Math.max(70, height / 2 - ((setB.length + 1) * stepB) / 2);
   setB.forEach((id, idx) => {
-    positions.set(id, { x: rightX, y: 70 + (idx + 1) * stepB });
+    positions.set(id, { x: rightX, y: topB + (idx + 1) * stepB });
   });
 
   const newNodes = nodes.map(node => ({
@@ -418,7 +582,7 @@ export function applyBipartiteLayout(data: GraphData, width: number, height: num
     vy: 0,
   }));
 
-  return { ...data, nodes: newNodes };
+  return { ...data, nodes: resolveNodeOverlaps(newNodes, 24, 28) };
 }
 
 /**
@@ -557,17 +721,10 @@ export function applyForceLayoutStep(
 
       node.x += node.vx;
       node.y += node.vy;
-
-      // Keep within bounds if single graph; for multi-graph let user place anywhere
-      if (!hasMultipleGraphs) {
-        const margin = 40;
-        node.x = Math.max(margin, Math.min(width - margin, node.x));
-        node.y = Math.max(margin, Math.min(height - margin, node.y));
-      }
     }
   }
 
-  return { ...data, nodes };
+  return { ...data, nodes: resolveNodeOverlaps(nodes, 8, 28) };
 }
 
 /**
@@ -585,22 +742,25 @@ export function positionNewNodesPreservingExisting(
     return applyLayout(parsed, settings.layout);
   }
 
-  // Position map initialized with all existing nodes (their positions are strictly fixed)
+  // Position map and node list tracking all already-placed nodes with their exact radii
   const posMap = new Map<string, { x: number; y: number }>();
+  const placedNodesList: GraphNode[] = [];
   existingNodeMap.forEach((node, id) => {
     posMap.set(id, { x: node.x, y: node.y });
+    placedNodesList.push({ ...node });
   });
 
   // Identify nodes that are brand new (not in existingNodeMap)
   const unpositionedNodes = parsed.nodes.filter(n => !existingNodeMap.has(n.id));
   if (unpositionedNodes.length === 0) {
-    // All nodes already existed; preserve their coordinates exactly
+    // All nodes already existed; preserve coordinates and only separate if any two literally overlap
+    const preserved = parsed.nodes.map(n => {
+      const exist = existingNodeMap.get(n.id);
+      return exist ? { ...n, x: exist.x, y: exist.y, fx: exist.fx, fy: exist.fy } : n;
+    });
     return {
       ...parsed,
-      nodes: parsed.nodes.map(n => {
-        const exist = existingNodeMap.get(n.id);
-        return exist ? { ...n, x: exist.x, y: exist.y, fx: exist.fx, fy: exist.fy } : n;
-      }),
+      nodes: resolveNodeOverlaps(preserved, 16, 28),
     };
   }
 
@@ -631,36 +791,6 @@ export function positionNewNodesPreservingExisting(
   // Track children counts per parent to fan out multiple new children neatly
   const neighborNewChildIndex = new Map<string, number>();
 
-  // Collision detector: ensures at least 60px distance between any two nodes
-  const isColliding = (candX: number, candY: number): boolean => {
-    for (const pos of posMap.values()) {
-      if (Math.hypot(pos.x - candX, pos.y - candY) < 60) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  // Find a non-colliding spot near target position
-  const findClearSpot = (targetX: number, targetY: number, preferredAngle?: number): { x: number; y: number } => {
-    if (!isColliding(targetX, targetY)) {
-      return { x: targetX, y: targetY };
-    }
-    for (let r = 70; r <= 350; r += 35) {
-      const stepCount = 12;
-      const baseAngle = preferredAngle ?? 0;
-      for (let s = 0; s < stepCount; s++) {
-        const a = baseAngle + (s * 2 * Math.PI) / stepCount;
-        const testX = targetX + r * Math.cos(a);
-        const testY = targetY + r * Math.sin(a);
-        if (!isColliding(testX, testY)) {
-          return { x: testX, y: testY };
-        }
-      }
-    }
-    return { x: targetX + 70, y: targetY + 70 };
-  };
-
   // Iteratively position new nodes: those connected to already positioned nodes first
   const remaining = [...unpositionedNodes];
   let progress = true;
@@ -688,7 +818,7 @@ export function positionNewNodesPreservingExisting(
 
         if (isTreeLike) {
           // Children fan out downwards: dy = +100
-          const xOffset = childIdx === 0 ? 0 : (childIdx % 2 === 1 ? 1 : -1) * Math.ceil(childIdx / 2) * 85;
+          const xOffset = childIdx === 0 ? 0 : (childIdx % 2 === 1 ? 1 : -1) * Math.ceil(childIdx / 2) * 90;
           candX = primaryPos.x + xOffset;
           candY = primaryPos.y + 100;
           preferredAngle = Math.PI / 2;
@@ -702,8 +832,9 @@ export function positionNewNodesPreservingExisting(
           candY = primaryPos.y + dist * Math.sin(preferredAngle);
         }
 
-        const spot = findClearSpot(candX, candY, preferredAngle);
+        const spot = findClearNodePosition(candX, candY, node, placedNodesList, 28, preferredAngle);
         posMap.set(node.id, spot);
+        placedNodesList.push({ ...node, x: spot.x, y: spot.y });
       }
     }
   }
@@ -711,46 +842,49 @@ export function positionNewNodesPreservingExisting(
   // Any remaining new nodes are isolated (or in a new disconnected component)
   // Position them neatly in the visible viewport (or to the right of the graph)
   let isolatedIndex = 0;
-  const baseX = visibleCenter ? visibleCenter.x : (isFinite(maxX) ? maxX + 90 : 450);
+  const baseX = visibleCenter ? visibleCenter.x : (isFinite(maxX) ? maxX + 96 : 450);
   const baseY = visibleCenter ? visibleCenter.y : (isFinite(minY) ? minY : 325);
 
   for (const node of remaining) {
     const col = isolatedIndex % 4;
     const row = Math.floor(isolatedIndex / 4);
     const candX = visibleCenter
-      ? baseX + (col - 1.5) * 85
-      : baseX + col * 80;
+      ? baseX + (col - 1.5) * 96
+      : baseX + col * 92;
     const candY = visibleCenter
-      ? baseY + (row - 0.5) * 85
-      : baseY + row * 85;
+      ? baseY + (row - 0.5) * 96
+      : baseY + row * 96;
     isolatedIndex++;
-    const spot = findClearSpot(candX, candY);
+    const spot = findClearNodePosition(candX, candY, node, placedNodesList, 28);
     posMap.set(node.id, spot);
+    placedNodesList.push({ ...node, x: spot.x, y: spot.y });
   }
 
-  // Return parsed data where existing nodes strictly keep their original positions
-  // and new nodes receive their resolved non-colliding positions.
-  return {
-    ...parsed,
-    nodes: parsed.nodes.map(n => {
-      const pos = posMap.get(n.id);
-      if (existingNodeMap.has(n.id)) {
-        const exist = existingNodeMap.get(n.id)!;
-        return {
-          ...n,
-          ...exist,
-          weight: n.weight !== undefined ? n.weight : exist.weight,
-          value: n.value !== undefined ? n.value : exist.value,
-          label: n.label || exist.label,
-          x: exist.x,
-          y: exist.y,
-        };
-      }
+  // Return parsed data where existing nodes keep their original positions
+  // and no two nodes overlap.
+  const finalNodes = parsed.nodes.map(n => {
+    const pos = posMap.get(n.id);
+    if (existingNodeMap.has(n.id)) {
+      const exist = existingNodeMap.get(n.id)!;
       return {
         ...n,
-        x: pos?.x ?? 450,
-        y: pos?.y ?? 325,
+        ...exist,
+        weight: n.weight !== undefined ? n.weight : exist.weight,
+        value: n.value !== undefined ? n.value : exist.value,
+        label: n.label || exist.label,
+        x: exist.x,
+        y: exist.y,
       };
-    }),
+    }
+    return {
+      ...n,
+      x: pos?.x ?? 450,
+      y: pos?.y ?? 325,
+    };
+  });
+
+  return {
+    ...parsed,
+    nodes: resolveNodeOverlaps(finalNodes, 16, 28),
   };
 }

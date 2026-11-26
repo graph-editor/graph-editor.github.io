@@ -21,7 +21,7 @@ import {
   runTreeMISDP,
   runTreeCentroid,
 } from './utils/algorithms';
-import { applyLayout, positionNewNodesPreservingExisting } from './utils/layout';
+import { applyLayout, positionNewNodesPreservingExisting, resolveNodeOverlaps, findClearNodePosition } from './utils/layout';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/LeftPanel';
 import { Canvas, CanvasHandle } from './components/Canvas';
@@ -594,7 +594,7 @@ export function App() {
       nextNum++;
     }
 
-    const newNode: GraphNode = {
+    const candidateNode: GraphNode = {
       id: `${prefix}${nextNum}`,
       label: String(nextNum),
       nodeType: 'int',
@@ -603,6 +603,13 @@ export function App() {
       x,
       y,
       color: '#3b82f6',
+    };
+
+    const clearPos = findClearNodePosition(x, y, candidateNode, data.nodes, 28);
+    const newNode: GraphNode = {
+      ...candidateNode,
+      x: clearPos.x,
+      y: clearPos.y,
     };
 
     const nextSettings = settings.nodeCountPreserved !== undefined
@@ -797,10 +804,10 @@ export function App() {
     }));
   }, []);
 
-  // Finish dragging: keep node coordinates cleanly updated
+  // Finish dragging: keep node coordinates cleanly updated without overlaps
   const handleFinishDragNode = (id: string) => {
     setData(prev => {
-      const nextNodes = prev.nodes.map(n => {
+      const updatedNodes = prev.nodes.map(n => {
         if (n.id === id) {
           return {
             ...n,
@@ -812,6 +819,7 @@ export function App() {
         }
         return n;
       });
+      const nextNodes = resolveNodeOverlaps(updatedNodes, 16, 28);
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
       const text = serializeGraphToCPInput(nextData, settings, false);
@@ -824,7 +832,7 @@ export function App() {
   const handleFinishDragNodes = useCallback((ids: string[]) => {
     const idSet = new Set(ids);
     setData(prev => {
-      const nextNodes = prev.nodes.map(n => {
+      const updatedNodes = prev.nodes.map(n => {
         if (idSet.has(n.id)) {
           return {
             ...n,
@@ -836,6 +844,7 @@ export function App() {
         }
         return n;
       });
+      const nextNodes = resolveNodeOverlaps(updatedNodes, 16, 28);
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
       const text = serializeGraphToCPInput(nextData, settings, false);
