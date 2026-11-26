@@ -170,15 +170,66 @@ export function generatePythonAdjacencyList(data: GraphData, settings: GraphSett
   return code;
 }
 
-export function exportSvgToFile(svgElement: SVGSVGElement, filename: string = 'graph.svg') {
-  const serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svgElement);
+let cachedEmbeddedFontCss: string | null = null;
 
-  // Add namespaces if not present
-  if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
-    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+async function getEmbeddedJetBrainsFontCss(): Promise<string> {
+  if (cachedEmbeddedFontCss !== null) return cachedEmbeddedFontCss;
+
+  const fonts: { weight: string; url: string }[] = [
+    { weight: '400', url: './fonts/JetBrainsMono-Regular.ttf' },
+    { weight: '700', url: './fonts/JetBrainsMono-Bold.ttf' },
+    { weight: '800 900', url: './fonts/JetBrainsMono-ExtraBold.ttf' },
+  ];
+
+  const rules: string[] = [];
+  for (const font of fonts) {
+    try {
+      const resp = await fetch(font.url);
+      if (!resp.ok) continue;
+      const buf = await resp.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const b64 = btoa(binary);
+      rules.push(
+        `@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:${font.weight};src:url(data:font/ttf;base64,${b64}) format('truetype');}`
+      );
+    } catch {
+      // Ignore individual font fetch failures and fall back gracefully
+    }
   }
 
+  cachedEmbeddedFontCss = rules.join('');
+  return cachedEmbeddedFontCss;
+}
+
+async function serializeSvgWithFonts(svgElement: SVGSVGElement): Promise<string> {
+  const clone = svgElement.cloneNode(true) as SVGSVGElement;
+  if (!clone.getAttribute('xmlns')) {
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  }
+
+  const fontCss = await getEmbeddedJetBrainsFontCss();
+  if (fontCss) {
+    const svgNs = 'http://www.w3.org/2000/svg';
+    let defs = clone.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS(svgNs, 'defs');
+      clone.insertBefore(defs, clone.firstChild);
+    }
+    const styleEl = document.createElementNS(svgNs, 'style');
+    styleEl.textContent = fontCss;
+    defs.appendChild(styleEl);
+  }
+
+  return new XMLSerializer().serializeToString(clone);
+}
+
+export async function exportSvgToFile(svgElement: SVGSVGElement, filename: string = 'graph.svg') {
+  const source = await serializeSvgWithFonts(svgElement);
   const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -190,9 +241,8 @@ export function exportSvgToFile(svgElement: SVGSVGElement, filename: string = 'g
   URL.revokeObjectURL(url);
 }
 
-export function exportPngFromSvg(svgElement: SVGSVGElement, filename: string = 'graph.png') {
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(svgElement);
+export async function exportPngFromSvg(svgElement: SVGSVGElement, filename: string = 'graph.png') {
+  const svgString = await serializeSvgWithFonts(svgElement);
   const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
   const URLObj = window.URL || window.webkitURL || window;
   const blobURL = URLObj.createObjectURL(svgBlob);
@@ -204,10 +254,12 @@ export function exportPngFromSvg(svgElement: SVGSVGElement, filename: string = '
     canvas.width = svgElement.clientWidth * scale || 1600;
     canvas.height = svgElement.clientHeight * scale || 1200;
     const context = canvas.getContext('2d');
-    if (!context) return;
+    if (!context) {
+      URLObj.revokeObjectURL(blobURL);
+      return;
+    }
 
-    // Fill background (dark or clean)
-    context.fillStyle = '#0f172a';
+    context.fillStyle = '#000000';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
 

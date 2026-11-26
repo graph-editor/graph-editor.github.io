@@ -804,13 +804,17 @@ export function App() {
     }));
   }, []);
 
-  // Finish dragging: keep node coordinates cleanly updated without overlaps
+  // Finish dragging: keep non-dragged nodes stationary while nudging only the dropped node(s) clear of overlaps
   const handleFinishDragNode = (id: string) => {
     setData(prev => {
-      const updatedNodes = prev.nodes.map(n => {
+      const otherNodes = prev.nodes.filter(n => n.id !== id);
+      const nextNodes = prev.nodes.map(n => {
         if (n.id === id) {
+          const clearPos = findClearNodePosition(n.x, n.y, n, otherNodes, 28);
           return {
             ...n,
+            x: clearPos.x,
+            y: clearPos.y,
             fx: null,
             fy: null,
             vx: 0,
@@ -819,7 +823,6 @@ export function App() {
         }
         return n;
       });
-      const nextNodes = resolveNodeOverlaps(updatedNodes, 16, 28);
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
       const text = serializeGraphToCPInput(nextData, settings, false);
@@ -828,10 +831,11 @@ export function App() {
     });
   };
 
-  // Finish dragging multiple nodes
+  // Finish dragging multiple nodes: keep non-dragged nodes fixed in place
   const handleFinishDragNodes = useCallback((ids: string[]) => {
     const idSet = new Set(ids);
     setData(prev => {
+      const fixedIds = new Set(prev.nodes.filter(n => !idSet.has(n.id)).map(n => n.id));
       const updatedNodes = prev.nodes.map(n => {
         if (idSet.has(n.id)) {
           return {
@@ -844,7 +848,7 @@ export function App() {
         }
         return n;
       });
-      const nextNodes = resolveNodeOverlaps(updatedNodes, 16, 28);
+      const nextNodes = resolveNodeOverlaps(updatedNodes, 16, 28, fixedIds);
       const nextData = { ...prev, nodes: nextNodes };
       syncGraphToText(nextData, settings);
       const text = serializeGraphToCPInput(nextData, settings, false);

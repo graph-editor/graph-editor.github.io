@@ -30,7 +30,8 @@ function getMinNodeSeparation(a: GraphNode, b: GraphNode, padding = 28): number 
 export function resolveNodeOverlaps(
   inputNodes: GraphNode[],
   iterations = 24,
-  padding = 28
+  padding = 28,
+  fixedNodeIds?: Set<string>
 ): GraphNode[] {
   const n = inputNodes.length;
   if (n <= 1) return inputNodes;
@@ -64,8 +65,8 @@ export function resolveNodeOverlaps(
         const uy = dy / dist;
         const overlap = minDist - dist + 0.5;
 
-        const aPinned = a.fx !== undefined && a.fx !== null;
-        const bPinned = b.fx !== undefined && b.fx !== null;
+        const aPinned = fixedNodeIds ? fixedNodeIds.has(a.id) : (a.fx !== undefined && a.fx !== null);
+        const bPinned = fixedNodeIds ? fixedNodeIds.has(b.id) : (b.fx !== undefined && b.fx !== null);
 
         if (!aPinned && !bPinned) {
           const shift = overlap * 0.5;
@@ -79,8 +80,8 @@ export function resolveNodeOverlaps(
         } else if (!aPinned && bPinned) {
           a.x -= ux * overlap;
           a.y -= uy * overlap;
-        } else {
-          // If both pinned in static layout mode, separate evenly
+        } else if (!fixedNodeIds) {
+          // In static layout mode when all nodes have fx/fy, separate evenly
           const shift = overlap * 0.5;
           a.x -= ux * shift;
           a.y -= uy * shift;
@@ -603,10 +604,12 @@ export function applyForceLayoutStep(
   nodes.forEach((node, i) => nodeMap.set(node.id, i));
 
   const k = Math.sqrt((width * height) / Math.max(1, n));
-  const repulsionStrength = 1800;
-  const springLength = 80;
+  // Balance pairwise repulsion with spring tension (~90-130px ideal spacing for small graphs,
+  // compact ~72-95px spacing for large/dense graphs so they fit cleanly inside the viewport).
+  const repulsionStrength = Math.max(115, Math.min(200, k * 0.85));
+  const springLength = Math.max(70, Math.min(95, k * 0.55));
   const springStrength = 0.05;
-  const centerGravity = 0.02;
+  const centerGravity = Math.min(0.06, 0.02 + Math.max(0, n - 12) * 0.0008);
   const centerX = width / 2;
   const centerY = height / 2;
 
@@ -708,8 +711,23 @@ export function applyForceLayoutStep(
 
       const gx = (targetCenter.cx - node.x) * centerGravity;
       const gy = (targetCenter.cy - node.y) * centerGravity;
-      node.vx = ((node.vx || 0) + gx) * damping;
-      node.vy = ((node.vy || 0) + gy) * damping;
+
+      // Soft elastic boundary containment for single graphs (prevents border pile-ups
+      // while gently keeping large/dense graphs inside the visible viewport)
+      let bx = 0;
+      let by = 0;
+      if (!hasMultipleGraphs) {
+        const margin = 48;
+        const maxBoundX = Math.max(margin + 100, width - margin);
+        const maxBoundY = Math.max(margin + 100, height - margin);
+        if (node.x < margin) bx = (margin - node.x) * 0.14;
+        else if (node.x > maxBoundX) bx = (maxBoundX - node.x) * 0.14;
+        if (node.y < margin) by = (margin - node.y) * 0.14;
+        else if (node.y > maxBoundY) by = (maxBoundY - node.y) * 0.14;
+      }
+
+      node.vx = ((node.vx || 0) + gx + bx) * damping;
+      node.vy = ((node.vy || 0) + gy + by) * damping;
 
       // Limit speed
       const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);

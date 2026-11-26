@@ -1164,6 +1164,19 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return { minX, maxX, minY, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
   }, [displayLassoPoints]);
 
+  // World-space bounding boxes of Note cards so weight badges avoid hiding underneath Notes
+  const noteBoxes = useMemo<LabelBox[]>(() => {
+    return notes.map(nt => {
+      const w = nt.width ?? 236;
+      const estimatedLines = Math.max(2, nt.text ? nt.text.split('\n').length : 2);
+      const linePx = (nt.fontSize ?? 13) * 1.65;
+      const h = nt.isMinimized ? 34 : (nt.height ?? Math.min(380, Math.max(115, 42 + estimatedLines * linePx)));
+      return { cx: nt.x + w / 2, cy: nt.y + h / 2, w, h };
+    });
+  }, [notes]);
+
+  const prevEdgeBadgeChoiceRef = useRef<Map<string, { t: number; n: number }>>(new Map());
+
   // Compute collision-free Node Weight badge placements so w:... pills stay clearly visible
   const nodeWeightLayoutMap = useMemo(() => {
     const map = new Map<string, { dx: number; dy: number; w: number; h: number; wStr: string; isBelow: boolean }>();
@@ -1204,6 +1217,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           const area = getBoxesOverlapArea(box, placed, 4);
           if (area > 0) score += 50000 + area * 100;
         }
+        for (const nBox of noteBoxes) {
+          const area = getBoxesOverlapArea(box, nBox, 4);
+          if (area > 0) score += 70000 + area * 120;
+        }
 
         if (score < bestScore) {
           bestScore = score;
@@ -1217,7 +1234,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     });
 
     return map;
-  }, [data.nodes, getNodeRadius]);
+  }, [data.nodes, noteBoxes, getNodeRadius]);
 
   interface EdgeLayoutInfo {
     edge: GraphEdge;
@@ -1452,15 +1469,20 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         { t: 0.65, n: 18 },
       ];
 
+      const skipHeavyEdgeCrossings = draggingNodeId !== null && data.edges.length > 180;
+      const nextChoiceMap = new Map<string, { t: number; n: number }>();
+
       for (const item of internalList) {
         if (item.edge.weight === undefined || item.edge.weight === null || String(item.edge.weight).trim() === '') continue;
 
         const weightStr = String(item.edge.weight);
         const badgeW = Math.max(28, weightStr.length * 8 + 14);
         const badgeH = 20;
+        const prevChoice = prevEdgeBadgeChoiceRef.current.get(item.edge.id);
 
         let bestX = item.labelX;
         let bestY = item.labelY;
+        let bestCand = candidates[0];
         let bestScore = Infinity;
 
         for (const cand of candidates) {
@@ -1468,7 +1490,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           const pt = item.samplePoint(cand.t, cand.n);
           const box: LabelBox = { cx: pt.x, cy: pt.y, w: badgeW, h: badgeH };
 
-          let score = Math.abs(cand.t - 0.5) * 20 + (cand.n !== 0 ? 600 + Math.abs(cand.n) : 0);
+          const stabilityBonus =
+            prevChoice && prevChoice.t === cand.t && prevChoice.n === cand.n ? -35 : 0;
+          let score =
+            Math.abs(cand.t - 0.5) * 20 +
+            (cand.n !== 0 ? 600 + Math.abs(cand.n) : 0) +
+            stabilityBonus;
 
           // 1. Avoid overlapping other placed edge weight badges (with generous 6px gap)
           for (const placed of placedBadges) {
@@ -1485,7 +1512,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             }
           }
 
-          // 3. Avoid overlapping any node weight pill (w:...)
+          // 3. Avoid overlapping any Canvas Note card
+          for (const noteBox of noteBoxes) {
+            const area = getBoxesOverlapArea(box, noteBox, 6);
+            if (area > 0) {
+              score += 70000 + area * 120;
+            }
+          }
+
+          // 4. Avoid overlapping any node weight pill (w:...)
           for (const nwBox of nodeWeightBoxes) {
             const area = getBoxesOverlapArea(box, nwBox, 5);
             if (area > 0) {
@@ -1493,20 +1528,22 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             }
           }
 
-          // 4. Prefer positions clear of other crossing/adjacent edge lines
-          const padHit = Math.max(badgeW * 0.45, 14);
-          for (const seg of edgeSegments) {
-            if (seg.edgeId === item.edge.id) continue;
-            if (
-              pt.x + padHit < seg.minX ||
-              pt.x - padHit > seg.maxX ||
-              pt.y + padHit < seg.minY ||
-              pt.y - padHit > seg.maxY
-            ) {
-              continue;
-            }
-            if (distToSegment(pt, seg.p1, seg.p2) < 13) {
-              score += 300;
+          // 5. Prefer positions clear of other crossing/adjacent edge lines (throttled during massive graph drags)
+          if (!skipHeavyEdgeCrossings) {
+            const padHit = Math.max(badgeW * 0.45, 14);
+            for (const seg of edgeSegments) {
+              if (seg.edgeId === item.edge.id) continue;
+              if (
+                pt.x + padHit < seg.minX ||
+                pt.x - padHit > seg.maxX ||
+                pt.y + padHit < seg.minY ||
+                pt.y - padHit > seg.maxY
+              ) {
+                continue;
+              }
+              if (distToSegment(pt, seg.p1, seg.p2) < 13) {
+                score += 300;
+              }
             }
           }
 
@@ -1514,21 +1551,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             bestScore = score;
             bestX = pt.x;
             bestY = pt.y;
-            if (score === 0) break;
+            bestCand = cand;
+            if (score <= 0) break;
           }
         }
 
         item.labelX = bestX;
         item.labelY = bestY;
+        nextChoiceMap.set(item.edge.id, bestCand);
         placedBadges.push({ cx: bestX, cy: bestY, w: badgeW, h: badgeH });
       }
+      prevEdgeBadgeChoiceRef.current = nextChoiceMap;
     }
 
     for (const item of internalList) {
       map.set(item.edge.id, item);
     }
     return map;
-  }, [data.edges, data.nodes, nodeMap, edgePairStats, nodeWeightLayoutMap, settings.isDirected, settings.isWeighted, getNodeRadius]);
+  }, [data.edges, data.nodes, nodeMap, edgePairStats, nodeWeightLayoutMap, noteBoxes, draggingNodeId, settings.isDirected, settings.isWeighted, getNodeRadius]);
 
   // Shared mouse/click/touch handlers for both edge strokes and edge weight badges
   const getEdgeInteractionHandlers = (
