@@ -238,6 +238,15 @@ export function parseGraphInput(
   return parseEdgeList(lines, currentSettings, existingNodes);
 }
 
+function parseEdgeWeightTokens(parts: string[]): number | string | undefined {
+  if (parts.length < 3) return undefined;
+  const rawW = parts.length === 3 ? parts[2] : parts.slice(2).join(' ');
+  const trimmed = rawW.trim();
+  if (trimmed === '') return undefined;
+  const numW = Number(trimmed);
+  return !isNaN(numW) ? numW : rawW;
+}
+
 function parseEdgeList(
   lines: string[],
   settings: GraphSettings,
@@ -278,7 +287,7 @@ function parseEdgeList(
     }
   }
 
-  const rawEdges: { u: string; v: string; w?: number }[] = [];
+  const rawEdges: { u: string; v: string; w?: number | string }[] = [];
   const nodeIds = new Set<string>();
   const nodeWeights = new Map<string, string | number>();
   let hasWeights = false;
@@ -324,10 +333,8 @@ function parseEdgeList(
     } else if (parts.length >= 2) {
       const uStr = parts[0];
       const vStr = parts[1];
-      let weight: number | undefined = undefined;
-
-      if (parts.length >= 3 && parts[2] !== '' && !isNaN(Number(parts[2]))) {
-        weight = parseFloat(parts[2]);
+      const weight = parseEdgeWeightTokens(parts);
+      if (weight !== undefined) {
         hasWeights = true;
       }
 
@@ -602,7 +609,7 @@ function parseAdjacencyList(
   settings: GraphSettings,
   existingNodes?: Map<string, GraphNode>
 ): ParseResult {
-  const rawEdges: { u: string; v: string; w?: number }[] = [];
+  const rawEdges: { u: string; v: string; w?: number | string }[] = [];
   const nodeIds = new Set<string>();
 
   for (const line of lines) {
@@ -715,8 +722,10 @@ export function serializeGraphToCPInput(
     connectedNodes.add(edge.target);
     const src = cleanNodeLabel(edge.source);
     const tgt = cleanNodeLabel(edge.target);
-    if (settings.isWeighted && edge.weight !== undefined) {
-      out += `${src} ${tgt} ${edge.weight}\n`;
+    if (settings.isWeighted && edge.weight !== undefined && String(edge.weight).trim() !== '') {
+      const wStr = String(edge.weight);
+      const serializedW = /\s/.test(wStr) ? JSON.stringify(wStr) : wStr;
+      out += `${src} ${tgt} ${serializedW}\n`;
     } else {
       out += `${src} ${tgt}\n`;
     }
@@ -974,7 +983,7 @@ export function findEdgeLineIndicesInInput(
     lineIdx: number;
     u: string;
     v: string;
-    w?: number;
+    w?: number | string;
   }
 
   const parsedLines: ParsedEdgeLine[] = [];
@@ -986,8 +995,7 @@ export function findEdgeLineIndicesInInput(
 
     const parts = splitLineTokens(trimmed);
     if (parts.length >= 2) {
-      const weight =
-        parts.length >= 3 && !isNaN(Number(parts[2])) ? parseFloat(parts[2]) : undefined;
+      const weight = parseEdgeWeightTokens(parts);
       parsedLines.push({ lineIdx, u: parts[0], v: parts[1], w: weight });
     }
   }

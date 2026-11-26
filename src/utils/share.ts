@@ -17,7 +17,7 @@ export interface SerializedGraphPayload {
     id?: string;
     source: string;
     target: string;
-    weight?: number;
+    weight?: number | string;
     color?: string;
     directed?: boolean;
     style?: 'solid' | 'dashed' | 'dotted';

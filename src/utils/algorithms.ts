@@ -1,5 +1,17 @@
 import { GraphData, GraphStats, AlgorithmStep } from '../types/graph';
 
+function getNumericEdgeWeight(w: number | string | undefined, fallback = 1): number {
+  if (typeof w === 'number') return Number.isFinite(w) ? w : fallback;
+  if (typeof w === 'string') {
+    const trimmed = w.trim();
+    if (trimmed !== '') {
+      const n = Number(trimmed);
+      if (!isNaN(n) && Number.isFinite(n)) return n;
+    }
+  }
+  return fallback;
+}
+
 export function computeGraphStats(data: GraphData, isDirected: boolean): GraphStats {
   const nodeCount = data.nodes.length;
   const edgeCount = data.edges.length;
@@ -352,7 +364,7 @@ export function runDijkstra(data: GraphData, startNodeId: string, isDirected: bo
   nodes.forEach(n => adj.set(n.id, []));
 
   edges.forEach(e => {
-    const w = e.weight !== undefined ? e.weight : 1;
+    const w = getNumericEdgeWeight(e.weight, 1);
     adj.get(e.source)?.push({ to: e.target, weight: w, edgeId: e.id });
     if (!isDirected) {
       adj.get(e.target)?.push({ to: e.source, weight: w, edgeId: e.id });
@@ -717,7 +729,7 @@ export function runKruskalMST(data: GraphData): AlgorithmStep[] {
   const edges = [...data.edges];
 
   // Sort edges by weight
-  edges.sort((a, b) => (a.weight ?? 1) - (b.weight ?? 1));
+  edges.sort((a, b) => getNumericEdgeWeight(a.weight, 1) - getNumericEdgeWeight(b.weight, 1));
 
   // DSU
   const parent: Record<string, string> = {};
@@ -757,7 +769,7 @@ export function runKruskalMST(data: GraphData): AlgorithmStep[] {
   for (const edge of edges) {
     const u = edge.source;
     const v = edge.target;
-    const w = edge.weight ?? 1;
+    const w = getNumericEdgeWeight(edge.weight, 1);
 
     const rootU = find(u);
     const rootV = find(v);
@@ -922,7 +934,7 @@ export function runTreeDiameter(data: GraphData): AlgorithmStep[] {
   const adj = new Map<string, { to: string; edgeId: string; weight: number }[]>();
   nodes.forEach(n => adj.set(n.id, []));
   edges.forEach(e => {
-    const w = e.weight ?? 1;
+    const w = getNumericEdgeWeight(e.weight, 1);
     adj.get(e.source)?.push({ to: e.target, edgeId: e.id, weight: w });
     adj.get(e.target)?.push({ to: e.source, edgeId: e.id, weight: w });
   });
@@ -1512,7 +1524,7 @@ export function runBellmanFord(data: GraphData, startNodeId: string, isDirected:
   // Directed edge list
   const edgeList: { u: string; v: string; w: number; edgeId: string }[] = [];
   edges.forEach(e => {
-    const w = e.weight ?? 1;
+    const w = getNumericEdgeWeight(e.weight, 1);
     edgeList.push({ u: e.source, v: e.target, w, edgeId: e.id });
     if (!isDirected && e.source !== e.target) {
       edgeList.push({ u: e.target, v: e.source, w, edgeId: e.id });
@@ -1592,7 +1604,7 @@ export function runPrimMST(data: GraphData, startNodeId: string, isDirected: boo
   const adj = new Map<string, { to: string; edgeId: string; weight: number }[]>();
   nodes.forEach(n => adj.set(n.id, []));
   edges.forEach(e => {
-    const w = e.weight ?? 1;
+    const w = getNumericEdgeWeight(e.weight, 1);
     adj.get(e.source)?.push({ to: e.target, edgeId: e.id, weight: w });
     adj.get(e.target)?.push({ to: e.source, edgeId: e.id, weight: w });
   });

@@ -131,7 +131,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       label: string;
       edgeId: string;
       dir: 'outgoing' | 'incoming' | 'undirected';
-      weight?: number;
+      weight?: number | string;
     }[] = [];
     let inDegree = 0;
     let outDegree = 0;
@@ -475,17 +475,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     onBatchUpdateNodes?.({ weight: resolved, value: resolved });
   };
 
+  const resolveEdgeWeightInput = (valStr: string, keepSpaces = false): number | string | undefined => {
+    const trimmed = valStr.trim();
+    if (trimmed === '') return undefined;
+    const num = Number(trimmed);
+    if (!isNaN(num) && trimmed !== '-' && !trimmed.endsWith('.') && (!keepSpaces || valStr === trimmed)) {
+      return num;
+    }
+    return keepSpaces ? valStr : trimmed;
+  };
+
   const applyBatchEdgeWeight = (valStr: string) => {
     setBatchEdgeWeightInput(valStr);
-    const trimmed = valStr.trim();
-    if (trimmed === '') {
-      onBatchUpdateEdges?.({ weight: undefined });
-      return;
-    }
-    const num = Number(trimmed);
-    if (!isNaN(num) && trimmed !== '-' && !trimmed.endsWith('.')) {
-      onBatchUpdateEdges?.({ weight: num });
-    }
+    onBatchUpdateEdges?.({ weight: resolveEdgeWeightInput(valStr) });
   };
 
   const batchSummaryText = [
@@ -607,9 +609,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         <span>Edges Weight ({selectedEdgesCount})</span>
       </span>
       <input
-        type="number"
+        type="text"
         value={batchEdgeWeightInput}
-        placeholder="Assign weight to selected edges..."
+        placeholder="Assign weight (number or text)..."
         onChange={e => applyBatchEdgeWeight(e.target.value)}
         className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${
           isLight ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 shadow-2xs' : 'bg-slate-950 border-slate-800 text-white placeholder:text-slate-500'
@@ -1146,12 +1148,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 <div>
                   <span className={`text-[11px] font-semibold block mb-2 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Weight</span>
                   <input
-                    type="number"
+                    type="text"
                     value={selectedEdge.weight ?? ''}
-                    placeholder="e.g. 5"
+                    placeholder="e.g. 5, cost, inf"
                     onChange={e =>
                       onUpdateEdge(selectedEdge.id, {
-                        weight: e.target.value === '' ? undefined : Number(e.target.value),
+                        weight: resolveEdgeWeightInput(e.target.value, true),
                       })
                     }
                     className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono mb-2 border focus:outline-none focus:border-blue-500 ${
@@ -1619,12 +1621,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             }`}>
               <span className={`text-[11px] font-semibold block ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>Edge Weight</span>
               <input
-                type="number"
+                type="text"
                 value={selectedEdge.weight ?? ''}
-                placeholder="e.g. 5"
+                placeholder="e.g. 5, cost, inf"
                 onChange={e =>
                   onUpdateEdge(selectedEdge.id, {
-                    weight: e.target.value === '' ? undefined : Number(e.target.value),
+                    weight: resolveEdgeWeightInput(e.target.value, true),
                   })
                 }
                 className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none focus:border-blue-500 ${

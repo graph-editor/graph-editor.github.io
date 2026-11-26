@@ -7,6 +7,15 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
 
   // Check if all nodes are non-negative pure integers
   const allNumeric = data.nodes.length > 0 && data.nodes.every(node => /^\d+$/.test(node.id.trim()));
+  const allEdgeWeightsNumeric =
+    !isWeighted ||
+    data.edges.every(
+      e =>
+        e.weight === undefined ||
+        typeof e.weight === 'number' ||
+        (String(e.weight).trim() !== '' && !isNaN(Number(e.weight)))
+    );
+  const edgeWeightCppType = allEdgeWeightsNumeric ? 'int' : 'string';
 
   if (allNumeric) {
     let code = `// C++ Adjacency List (${isZero ? '0' : '1'}-indexed, ${isDirected ? 'Directed' : 'Undirected'}${isWeighted ? ', Weighted' : ''})\n`;
@@ -21,7 +30,7 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
 
     code += `const int N = ${sizeN};\n`;
     if (isWeighted) {
-      code += `vector<pair<int, int>> adj[N]; // {neighbor, weight}\n`;
+      code += `vector<pair<int, ${edgeWeightCppType}>> adj[N]; // {neighbor, weight}\n`;
     } else {
       code += `vector<int> adj[N];\n`;
     }
@@ -45,7 +54,8 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
 
     if (isWeighted) {
       for (const e of data.edges) {
-        const w = e.weight ?? 1;
+        const rawW = e.weight ?? 1;
+        const w = allEdgeWeightsNumeric ? rawW : JSON.stringify(String(rawW));
         code += `    adj[${e.source}].push_back({${e.target}, ${w}});\n`;
         if (!isDirected) {
           code += `    adj[${e.target}].push_back({${e.source}, ${w}});\n`;
@@ -72,7 +82,7 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
   );
 
   if (isWeighted) {
-    code += `unordered_map<string, vector<pair<string, int>>> adj; // {neighbor, weight}\n`;
+    code += `unordered_map<string, vector<pair<string, ${edgeWeightCppType}>>> adj; // {neighbor, weight}\n`;
   } else {
     code += `unordered_map<string, vector<string>> adj;\n`;
   }
@@ -92,7 +102,8 @@ export function generateCppAdjacencyList(data: GraphData, settings: GraphSetting
     code += `    adj[${JSON.stringify(node.id)}]; // node\n`;
   }
   for (const e of data.edges) {
-    const w = e.weight ?? 1;
+    const rawW = e.weight ?? 1;
+    const w = allEdgeWeightsNumeric ? rawW : JSON.stringify(String(rawW));
     if (isWeighted) {
       code += `    adj[${JSON.stringify(e.source)}].push_back({${JSON.stringify(e.target)}, ${w}});\n`;
       if (!isDirected) {
@@ -144,9 +155,9 @@ export function generatePythonAdjacencyList(data: GraphData, settings: GraphSett
   for (const e of data.edges) {
     const w = e.weight ?? 1;
     if (isWeighted) {
-      code += `    adj[${JSON.stringify(e.source)}].append((${JSON.stringify(e.target)}, ${w}))\n`;
+      code += `    adj[${JSON.stringify(e.source)}].append((${JSON.stringify(e.target)}, ${JSON.stringify(w)}))\n`;
       if (!isDirected) {
-        code += `    adj[${JSON.stringify(e.target)}].append((${JSON.stringify(e.source)}, ${w}))\n`;
+        code += `    adj[${JSON.stringify(e.target)}].append((${JSON.stringify(e.source)}, ${JSON.stringify(w)}))\n`;
       }
     } else {
       code += `    adj[${JSON.stringify(e.source)}].append(${JSON.stringify(e.target)})\n`;

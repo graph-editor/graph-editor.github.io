@@ -54,6 +54,32 @@ function doesEdgeIntersectPolygon(u: { x: number; y: number }, v: { x: number; y
   return false;
 }
 
+interface LabelBox {
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+}
+
+function getBoxesOverlapArea(a: LabelBox, b: LabelBox, pad = 6): number {
+  const overlapX =
+    Math.min(a.cx + a.w / 2 + pad, b.cx + b.w / 2 + pad) -
+    Math.max(a.cx - a.w / 2 - pad, b.cx - b.w / 2 - pad);
+  if (overlapX <= 0) return 0;
+  const overlapY =
+    Math.min(a.cy + a.h / 2 + pad, b.cy + b.h / 2 + pad) -
+    Math.max(a.cy - a.h / 2 - pad, b.cy - b.h / 2 - pad);
+  return overlapY > 0 ? overlapX * overlapY : 0;
+}
+
+function doesCircleOverlapBox(cx: number, cy: number, r: number, box: LabelBox): boolean {
+  const closestX = Math.max(box.cx - box.w / 2, Math.min(cx, box.cx + box.w / 2));
+  const closestY = Math.max(box.cy - box.h / 2, Math.min(cy, box.cy + box.h / 2));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return dx * dx + dy * dy < r * r;
+}
+
 // 2D Convex Hull (Monotone Chain) for selection lasso enclosure
 function computeConvexHull(points: { x: number; y: number }[]): { x: number; y: number }[] {
   if (points.length <= 2) return points;
@@ -1138,218 +1164,385 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     return { minX, maxX, minY, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
   }, [displayLassoPoints]);
 
-  // Render edge path (Straight, Curved for multi-edges, or Looped for self-loops)
-  const renderEdge = (edge: GraphEdge) => {
-    const sourceNode = nodeMap.get(edge.source);
-    const targetNode = nodeMap.get(edge.target);
-    if (!sourceNode || !targetNode) return null;
+  // Compute collision-free Node Weight badge placements so w:... pills stay clearly visible
+  const nodeWeightLayoutMap = useMemo(() => {
+    const map = new Map<string, { dx: number; dy: number; w: number; h: number; wStr: string; isBelow: boolean }>();
+    const nodeCircles = data.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, r: getNodeRadius(n) + 6 }));
+    const placedBoxes: LabelBox[] = [];
 
-    // Check if there is an opposite edge between these two nodes in data.edges
-    const oppEdge = data.edges.find(e => e.id !== edge.id && e.source === edge.target && e.target === edge.source);
-    const hasOppositeEdge = Boolean(oppEdge);
-    const isDirected = Boolean(edge.directed || settings.isDirected || hasOppositeEdge);
-    const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
-    const isHovered = hoveredEdgeId === edge.id;
+    data.nodes.forEach(node => {
+      const rawW = node.weight ?? node.value;
+      if (rawW === undefined || rawW === null || String(rawW).trim() === '') return;
+      const wStr = String(rawW);
+      const w = Math.max(34, wStr.length * 8 + 18);
+      const h = 18;
+      const r = getNodeRadius(node);
 
-    // Check algorithm highlight
-    const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
-    const defaultColor = isLight ? '#334155' : '#94a3b8';
-    const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
-    const edgeActualColor = edge.color && edge.color !== '#64748b' ? edge.color : defaultColor;
-    const effectiveEdgeColor = algoEdgeHighlight?.color || (
-      isHovered && !isSelected
-        ? hoveredColor
-        : edgeActualColor
-    );
-    const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
+      const candidates: { dx: number; dy: number; isBelow: boolean; basePenalty: number }[] = [
+        { dx: 0, dy: r + 14, isBelow: true, basePenalty: 0 },
+        { dx: 0, dy: -(r + 14), isBelow: false, basePenalty: node.badge ? 40000 : 12 },
+        { dx: r + w / 2 + 6, dy: 0, isBelow: false, basePenalty: 20 },
+        { dx: -(r + w / 2 + 6), dy: 0, isBelow: false, basePenalty: 25 },
+        { dx: r * 0.8 + w / 3, dy: r + 12, isBelow: true, basePenalty: 35 },
+        { dx: -(r * 0.8 + w / 3), dy: r + 12, isBelow: true, basePenalty: 40 },
+      ];
 
-    // Self loop
-    if (edge.source === edge.target) {
-      const handleLoopClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsLassoSelected(false);
-        const isMulti = e.ctrlKey || e.metaKey || e.shiftKey || activeTool === 'lasso';
-        if (isMulti) {
-          const baseNodes = selectedNodeId && !selectedNodeIds.includes(selectedNodeId)
-            ? [...selectedNodeIds, selectedNodeId]
-            : selectedNodeIds;
-          const baseEdges = selectedEdgeId && !selectedEdgeIds.includes(selectedEdgeId)
-            ? [...selectedEdgeIds, selectedEdgeId]
-            : selectedEdgeIds;
-          const nextEdges = baseEdges.includes(edge.id)
-            ? baseEdges.filter(id => id !== edge.id)
-            : [...baseEdges, edge.id];
-          onBatchSelect?.(baseNodes, nextEdges);
-          onSelectEdge(nextEdges[nextEdges.length - 1] || null);
-          return;
+      let best = candidates[0];
+      let bestScore = Infinity;
+
+      for (const cand of candidates) {
+        const box: LabelBox = { cx: node.x + cand.dx, cy: node.y + cand.dy, w, h };
+        let score = cand.basePenalty;
+
+        for (const circle of nodeCircles) {
+          if (circle.id === node.id) continue;
+          if (doesCircleOverlapBox(circle.x, circle.y, circle.r, box)) {
+            score += 80000;
+          }
         }
-        onSelectEdge(edge.id);
-        onSelectNode(null);
-        onBatchSelect?.([], [edge.id]);
-      };
+        for (const placed of placedBoxes) {
+          const area = getBoxesOverlapArea(box, placed, 4);
+          if (area > 0) score += 50000 + area * 100;
+        }
+
+        if (score < bestScore) {
+          bestScore = score;
+          best = cand;
+          if (score === 0) break;
+        }
+      }
+
+      map.set(node.id, { dx: best.dx, dy: best.dy, w, h, wStr, isBelow: best.isBelow });
+      placedBoxes.push({ cx: node.x + best.dx, cy: node.y + best.dy, w, h });
+    });
+
+    return map;
+  }, [data.nodes, getNodeRadius]);
+
+  interface EdgeLayoutInfo {
+    edge: GraphEdge;
+    sourceNode: GraphNode;
+    targetNode: GraphNode;
+    oppEdge?: GraphEdge;
+    hasOppositeEdge: boolean;
+    isDirected: boolean;
+    isCurved: boolean;
+    curvature: number;
+    pathD: string;
+    labelX: number;
+    labelY: number;
+  }
+
+  // Precompute all edge paths & collision-avoiding edge weight badge positions
+  const edgeLayoutMap = useMemo(() => {
+    const map = new Map<string, EdgeLayoutInfo>();
+    interface EdgeGeomInternal extends EdgeLayoutInfo {
+      samplePoint: (t: number, normalShift?: number) => { x: number; y: number };
+      isSelfLoop: boolean;
+      loopRadius: number;
+    }
+
+    const internalList: EdgeGeomInternal[] = [];
+    const edgeSegments: {
+      edgeId: string;
+      p1: { x: number; y: number };
+      p2: { x: number; y: number };
+      minX: number;
+      maxX: number;
+      minY: number;
+      maxY: number;
+    }[] = [];
+
+    // Pass 1: compute geometry & path curves in deterministic data.edges order
+    for (const edge of data.edges) {
+      const sourceNode = nodeMap.get(edge.source);
+      const targetNode = nodeMap.get(edge.target);
+      if (!sourceNode || !targetNode) continue;
+
+      const oppEdge = data.edges.find(
+        e => e.id !== edge.id && e.source === edge.target && e.target === edge.source
+      );
+      const hasOppositeEdge = Boolean(oppEdge);
+      const isDirected = Boolean(edge.directed || settings.isDirected || hasOppositeEdge);
+      const stats = edgePairStats.get(edge.id) || { total: 1, index: 0 };
+
+      if (edge.source === edge.target) {
+        const sourceRadius = getNodeRadius(sourceNode);
+        const x = sourceNode.x;
+        const y = sourceNode.y - sourceRadius;
+        const loopRadius = Math.max(22, sourceRadius + 4) + stats.index * 16;
+        const endY = isDirected ? y - 10 : y;
+        const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${endY}`;
+        const sampleLoop = (t: number, normalShift = 0) => {
+          const angle = (t - 0.5) * Math.PI * 1.1;
+          const rPos = loopRadius + 6 + normalShift;
+          return {
+            x: x + Math.sin(angle) * rPos,
+            y: y - loopRadius * 0.55 - Math.cos(angle) * (loopRadius * 0.55 + 6 + normalShift),
+          };
+        };
+
+        const info: EdgeGeomInternal = {
+          edge,
+          sourceNode,
+          targetNode,
+          oppEdge,
+          hasOppositeEdge: false,
+          isDirected,
+          isCurved: true,
+          curvature: 0,
+          pathD,
+          labelX: x,
+          labelY: y - loopRadius - 6,
+          samplePoint: sampleLoop,
+          isSelfLoop: true,
+          loopRadius,
+        };
+        internalList.push(info);
+        continue;
+      }
+
+      const dx = targetNode.x - sourceNode.x;
+      const dy = targetNode.y - sourceNode.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const nx = -uy;
+      const ny = ux;
+
+      const isWeighted = Boolean(
+        settings.isWeighted || edge.weight !== undefined || (oppEdge && oppEdge.weight !== undefined)
+      );
+
+      let curvature = 0;
+      if (isWeighted) {
+        if (stats.total > 1) {
+          const offsetStep = 36;
+          const centerOffset = (stats.total - 1) / 2;
+          curvature = (stats.index - centerOffset) * offsetStep;
+        } else if (hasOppositeEdge) {
+          curvature = Math.max(34, Math.min(48, dist * 0.18));
+        }
+      }
 
       const sourceRadius = getNodeRadius(sourceNode);
-      const x = sourceNode.x;
-      const y = sourceNode.y - sourceRadius;
-      const loopRadius = Math.max(22, sourceRadius + 4);
-      const endY = isDirected ? y - 10 : y;
-      const pathD = `M ${x - 10} ${y} A ${loopRadius} ${loopRadius} 0 1 1 ${x + 10} ${endY}`;
+      const targetRadius = getNodeRadius(targetNode);
+      const arrowOffset = isDirected ? 12.5 : 0;
+      const isCurved = Math.abs(curvature) >= 1;
+      const startOffset = isDirected && hasOppositeEdge && !isCurved ? arrowOffset : 0;
 
-      return (
-        <g
-          key={edge.id}
-          className="edge-group cursor-pointer"
-          onClick={handleLoopClick}
-          onMouseEnter={() => setHoveredEdgeId(edge.id)}
-          onMouseLeave={() => setHoveredEdgeId(null)}
-        >
-          {/* Selection Halo */}
-          {isSelected && (
-            <path
-              d={pathD}
-              fill="none"
-              stroke={isLight ? '#2563eb' : '#38bdf8'}
-              strokeWidth={strokeWidth + 5}
-              strokeOpacity="0.5"
-              strokeLinecap="round"
-            />
-          )}
-          <path
-            d={pathD}
-            fill="none"
-            stroke={effectiveEdgeColor}
-            strokeWidth={strokeWidth}
-            strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
-            markerEnd={isDirected ? `url(#${getMarkerId(effectiveEdgeColor)})` : undefined}
-          />
-          {settings.isWeighted && edge.weight !== undefined && (() => {
-            const weightStr = String(edge.weight);
-            const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
-            const badgeHeight = 20;
-            return (
-              <g transform={`translate(${x}, ${y - loopRadius - 6})`}>
-                <rect
-                  x={-badgeWidth / 2}
-                  y={-badgeHeight / 2}
-                  width={badgeWidth}
-                  height={badgeHeight}
-                  rx="6"
-                  fill={isLight ? '#ffffff' : '#0b0f19'}
-                  stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#334155' : '#475569'}
-                  strokeWidth="1.8"
-                  filter="url(#badge-shadow)"
-                />
-                <text
-                  textAnchor="middle"
-                  dy="4.2"
-                  fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#0f172a' : '#f8fafc'}
-                  fontSize="12"
-                  fontFamily={CANVAS_MONO_FONT}
-                  fontWeight="800"
-                  style={{ fontWeight: 800 }}
-                >
-                  {edge.weight}
-                </text>
-              </g>
-            );
-          })()}
-        </g>
-      );
-    }
+      const sinA = isCurved ? Math.max(-0.35, Math.min(0.35, (curvature / sourceRadius) * 0.16)) : 0;
+      const cosA = isCurved ? Math.sqrt(1 - sinA * sinA) : 1;
 
-    // Between distinct nodes
-    const dx = targetNode.x - sourceNode.x;
-    const dy = targetNode.y - sourceNode.y;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const startX = sourceNode.x + (ux * cosA + nx * sinA) * (sourceRadius + startOffset);
+      const startY = sourceNode.y + (uy * cosA + ny * sinA) * (sourceRadius + startOffset);
+      const endX = targetNode.x - (ux * cosA - nx * sinA) * (targetRadius + arrowOffset);
+      const endY = targetNode.y - (uy * cosA - ny * sinA) * (targetRadius + arrowOffset);
 
-    // Unit vector
-    const ux = dx / dist;
-    const uy = dy / dist;
+      let pathD = '';
+      let samplePoint: (t: number, normalShift?: number) => { x: number; y: number };
 
-    // Normal vector
-    const nx = -uy;
-    const ny = ux;
+      if (!isCurved) {
+        pathD = `M ${startX} ${startY} L ${endX} ${endY}`;
+        const oppShift = hasOppositeEdge ? 18 : 0;
+        samplePoint = (t: number, normalShift = 0) => ({
+          x: startX + (endX - startX) * t + nx * (oppShift + normalShift),
+          y: startY + (endY - startY) * t + ny * (oppShift + normalShift),
+        });
+        edgeSegments.push({
+          edgeId: edge.id,
+          p1: { x: startX, y: startY },
+          p2: { x: endX, y: endY },
+          minX: Math.min(startX, endX),
+          maxX: Math.max(startX, endX),
+          minY: Math.min(startY, endY),
+          maxY: Math.max(startY, endY),
+        });
+      } else {
+        const chordDx = endX - startX;
+        const chordDy = endY - startY;
+        const chordDist = Math.hypot(chordDx, chordDy) || 1;
+        const chordUx = chordDx / chordDist;
+        const chordUy = chordDy / chordDist;
 
-    // Parallel edge offset
-    const stats = edgePairStats.get(edge.id) || { total: 1, index: 0 };
-    const isWeighted = Boolean(settings.isWeighted || edge.weight !== undefined || (oppEdge && oppEdge.weight !== undefined));
+        const cpDist = chordDist * 0.38;
+        const cp1x = startX + chordUx * cpDist + nx * curvature;
+        const cp1y = startY + chordUy * cpDist + ny * curvature;
+        const cp2x = endX - chordUx * cpDist + nx * curvature;
+        const cp2y = endY - chordUy * cpDist + ny * curvature;
 
-    let curvature = 0;
-    // Rule: Multiple edges curve ONLY for weighted edges (e.g. parallel weighted edges or opposite weighted edges).
-    // For simple directed unweighted edges, it shows ONLY a straight line with both-side arrow.
-    if (isWeighted) {
-      if (stats.total > 1) {
-        const offsetStep = 36;
-        const centerOffset = (stats.total - 1) / 2;
-        curvature = (stats.index - centerOffset) * offsetStep;
-      } else if (hasOppositeEdge) {
-        // Generous, smooth, non-colliding curves for weighted opposing edges (scaled gracefully by distance)
-        const oppCurvature = Math.max(34, Math.min(48, dist * 0.18));
-        curvature = oppCurvature;
+        pathD = `M ${startX} ${startY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${endX} ${endY}`;
+        samplePoint = (t: number, normalShift = 0) => {
+          const mt = 1 - t;
+          const xPos =
+            mt * mt * mt * startX +
+            3 * mt * mt * t * cp1x +
+            3 * mt * t * t * cp2x +
+            t * t * t * endX;
+          const yPos =
+            mt * mt * mt * startY +
+            3 * mt * mt * t * cp1y +
+            3 * mt * t * t * cp2y +
+            t * t * t * endY;
+          return { x: xPos + nx * normalShift, y: yPos + ny * normalShift };
+        };
+
+        const pts = [0, 0.33, 0.67, 1].map(tt => samplePoint(tt, 0));
+        for (let k = 0; k < pts.length - 1; k++) {
+          edgeSegments.push({
+            edgeId: edge.id,
+            p1: pts[k],
+            p2: pts[k + 1],
+            minX: Math.min(pts[k].x, pts[k + 1].x),
+            maxX: Math.max(pts[k].x, pts[k + 1].x),
+            minY: Math.min(pts[k].y, pts[k + 1].y),
+            maxY: Math.max(pts[k].y, pts[k + 1].y),
+          });
+        }
       }
-    } else {
-      curvature = 0;
+
+      const mid = samplePoint(0.5, 0);
+      internalList.push({
+        edge,
+        sourceNode,
+        targetNode,
+        oppEdge,
+        hasOppositeEdge,
+        isDirected,
+        isCurved,
+        curvature,
+        pathD,
+        labelX: mid.x,
+        labelY: mid.y,
+        samplePoint,
+        isSelfLoop: false,
+        loopRadius: 0,
+      });
     }
 
-    const sourceRadius = getNodeRadius(sourceNode);
-    const targetRadius = getNodeRadius(targetNode);
+    // Pass 2: resolve non-overlapping edge weight badge positions
+    if (settings.isWeighted) {
+      const nodeCircles = data.nodes.map(n => ({ x: n.x, y: n.y, r: getNodeRadius(n) + 7 }));
+      const nodeWeightBoxes: LabelBox[] = [];
+      data.nodes.forEach(n => {
+        const nw = nodeWeightLayoutMap.get(n.id);
+        if (nw) {
+          nodeWeightBoxes.push({ cx: n.x + nw.dx, cy: n.y + nw.dy, w: nw.w, h: nw.h });
+        }
+      });
 
-    // Arrowhead geometry: forward length from refX (2.5) to tip (12.5) is 10px, with 2.5px gap to node boundary
-    const arrowOffset = isDirected ? 12.5 : 0;
-    // For bidirectional straight edges (like in CS Academy), start at the base of the opposite arrowhead
-    // so the stroke begins cleanly at the opposite arrow's base and does not occlude either arrowhead
-    const isCurved = Math.abs(curvature) >= 1;
-    const startOffset = (isDirected && hasOppositeEdge && !isCurved) ? arrowOffset : 0;
+      const placedBadges: LabelBox[] = [];
 
-    // For curved edges, shift attachment points slightly along the node circumference in the direction of the curve
-    // so incoming arrowhead and outgoing line never pinch or collide at the node perimeter
-    const sinA = isCurved ? Math.max(-0.35, Math.min(0.35, (curvature / sourceRadius) * 0.16)) : 0;
-    const cosA = isCurved ? Math.sqrt(1 - sinA * sinA) : 1;
+      // Candidate positions strictly along the edge path first, then gentle normal offsets if crowded
+      const candidates: { t: number; n: number }[] = [
+        { t: 0.5, n: 0 },
+        { t: 0.35, n: 0 },
+        { t: 0.65, n: 0 },
+        { t: 0.28, n: 0 },
+        { t: 0.72, n: 0 },
+        { t: 0.42, n: 0 },
+        { t: 0.58, n: 0 },
+        { t: 0.22, n: 0 },
+        { t: 0.78, n: 0 },
+        { t: 0.5, n: 18 },
+        { t: 0.5, n: -18 },
+        { t: 0.35, n: 18 },
+        { t: 0.65, n: -18 },
+        { t: 0.35, n: -18 },
+        { t: 0.65, n: 18 },
+      ];
 
-    // Node boundary intersection points
-    const startX = sourceNode.x + (ux * cosA + nx * sinA) * (sourceRadius + startOffset);
-    const startY = sourceNode.y + (uy * cosA + ny * sinA) * (sourceRadius + startOffset);
-    const endX = targetNode.x - (ux * cosA - nx * sinA) * (targetRadius + arrowOffset);
-    const endY = targetNode.y - (uy * cosA - ny * sinA) * (targetRadius + arrowOffset);
+      for (const item of internalList) {
+        if (item.edge.weight === undefined || item.edge.weight === null || String(item.edge.weight).trim() === '') continue;
 
-    let pathD = '';
-    let labelX = (startX + endX) / 2;
-    let labelY = (startY + endY) / 2;
+        const weightStr = String(item.edge.weight);
+        const badgeW = Math.max(28, weightStr.length * 8 + 14);
+        const badgeH = 20;
 
-    if (!isCurved) {
-      pathD = `M ${startX} ${startY} L ${endX} ${endY}`;
-      if (hasOppositeEdge) {
-        // Offset weight badge along the normal vector so both weights stay cleanly visible without colliding
-        labelX += nx * 18;
-        labelY += ny * 18;
+        let bestX = item.labelX;
+        let bestY = item.labelY;
+        let bestScore = Infinity;
+
+        for (const cand of candidates) {
+          if (item.isSelfLoop && cand.n !== 0) continue;
+          const pt = item.samplePoint(cand.t, cand.n);
+          const box: LabelBox = { cx: pt.x, cy: pt.y, w: badgeW, h: badgeH };
+
+          let score = Math.abs(cand.t - 0.5) * 20 + (cand.n !== 0 ? 600 + Math.abs(cand.n) : 0);
+
+          // 1. Avoid overlapping other placed edge weight badges (with generous 6px gap)
+          for (const placed of placedBadges) {
+            const area = getBoxesOverlapArea(box, placed, 6);
+            if (area > 0) {
+              score += 100000 + area * 150;
+            }
+          }
+
+          // 2. Avoid overlapping any node circle
+          for (const circle of nodeCircles) {
+            if (doesCircleOverlapBox(circle.x, circle.y, circle.r, box)) {
+              score += 80000;
+            }
+          }
+
+          // 3. Avoid overlapping any node weight pill (w:...)
+          for (const nwBox of nodeWeightBoxes) {
+            const area = getBoxesOverlapArea(box, nwBox, 5);
+            if (area > 0) {
+              score += 60000 + area * 120;
+            }
+          }
+
+          // 4. Prefer positions clear of other crossing/adjacent edge lines
+          const padHit = Math.max(badgeW * 0.45, 14);
+          for (const seg of edgeSegments) {
+            if (seg.edgeId === item.edge.id) continue;
+            if (
+              pt.x + padHit < seg.minX ||
+              pt.x - padHit > seg.maxX ||
+              pt.y + padHit < seg.minY ||
+              pt.y - padHit > seg.maxY
+            ) {
+              continue;
+            }
+            if (distToSegment(pt, seg.p1, seg.p2) < 13) {
+              score += 300;
+            }
+          }
+
+          if (score < bestScore) {
+            bestScore = score;
+            bestX = pt.x;
+            bestY = pt.y;
+            if (score === 0) break;
+          }
+        }
+
+        item.labelX = bestX;
+        item.labelY = bestY;
+        placedBadges.push({ cx: bestX, cy: bestY, w: badgeW, h: badgeH });
       }
-    } else {
-      const chordDx = endX - startX;
-      const chordDy = endY - startY;
-      const chordDist = Math.hypot(chordDx, chordDy) || 1;
-      const chordUx = chordDx / chordDist;
-      const chordUy = chordDy / chordDist;
-
-      // Control points for a graceful, organic cubic bezier
-      const cpDist = chordDist * 0.38;
-      const cp1x = startX + chordUx * cpDist + nx * curvature;
-      const cp1y = startY + chordUy * cpDist + ny * curvature;
-      const cp2x = endX - chordUx * cpDist + nx * curvature;
-      const cp2y = endY - chordUy * cpDist + ny * curvature;
-
-      pathD = `M ${startX} ${startY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${endX} ${endY}`;
-
-      // Geometric center at t = 0.5 of the cubic bezier
-      labelX = 0.125 * startX + 0.375 * cp1x + 0.375 * cp2x + 0.125 * endX;
-      labelY = 0.125 * startY + 0.375 * cp1y + 0.375 * cp2y + 0.125 * endY;
     }
 
-    const markerId = getMarkerId(effectiveEdgeColor);
+    for (const item of internalList) {
+      map.set(item.edge.id, item);
+    }
+    return map;
+  }, [data.edges, data.nodes, nodeMap, edgePairStats, nodeWeightLayoutMap, settings.isDirected, settings.isWeighted, getNodeRadius]);
 
-    const handleEdgeClick = (e: React.MouseEvent) => {
+  // Shared mouse/click/touch handlers for both edge strokes and edge weight badges
+  const getEdgeInteractionHandlers = (
+    edge: GraphEdge,
+    oppEdge: GraphEdge | undefined,
+    hasOppositeEdge: boolean,
+    isCurved: boolean,
+    sourceNode: GraphNode,
+    targetNode: GraphNode
+  ) => ({
+    onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
       let targetEdge = edge;
-      if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
+      if (hasOppositeEdge && oppEdge && !isCurved) {
         if (selectedEdgeId === edge.id) {
           targetEdge = oppEdge;
         } else if (selectedEdgeId === oppEdge.id) {
@@ -1381,55 +1574,62 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       onSelectEdge(targetEdge.id);
       onSelectNode(null);
       onBatchSelect?.([], [targetEdge.id]);
-    };
-
-    const handleEdgeMouseDown = (e: React.MouseEvent) => {
+    },
+    onMouseDown: (e: React.MouseEvent) => {
       e.stopPropagation();
       if (e.button !== 0) return;
       setIsLassoSelected(false);
-      if (e.shiftKey || e.ctrlKey || e.metaKey) return;
-    };
-
-    const handleEdgeTouchStart = (e: React.TouchEvent) => {
+    },
+    onTouchStart: (e: React.TouchEvent) => {
       e.stopPropagation();
       if (e.touches.length !== 1) return;
       setIsLassoSelected(false);
-    };
+    },
+    onMouseEnter: (e: React.MouseEvent) => {
+      if (hasOppositeEdge && oppEdge && !isCurved) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
+        const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
+        setHoveredEdgeId(distToTarget <= distToSource ? edge.id : oppEdge.id);
+      } else {
+        setHoveredEdgeId(edge.id);
+      }
+    },
+    onMouseMove: (e: React.MouseEvent) => {
+      if (hasOppositeEdge && oppEdge && !isCurved) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
+        const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
+        const targetId = distToTarget <= distToSource ? edge.id : oppEdge.id;
+        if (hoveredEdgeId !== targetId) {
+          setHoveredEdgeId(targetId);
+        }
+      }
+    },
+    onMouseLeave: () => setHoveredEdgeId(null),
+  });
+
+  // Render edge stroke path (Straight, Curved, or Self-loop)
+  const renderEdgePath = (edge: GraphEdge) => {
+    const layout = edgeLayoutMap.get(edge.id);
+    if (!layout) return null;
+
+    const { sourceNode, targetNode, oppEdge, hasOppositeEdge, isDirected, isCurved, pathD } = layout;
+    const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
+    const isHovered = hoveredEdgeId === edge.id;
+
+    const algoEdgeHighlight = currentStep?.highlightedEdges.find(h => h.edgeId === edge.id);
+    const defaultColor = isLight ? '#334155' : '#94a3b8';
+    const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
+    const edgeActualColor = edge.color && edge.color !== '#64748b' ? edge.color : defaultColor;
+    const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? hoveredColor : edgeActualColor);
+    const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
+    const markerId = getMarkerId(effectiveEdgeColor);
+    const handlers = getEdgeInteractionHandlers(edge, oppEdge, hasOppositeEdge, isCurved, sourceNode, targetNode);
 
     return (
-      <g
-        key={edge.id}
-        className="edge-group cursor-pointer"
-        onClick={handleEdgeClick}
-        onMouseDown={handleEdgeMouseDown}
-        onTouchStart={handleEdgeTouchStart}
-        onMouseEnter={(e) => {
-          if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
-            const world = screenToWorld(e.clientX, e.clientY);
-            const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
-            const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
-            setHoveredEdgeId(distToTarget <= distToSource ? edge.id : oppEdge.id);
-          } else {
-            setHoveredEdgeId(edge.id);
-          }
-        }}
-        onMouseMove={(e) => {
-          if (hasOppositeEdge && oppEdge && Math.abs(curvature) < 1) {
-            const world = screenToWorld(e.clientX, e.clientY);
-            const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
-            const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
-            const targetId = distToTarget <= distToSource ? edge.id : oppEdge.id;
-            if (hoveredEdgeId !== targetId) {
-              setHoveredEdgeId(targetId);
-            }
-          }
-        }}
-        onMouseLeave={() => setHoveredEdgeId(null)}
-      >
-        {/* Invisible wider stroke for easy clicking */}
+      <g key={edge.id} className="edge-group cursor-pointer" {...handlers}>
         <path d={pathD} fill="none" stroke="transparent" strokeWidth="16" />
-
-        {/* Selection Halo */}
         {isSelected && (
           <path
             d={pathD}
@@ -1440,8 +1640,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
             strokeLinecap="round"
           />
         )}
-
-        {/* Visible stroke */}
         <path
           d={pathD}
           fill="none"
@@ -1452,39 +1650,54 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           strokeDasharray={algoEdgeHighlight?.style === 'dashed' ? '5,5' : undefined}
           markerEnd={isDirected ? `url(#${markerId})` : undefined}
         />
+      </g>
+    );
+  };
 
-        {/* Edge weight badge */}
-        {settings.isWeighted && edge.weight !== undefined && (() => {
-          const weightStr = String(edge.weight);
-          const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
-          const badgeHeight = 20;
-          return (
-            <g transform={`translate(${labelX}, ${labelY})`}>
-              <rect
-                x={-badgeWidth / 2}
-                y={-badgeHeight / 2}
-                width={badgeWidth}
-                height={badgeHeight}
-                rx="6"
-                fill={isLight ? '#ffffff' : '#0b0f19'}
-                stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#334155' : '#475569'}
-                strokeWidth="1.8"
-                filter="url(#badge-shadow)"
-              />
-              <text
-                textAnchor="middle"
-                dy="4.2"
-                fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#0f172a' : '#f8fafc'}
-                fontSize="12"
-                fontFamily={CANVAS_MONO_FONT}
-                fontWeight="800"
-                style={{ fontWeight: 800 }}
-              >
-                {edge.weight}
-              </text>
-            </g>
-          );
-        })()}
+  // Render edge weight badge in dedicated upper layer so no edge line cuts through any weight pill
+  const renderEdgeBadge = (edge: GraphEdge) => {
+    if (!settings.isWeighted || edge.weight === undefined || edge.weight === null || String(edge.weight).trim() === '') return null;
+    const layout = edgeLayoutMap.get(edge.id);
+    if (!layout) return null;
+
+    const { sourceNode, targetNode, oppEdge, hasOppositeEdge, isCurved, labelX, labelY } = layout;
+    const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
+    const isHovered = hoveredEdgeId === edge.id;
+    const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
+    const weightStr = String(edge.weight);
+    const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
+    const badgeHeight = 20;
+    const handlers = getEdgeInteractionHandlers(edge, oppEdge, hasOppositeEdge, isCurved, sourceNode, targetNode);
+
+    return (
+      <g
+        key={`badge-${edge.id}`}
+        transform={`translate(${labelX}, ${labelY})`}
+        className="edge-badge cursor-pointer select-none"
+        {...handlers}
+      >
+        <rect
+          x={-badgeWidth / 2}
+          y={-badgeHeight / 2}
+          width={badgeWidth}
+          height={badgeHeight}
+          rx="6"
+          fill={isLight ? '#ffffff' : '#0b0f19'}
+          stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#334155' : '#475569'}
+          strokeWidth="1.8"
+          filter="url(#badge-shadow)"
+        />
+        <text
+          textAnchor="middle"
+          dy="4.2"
+          fill={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isHovered ? hoveredColor : isLight ? '#0f172a' : '#f8fafc'}
+          fontSize="12"
+          fontFamily={CANVAS_MONO_FONT}
+          fontWeight="800"
+          style={{ fontWeight: 800 }}
+        >
+          {edge.weight}
+        </text>
       </g>
     );
   };
@@ -1570,20 +1783,17 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           </g>
         )}
 
-        {/* Node Weight Badge (supports number, char, or string) */}
+        {/* Node Weight Badge (supports number, char, or string with smart non-overlapping placement) */}
         {(() => {
-          const rawW = node.weight ?? node.value;
-          if (rawW === undefined || rawW === null || String(rawW).trim() === '') return null;
-          const wStr = String(rawW);
-          const badgeWidth = Math.max(34, wStr.length * 8 + 18);
-          const yOffset = r + 14;
+          const nw = nodeWeightLayoutMap.get(node.id);
+          if (!nw) return null;
           return (
-            <g transform={`translate(0, ${yOffset})`} className="pointer-events-none">
+            <g transform={`translate(${nw.dx}, ${nw.dy})`} className="pointer-events-none">
               <rect
-                x={-badgeWidth / 2}
-                y="-9"
-                width={badgeWidth}
-                height="18"
+                x={-nw.w / 2}
+                y={-nw.h / 2}
+                width={nw.w}
+                height={nw.h}
                 rx="9"
                 fill={isLight ? '#ffffff' : '#0a0a0a'}
                 stroke={isSelected ? (isLight ? '#2563eb' : '#38bdf8') : isLight ? '#334155' : '#475569'}
@@ -1599,7 +1809,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                 fontWeight="900"
                 style={{ fontWeight: 900 }}
               >
-                {`w:${wStr}`}
+                {`w:${nw.wStr}`}
               </text>
             </g>
           );
@@ -1607,10 +1817,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         {/* Annotation (e.g. dist: 4, low: 1, SCC #1) */}
         {annotation && (() => {
-          const hasNodeWeight =
-            (node.weight !== undefined && node.weight !== null && String(node.weight).trim() !== '') ||
-            (node.value !== undefined && node.value !== null && String(node.value).trim() !== '');
-          const annotY = hasNodeWeight ? r + 34 : r + 14;
+          const nw = nodeWeightLayoutMap.get(node.id);
+          const annotY = nw?.isBelow ? r + 34 : r + 14;
           return (
             <g transform={`translate(0, ${annotY})`}>
               <rect
@@ -1783,7 +1991,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           <rect x="-100000" y="-100000" width="200000" height="200000" fill="url(#canvas-grid-dots)" pointerEvents="none" />
 
           {/* Edges Layer */}
-          <g className="edges-layer">{renderedEdges.map(renderEdge)}</g>
+          <g className="edges-layer">{renderedEdges.map(renderEdgePath)}</g>
+
+          {/* Edge Weight Badges Layer (rendered above all edge lines for unobstructed readability) */}
+          <g className="edge-badges-layer">{renderedEdges.map(renderEdgeBadge)}</g>
 
           {/* Selection Lasso Enclosure (Appears ONLY when actively using the Lasso tool and a lasso selection was made) */}
           {activeTool === 'lasso' && isLassoSelected && activeLassoPoints.length < 2 && displayLassoPoints.length >= 3 && (

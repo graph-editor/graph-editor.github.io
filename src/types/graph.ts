@@ -23,7 +23,7 @@ export interface GraphEdge {
   id: string;
   source: string; // source node id
   target: string; // target node id
-  weight?: number;
+  weight?: number | string;
   color: string;
   directed: boolean;
   highlighted?: boolean;

@@ -62,9 +62,10 @@ export function parseLeetCode2DArray(text: string): LeetCodeParseResult | null {
     if (parts.length >= 2) {
       const u = parts[0];
       const v = parts[1];
-      if (parts.length >= 3 && parts[2] !== '' && !isNaN(Number(parts[2]))) {
+      if (parts.length >= 3 && parts[2] !== '') {
         isWeighted = true;
-        edgeLines.push(`${u} ${v} ${parts[2]}`);
+        const wToken = /\s/.test(parts[2]) ? JSON.stringify(parts[2]) : parts[2];
+        edgeLines.push(`${u} ${v} ${wToken}`);
       } else {
         edgeLines.push(`${u} ${v}`);
       }
@@ -310,8 +311,10 @@ export function serializeToLeetCode(
     const v = cleanNodeLabel(e.target);
     const uVal = /^-?\d+$/.test(u) ? u : JSON.stringify(u);
     const vVal = /^-?\d+$/.test(v) ? v : JSON.stringify(v);
-    if (settings.isWeighted && e.weight !== undefined) {
-      return `[${uVal},${vVal},${e.weight}]`;
+    if (settings.isWeighted && e.weight !== undefined && String(e.weight).trim() !== '') {
+      const wStr = String(e.weight).trim();
+      const wVal = !isNaN(Number(wStr)) && typeof e.weight === 'number' ? String(e.weight) : JSON.stringify(e.weight);
+      return `[${uVal},${vVal},${wVal}]`;
     }
     return `[${uVal},${vVal}]`;
   });
