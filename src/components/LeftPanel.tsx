@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   FileCode2,
   Cpu,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { GraphData, GraphSettings, AlgorithmType, GraphTab } from '../types/graph';
 import { detectMultiTestcases } from '../utils/contestParser';
+import { findEdgeLineIndicesInInput } from '../utils/parser';
 import {
   generateBamboo,
   generateStar,
@@ -35,6 +36,8 @@ interface LeftPanelProps {
   onRawTextChange: (text: string) => void;
   data: GraphData;
   settings: GraphSettings;
+  selectedEdgeId?: string | null;
+  selectedEdgeIds?: string[];
   onRunAlgorithm: (algo: AlgorithmType, startNodeId: string) => void;
   onLoadPreset: (newData: GraphData, newSettings: Partial<GraphSettings>) => void;
   isCollapsed: boolean;
@@ -58,6 +61,8 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onRawTextChange,
   data,
   settings,
+  selectedEdgeId,
+  selectedEdgeIds,
   onRunAlgorithm,
   onLoadPreset,
   isCollapsed,
@@ -81,6 +86,80 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   const [startNodeId, setStartNodeId] = useState<string>(data.nodes[0]?.id || (settings.isZeroIndexed ? '0' : '1'));
   const [copied, setCopied] = useState(false);
   const [singleNodeInput, setSingleNodeInput] = useState('');
+
+  const edgeTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const edgeBackdropRef = useRef<HTMLDivElement>(null);
+  const firstHighlightLineRef = useRef<HTMLDivElement>(null);
+
+  const activeGraphIndex = useMemo(() => {
+    if (!tabs || tabs.length <= 1 || !activeTabId) return 0;
+    const idx = tabs.findIndex(t => t.id === activeTabId);
+    return idx >= 0 ? idx : 0;
+  }, [tabs, activeTabId]);
+
+  const effectiveSelectedEdgeIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (selectedEdgeId) ids.add(selectedEdgeId);
+    if (selectedEdgeIds) {
+      selectedEdgeIds.forEach(id => ids.add(id));
+    }
+    return Array.from(ids);
+  }, [selectedEdgeId, selectedEdgeIds]);
+
+  const highlightedLineIndices = useMemo(
+    () =>
+      findEdgeLineIndicesInInput(
+        rawText,
+        effectiveSelectedEdgeIds,
+        data,
+        settings,
+        activeGraphIndex
+      ),
+    [rawText, effectiveSelectedEdgeIds, data, settings, activeGraphIndex]
+  );
+
+  const highlightedLineSet = useMemo(
+    () => new Set<number>(highlightedLineIndices),
+    [highlightedLineIndices]
+  );
+
+  const rawLines = useMemo(() => rawText.split(/\r?\n/), [rawText]);
+
+  const syncBackdropScroll = useCallback(() => {
+    if (edgeTextareaRef.current && edgeBackdropRef.current) {
+      edgeBackdropRef.current.scrollTop = edgeTextareaRef.current.scrollTop;
+      edgeBackdropRef.current.scrollLeft = edgeTextareaRef.current.scrollLeft;
+    }
+  }, []);
+
+  const edgeSelectionKey = useMemo(
+    () => `${selectedEdgeId ?? ''}|${(selectedEdgeIds ?? []).join(',')}|${activeTabId ?? ''}`,
+    [selectedEdgeId, selectedEdgeIds, activeTabId]
+  );
+  const prevSelectionKeyRef = useRef<string>('');
+
+  // Auto-scroll the Edges List textbox into view when edge selection changes on canvas (without stealing focus)
+  useEffect(() => {
+    if (prevSelectionKeyRef.current === edgeSelectionKey) return;
+    prevSelectionKeyRef.current = edgeSelectionKey;
+    if (highlightedLineIndices.length === 0) return;
+
+    const rafId = requestAnimationFrame(() => {
+      const ta = edgeTextareaRef.current;
+      const targetEl = firstHighlightLineRef.current;
+      if (ta && targetEl) {
+        const elTop = targetEl.offsetTop;
+        const elBottom = elTop + targetEl.offsetHeight;
+        const viewTop = ta.scrollTop;
+        const viewBottom = viewTop + ta.clientHeight;
+        if (elTop < viewTop + 10 || elBottom > viewBottom - 10) {
+          ta.scrollTop = Math.max(0, elTop - ta.clientHeight / 2 + targetEl.offsetHeight / 2);
+        }
+        syncBackdropScroll();
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [edgeSelectionKey, highlightedLineIndices, syncBackdropScroll]);
 
   // Auto-detect multi-testcase inputs in the current raw text
   const multiTestcaseDetection = useMemo(() => detectMultiTestcases(rawText), [rawText]);
@@ -542,20 +621,60 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           <div className={`flex-1 relative flex flex-col border rounded-lg overflow-hidden focus-within:border-blue-500 ${
             isLight ? 'bg-white border-slate-300 shadow-inner' : 'bg-neutral-950 border-neutral-800'
           }`}>
+            {/* Synced Highlight Layer for Edges Selected on Canvas */}
+            <div
+              ref={edgeBackdropRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words select-none"
+            >
+              {rawLines.map((line, idx) => {
+                const isHighlighted = highlightedLineSet.has(idx);
+                const isFirstHighlight =
+                  highlightedLineIndices.length > 0 && idx === highlightedLineIndices[0];
+                return (
+                  <div
+                    key={idx}
+                    ref={isFirstHighlight ? firstHighlightLineRef : undefined}
+                    className={`-mx-3 px-3 transition-colors duration-100 ${
+                      isHighlighted
+                        ? isLight
+                          ? 'bg-blue-500/15 shadow-[inset_3px_0_0_#2563eb]'
+                          : 'bg-blue-500/20 shadow-[inset_3px_0_0_#38bdf8]'
+                        : ''
+                    }`}
+                  >
+                    <span className="text-transparent">{line.length > 0 ? line : ' '}</span>
+                  </div>
+                );
+              })}
+            </div>
             <textarea
+              ref={edgeTextareaRef}
               value={rawText}
               onChange={e => onRawTextChange(e.target.value)}
+              onScroll={syncBackdropScroll}
               placeholder={`# Edges (u v [w]):\n1 2\n2 3 5\n\n# Weighted nodes (u [w] or u: w):\n1 [10]\n2: 'A'\n3: "goal"\n\n# Isolated node:\nSingleNode`}
               spellCheck={false}
-              className={`flex-1 w-full p-3 bg-transparent text-xs font-mono focus:outline-none resize-none leading-relaxed ${
+              className={`relative z-10 flex-1 w-full p-3 bg-transparent text-xs font-mono focus:outline-none resize-none leading-relaxed whitespace-pre-wrap break-words ${
                 isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-neutral-100 placeholder:text-neutral-600'
               }`}
             />
           </div>
-          <div className={`pt-1.5 px-0.5 flex items-center justify-between text-[10px] font-mono ${
+          <div className={`pt-1.5 px-0.5 flex items-center justify-between gap-2 text-[10px] font-mono ${
             isLight ? 'text-slate-500' : 'text-neutral-500'
           }`}>
-            <span>Supports Weighted Nodes, Chars, Strings & CP inputs</span>
+            {highlightedLineIndices.length > 0 ? (
+              <span className={`truncate font-medium ${isLight ? 'text-blue-600' : 'text-sky-400'}`}>
+                {highlightedLineIndices.length === 1
+                  ? `Selected edge: Line ${highlightedLineIndices[0] + 1}`
+                  : `Selected ${highlightedLineIndices.length} edges: Lines ${highlightedLineIndices
+                      .slice(0, 4)
+                      .map(i => i + 1)
+                      .join(', ')}${highlightedLineIndices.length > 4 ? '...' : ''}`}
+              </span>
+            ) : (
+              <span className="truncate">Supports Weighted Nodes, Chars, Strings &amp; CP inputs</span>
+            )}
           </div>
         </div>
       )}

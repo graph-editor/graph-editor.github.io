@@ -848,3 +848,166 @@ export function toggleGraphIndexing(data: GraphData, toZeroIndexed: boolean): Gr
 
   return { nodes: newNodes, edges: newEdges };
 }
+
+/**
+ * Maps selected GraphEdges from the canvas back to 0-based line indices in `rawText`
+ * so the Edges List editor can highlight and scroll to the corresponding lines.
+ */
+export function findEdgeLineIndicesInInput(
+  rawText: string,
+  selectedEdgeIds: string[],
+  data: GraphData,
+  settings: GraphSettings,
+  activeGraphIndex = 0
+): number[] {
+  if (!rawText || selectedEdgeIds.length === 0) return [];
+
+  const selectedIdSet = new Set(selectedEdgeIds);
+  const tabEdges = data.edges.filter(e => (e.graphIndex ?? 0) === activeGraphIndex);
+  const selectedEdges = tabEdges.filter(e => selectedIdSet.has(e.id));
+  if (selectedEdges.length === 0) return [];
+
+  const nodeMap = new Map<string, GraphNode>();
+  data.nodes.forEach(n => nodeMap.set(n.id, n));
+
+  const getCleanLabel = (id: string): string => {
+    const node = nodeMap.get(id);
+    if (node?.label) return node.label;
+    if (id.includes(':')) return id.slice(id.indexOf(':') + 1);
+    return id;
+  };
+
+  const rawLines = rawText.split(/\r?\n/);
+  const activeLines: { lineIdx: number; trimmed: string }[] = [];
+  rawLines.forEach((line, lineIdx) => {
+    const trimmed = line.trim();
+    if (trimmed.length > 0 && !trimmed.startsWith('#') && !trimmed.startsWith('//')) {
+      activeLines.push({ lineIdx, trimmed });
+    }
+  });
+
+  if (activeLines.length === 0) return [];
+
+  let lines = activeLines;
+
+  // Match parseGraphInput header-skipping rules when hasHeader is enabled
+  if (settings.hasHeader && lines.length > 2 && lines[0].trimmed === '1') {
+    const headerTokens = splitLineTokens(lines[1].trimmed);
+    if (headerTokens.length === 2) {
+      const n = parseInt(headerTokens[0], 10);
+      const m = parseInt(headerTokens[1], 10);
+      if (!isNaN(n) && !isNaN(m) && lines.length - 2 === m) {
+        lines = lines.slice(1);
+      }
+    }
+  }
+
+  // Handle Adjacency List format (e.g. "1: 2 3" or "1 -> 2, 3")
+  const isAdjList = lines.some(l => l.trimmed.includes(':') || l.trimmed.includes('->'));
+  if (isAdjList) {
+    const matched = new Set<number>();
+    for (const edge of selectedEdges) {
+      const src = getCleanLabel(edge.source);
+      const tgt = getCleanLabel(edge.target);
+      for (const entry of lines) {
+        if (entry.trimmed.includes(':') || entry.trimmed.includes('->')) {
+          const parts = entry.trimmed.split(/:|->/).map(s => s.trim());
+          const u = parts[0];
+          const targets = parts[1] ? parts[1].split(/[,\s]+/).filter(Boolean) : [];
+          const forward = u === src && targets.includes(tgt);
+          const reverse = !edge.directed && u === tgt && targets.includes(src);
+          if (forward || reverse) {
+            matched.add(entry.lineIdx);
+          }
+        }
+      }
+    }
+    return Array.from(matched).sort((a, b) => a - b);
+  }
+
+  // Standard Edge List parsing with 0-based raw line tracking
+  let startIdx = 0;
+  const firstTokens = splitLineTokens(lines[0].trimmed);
+  if (settings.hasHeader && lines.length > 1 && firstTokens.length === 2) {
+    const n = parseInt(firstTokens[0], 10);
+    const m = parseInt(firstTokens[1], 10);
+    if (!isNaN(n) && !isNaN(m) && n >= 1 && m >= 0) {
+      startIdx = 1;
+    }
+  }
+
+  interface ParsedEdgeLine {
+    lineIdx: number;
+    u: string;
+    v: string;
+    w?: number;
+  }
+
+  const parsedLines: ParsedEdgeLine[] = [];
+  for (let i = startIdx; i < lines.length; i++) {
+    const { lineIdx, trimmed } = lines[i];
+    const bracketMatch = trimmed.match(/^([^\s[\]]+)\s*\[([^\]]+)\]$/);
+    const assignMatch = trimmed.match(/^([^\s:=[\]]+)\s*[:=]\s*(.+)$/);
+    if (bracketMatch || assignMatch) continue;
+
+    const parts = splitLineTokens(trimmed);
+    if (parts.length >= 2) {
+      const weight =
+        parts.length >= 3 && !isNaN(Number(parts[2])) ? parseFloat(parts[2]) : undefined;
+      parsedLines.push({ lineIdx, u: parts[0], v: parts[1], w: weight });
+    }
+  }
+
+  if (parsedLines.length === 0) return [];
+
+  const matched = new Set<number>();
+  const usedParsedLineIdx = new Set<number>();
+
+  const matchesEndpoints = (pl: ParsedEdgeLine, edge: GraphEdge): boolean => {
+    const src = getCleanLabel(edge.source);
+    const tgt = getCleanLabel(edge.target);
+    if (pl.u === src && pl.v === tgt) return true;
+    if (!edge.directed && pl.u === tgt && pl.v === src) return true;
+    return false;
+  };
+
+  // Fast 1-to-1 positional alignment (handles parallel edges identically to parser & serializer)
+  if (parsedLines.length === tabEdges.length) {
+    let allAligned = true;
+    for (let i = 0; i < tabEdges.length; i++) {
+      if (!matchesEndpoints(parsedLines[i], tabEdges[i])) {
+        allAligned = false;
+        break;
+      }
+    }
+    if (allAligned) {
+      for (let i = 0; i < tabEdges.length; i++) {
+        if (selectedIdSet.has(tabEdges[i].id)) {
+          matched.add(parsedLines[i].lineIdx);
+        }
+      }
+      return Array.from(matched).sort((a, b) => a - b);
+    }
+  }
+
+  // Fallback matching by endpoints + weight, consuming each line once
+  for (const edge of selectedEdges) {
+    let found = parsedLines.findIndex(
+      (pl, idx) =>
+        !usedParsedLineIdx.has(idx) &&
+        matchesEndpoints(pl, edge) &&
+        (edge.weight === undefined ? pl.w === undefined : pl.w === edge.weight)
+    );
+    if (found === -1) {
+      found = parsedLines.findIndex(
+        (pl, idx) => !usedParsedLineIdx.has(idx) && matchesEndpoints(pl, edge)
+      );
+    }
+    if (found !== -1) {
+      usedParsedLineIdx.add(found);
+      matched.add(parsedLines[found].lineIdx);
+    }
+  }
+
+  return Array.from(matched).sort((a, b) => a - b);
+}

@@ -205,8 +205,19 @@ export function App() {
     setSelectedEdgeId(edgeId);
     if (edgeId) {
       setIsInspectorOpen(true);
+      // Auto-switch active tab to the graph that owns this edge
+      if (tabs.length > 1) {
+        const edge = data.edges.find(e => e.id === edgeId);
+        if (edge && edge.graphIndex !== undefined && tabs[edge.graphIndex]) {
+          const targetTab = tabs[edge.graphIndex];
+          if (targetTab.id !== activeTabId) {
+            setActiveTabId(targetTab.id);
+            setRawText(targetTab.text);
+          }
+        }
+      }
     }
-  }, []);
+  }, [tabs, activeTabId, data.edges]);
 
   // Zoom scale reported by Canvas
   const [zoomScale, setZoomScale] = useState<number>(1);
@@ -1512,6 +1523,8 @@ export function App() {
           onRawTextChange={handleRawTextChange}
           data={data}
           settings={settings}
+          selectedEdgeId={selectedEdgeId}
+          selectedEdgeIds={selectedEdgeIds}
           onRunAlgorithm={handleRunAlgorithm}
           onLoadPreset={handleLoadPreset}
           isCollapsed={isLeftPanelCollapsed}
