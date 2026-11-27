@@ -80,6 +80,142 @@ function doesCircleOverlapBox(cx: number, cy: number, r: number, box: LabelBox):
   return dx * dx + dy * dy < r * r;
 }
 
+function normalizeAngleRad(rad: number): number {
+  let a = rad % (2 * Math.PI);
+  if (a <= -Math.PI) a += 2 * Math.PI;
+  if (a > Math.PI) a -= 2 * Math.PI;
+  return a;
+}
+
+interface NodePortEntry {
+  key: string;
+  baseAngle: number;
+  isArrow: boolean;
+}
+
+/**
+ * Spreads crowded incident edge ports around a node's circumference so incoming arrowheads
+ * and outgoing tails attach cleanly aside each other without colliding at the node perimeter.
+ */
+function distributeNodePorts(entries: NodePortEntry[]): Map<string, number> {
+  const result = new Map<string, number>();
+  const k = entries.length;
+  if (k === 0) return result;
+  if (k === 1) {
+    result.set(entries[0].key, entries[0].baseAngle);
+    return result;
+  }
+
+  const sorted = [...entries]
+    .map(e => ({ ...e, norm: normalizeAngleRad(e.baseAngle) }))
+    .sort((a, b) => (a.norm !== b.norm ? a.norm - b.norm : a.key.localeCompare(b.key)));
+
+  const MAX_TOTAL_SPAN = Math.PI * 1.88;
+  const rawGaps: number[] = [];
+  let sumIdeal = 0;
+  for (let i = 0; i < k; i++) {
+    const next = sorted[(i + 1) % k];
+    const gap = sorted[i].isArrow || next.isArrow ? 0.48 : 0.36;
+    rawGaps.push(gap);
+    sumIdeal += gap;
+  }
+
+  const scale = sumIdeal > MAX_TOTAL_SPAN ? MAX_TOTAL_SPAN / sumIdeal : 1;
+  const targetGaps = rawGaps.map(g => g * scale);
+
+  // If the full circle is saturated by high degree, distribute monotonically around circular mean
+  if (sumIdeal > MAX_TOTAL_SPAN) {
+    let sinSum = 0;
+    let cosSum = 0;
+    sorted.forEach(s => {
+      sinSum += Math.sin(s.norm);
+      cosSum += Math.cos(s.norm);
+    });
+    const meanCircle = Math.atan2(sinSum, cosSum);
+    let cursor = meanCircle - (MAX_TOTAL_SPAN - targetGaps[k - 1]) / 2;
+    for (let i = 0; i < k; i++) {
+      result.set(sorted[i].key, cursor);
+      cursor += targetGaps[i];
+    }
+    return result;
+  }
+
+  // Cut the circle at the largest empty angular gap so clusters don't wrap across the cut
+  let bestCutIdx = 0;
+  let maxEmptyGap = -1;
+  for (let i = 0; i < k; i++) {
+    const curr = sorted[i].norm;
+    const next = i + 1 < k ? sorted[i + 1].norm : sorted[0].norm + 2 * Math.PI;
+    const empty = next - curr;
+    if (empty > maxEmptyGap) {
+      maxEmptyGap = empty;
+      bestCutIdx = (i + 1) % k;
+    }
+  }
+
+  const ordered: { key: string; ang: number; gapAfter: number }[] = [];
+  for (let offset = 0; offset < k; offset++) {
+    const idx = (bestCutIdx + offset) % k;
+    let ang = sorted[idx].norm;
+    if (offset > 0) {
+      while (ang < ordered[offset - 1].ang) ang += 2 * Math.PI;
+    }
+    ordered.push({ key: sorted[idx].key, ang, gapAfter: targetGaps[idx] });
+  }
+
+  // Group colliding adjacent ports into symmetric centered fans
+  interface Cluster {
+    start: number;
+    end: number;
+    angles: number[];
+  }
+
+  const buildCluster = (start: number, end: number): Cluster => {
+    let totalSpan = 0;
+    for (let i = start; i < end; i++) {
+      totalSpan += ordered[i].gapAfter;
+    }
+    let sumOrig = 0;
+    for (let i = start; i <= end; i++) {
+      sumOrig += ordered[i].ang;
+    }
+    const meanOrig = sumOrig / (end - start + 1);
+    const angles: number[] = [];
+    let cur = meanOrig - totalSpan / 2;
+    for (let i = start; i <= end; i++) {
+      angles.push(cur);
+      cur += ordered[i].gapAfter;
+    }
+    return { start, end, angles };
+  };
+
+  const clusters: Cluster[] = ordered.map((_, i) => buildCluster(i, i));
+
+  let changed = true;
+  while (changed && clusters.length > 1) {
+    changed = false;
+    for (let c = 0; c < clusters.length - 1; c++) {
+      const left = clusters[c];
+      const right = clusters[c + 1];
+      const reqGap = ordered[left.end].gapAfter;
+      const actualGap = right.angles[0] - left.angles[left.angles.length - 1];
+      if (actualGap < reqGap - 1e-4) {
+        const merged = buildCluster(left.start, right.end);
+        clusters.splice(c, 2, merged);
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  for (const cl of clusters) {
+    for (let idx = cl.start; idx <= cl.end; idx++) {
+      result.set(ordered[idx].key, normalizeAngleRad(cl.angles[idx - cl.start]));
+    }
+  }
+  return result;
+}
+
 // 2D Convex Hull (Monotone Chain) for selection lasso enclosure
 function computeConvexHull(points: { x: number; y: number }[]): { x: number; y: number }[] {
   if (points.length <= 2) return points;
@@ -1242,6 +1378,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     targetNode: GraphNode;
     oppEdge?: GraphEdge;
     hasOppositeEdge: boolean;
+    isSharedOppositeLine: boolean;
     isDirected: boolean;
     isCurved: boolean;
     curvature: number;
@@ -1250,7 +1387,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     labelY: number;
   }
 
-  // Precompute all edge paths & collision-avoiding edge weight badge positions
+  // Precompute all edge paths, non-overlapping incident port attachments & weight badge positions
   const edgeLayoutMap = useMemo(() => {
     const map = new Map<string, EdgeLayoutInfo>();
     interface EdgeGeomInternal extends EdgeLayoutInfo {
@@ -1270,8 +1407,26 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       maxY: number;
     }[] = [];
 
-    // Pass 1: compute geometry & path curves in deterministic data.edges order
+    // Pass 0: gather incident ports per node so indegree/outdegree edges fan around node rim cleanly
+    const nodePortRequests = new Map<string, Map<string, NodePortEntry>>();
+    const edgePreGeom = new Map<
+      string,
+      {
+        oppEdge?: GraphEdge;
+        hasOppositeEdge: boolean;
+        isWeighted: boolean;
+        isDirected: boolean;
+        isSharedOppositeLine: boolean;
+        curvature: number;
+        naturalSrcAngle: number;
+        naturalTgtAngle: number;
+        srcPortKey: string;
+        tgtPortKey: string;
+      }
+    >();
+
     for (const edge of data.edges) {
+      if (edge.source === edge.target) continue;
       const sourceNode = nodeMap.get(edge.source);
       const targetNode = nodeMap.get(edge.target);
       if (!sourceNode || !targetNode) continue;
@@ -1281,9 +1436,90 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       );
       const hasOppositeEdge = Boolean(oppEdge);
       const isDirected = Boolean(edge.directed || settings.isDirected || hasOppositeEdge);
+      const isWeighted = Boolean(
+        settings.isWeighted || edge.weight !== undefined || (oppEdge && oppEdge.weight !== undefined)
+      );
       const stats = edgePairStats.get(edge.id) || { total: 1, index: 0 };
 
+      const dx = targetNode.x - sourceNode.x;
+      const dy = targetNode.y - sourceNode.y;
+      const dist = Math.hypot(dx, dy) || 1;
+
+      let curvature = 0;
+      if (isWeighted) {
+        if (stats.total > 1) {
+          const offsetStep = 36;
+          const centerOffset = (stats.total - 1) / 2;
+          curvature = (stats.index - centerOffset) * offsetStep;
+        } else if (hasOppositeEdge) {
+          curvature = Math.max(34, Math.min(48, dist * 0.18));
+        }
+      }
+
+      const sourceRadius = getNodeRadius(sourceNode);
+      const isCurved = Math.abs(curvature) >= 1;
+      const sinA = isCurved ? Math.max(-0.35, Math.min(0.35, (curvature / sourceRadius) * 0.16)) : 0;
+      const curveAngle = isCurved ? Math.asin(sinA) : 0;
+
+      const baseSrcAngle = Math.atan2(dy, dx);
+      const baseTgtAngle = Math.atan2(-dy, -dx);
+      const naturalSrcAngle = normalizeAngleRad(baseSrcAngle + curveAngle);
+      const naturalTgtAngle = normalizeAngleRad(baseTgtAngle - curveAngle);
+
+      const isSharedOppositeLine = hasOppositeEdge && !isCurved;
+      const canonicalSharedPair =
+        edge.source < edge.target ? `${edge.source}--${edge.target}` : `${edge.target}--${edge.source}`;
+      const srcPortKey = isSharedOppositeLine ? `shared:${canonicalSharedPair}` : `${edge.id}:src`;
+      const tgtPortKey = isSharedOppositeLine ? `shared:${canonicalSharedPair}` : `${edge.id}:tgt`;
+
+      edgePreGeom.set(edge.id, {
+        oppEdge,
+        hasOppositeEdge,
+        isWeighted,
+        isDirected,
+        isSharedOppositeLine,
+        curvature,
+        naturalSrcAngle,
+        naturalTgtAngle,
+        srcPortKey,
+        tgtPortKey,
+      });
+
+      if (!nodePortRequests.has(edge.source)) nodePortRequests.set(edge.source, new Map());
+      const srcMap = nodePortRequests.get(edge.source)!;
+      if (!srcMap.has(srcPortKey)) {
+        srcMap.set(srcPortKey, {
+          key: srcPortKey,
+          baseAngle: naturalSrcAngle,
+          isArrow: isSharedOppositeLine && isDirected,
+        });
+      }
+
+      if (!nodePortRequests.has(edge.target)) nodePortRequests.set(edge.target, new Map());
+      const tgtMap = nodePortRequests.get(edge.target)!;
+      if (!tgtMap.has(tgtPortKey)) {
+        tgtMap.set(tgtPortKey, {
+          key: tgtPortKey,
+          baseAngle: naturalTgtAngle,
+          isArrow: isDirected,
+        });
+      }
+    }
+
+    const resolvedNodePorts = new Map<string, Map<string, number>>();
+    nodePortRequests.forEach((portMap, nodeId) => {
+      resolvedNodePorts.set(nodeId, distributeNodePorts(Array.from(portMap.values())));
+    });
+
+    // Pass 1: compute edge curves & attachment points using resolved node ports
+    for (const edge of data.edges) {
+      const sourceNode = nodeMap.get(edge.source);
+      const targetNode = nodeMap.get(edge.target);
+      if (!sourceNode || !targetNode) continue;
+
       if (edge.source === edge.target) {
+        const isDirected = Boolean(edge.directed || settings.isDirected);
+        const stats = edgePairStats.get(edge.id) || { total: 1, index: 0 };
         const sourceRadius = getNodeRadius(sourceNode);
         const x = sourceNode.x;
         const y = sourceNode.y - sourceRadius;
@@ -1303,8 +1539,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           edge,
           sourceNode,
           targetNode,
-          oppEdge,
+          oppEdge: undefined,
           hasOppositeEdge: false,
+          isSharedOppositeLine: false,
           isDirected,
           isCurved: true,
           curvature: 0,
@@ -1319,49 +1556,61 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         continue;
       }
 
+      const pre = edgePreGeom.get(edge.id);
+      if (!pre) continue;
+
+      const {
+        oppEdge,
+        hasOppositeEdge,
+        isDirected,
+        isSharedOppositeLine,
+        curvature,
+        naturalSrcAngle,
+        naturalTgtAngle,
+        srcPortKey,
+        tgtPortKey,
+      } = pre;
+
       const dx = targetNode.x - sourceNode.x;
       const dy = targetNode.y - sourceNode.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const dist = Math.hypot(dx, dy) || 1;
       const ux = dx / dist;
       const uy = dy / dist;
       const nx = -uy;
       const ny = ux;
 
-      const isWeighted = Boolean(
-        settings.isWeighted || edge.weight !== undefined || (oppEdge && oppEdge.weight !== undefined)
-      );
+      const srcAngle = resolvedNodePorts.get(edge.source)?.get(srcPortKey) ?? naturalSrcAngle;
+      const tgtAngle = resolvedNodePorts.get(edge.target)?.get(tgtPortKey) ?? naturalTgtAngle;
 
-      let curvature = 0;
-      if (isWeighted) {
-        if (stats.total > 1) {
-          const offsetStep = 36;
-          const centerOffset = (stats.total - 1) / 2;
-          curvature = (stats.index - centerOffset) * offsetStep;
-        } else if (hasOppositeEdge) {
-          curvature = Math.max(34, Math.min(48, dist * 0.18));
-        }
-      }
+      const srcShift = normalizeAngleRad(srcAngle - naturalSrcAngle);
+      const tgtShift = normalizeAngleRad(tgtAngle - naturalTgtAngle);
 
       const sourceRadius = getNodeRadius(sourceNode);
       const targetRadius = getNodeRadius(targetNode);
       const arrowOffset = isDirected ? 12.5 : 0;
-      const isCurved = Math.abs(curvature) >= 1;
-      const startOffset = isDirected && hasOppositeEdge && !isCurved ? arrowOffset : 0;
+      const isParallelCurved = Math.abs(curvature) >= 1;
+      const startOffset = isDirected && isSharedOppositeLine ? arrowOffset : 0;
 
-      const sinA = isCurved ? Math.max(-0.35, Math.min(0.35, (curvature / sourceRadius) * 0.16)) : 0;
-      const cosA = isCurved ? Math.sqrt(1 - sinA * sinA) : 1;
+      const srcDirX = Math.cos(srcAngle);
+      const srcDirY = Math.sin(srcAngle);
+      const tgtDirX = Math.cos(tgtAngle);
+      const tgtDirY = Math.sin(tgtAngle);
 
-      const startX = sourceNode.x + (ux * cosA + nx * sinA) * (sourceRadius + startOffset);
-      const startY = sourceNode.y + (uy * cosA + ny * sinA) * (sourceRadius + startOffset);
-      const endX = targetNode.x - (ux * cosA - nx * sinA) * (targetRadius + arrowOffset);
-      const endY = targetNode.y - (uy * cosA - ny * sinA) * (targetRadius + arrowOffset);
+      const startX = sourceNode.x + srcDirX * (sourceRadius + startOffset);
+      const startY = sourceNode.y + srcDirY * (sourceRadius + startOffset);
+      const endX = targetNode.x + tgtDirX * (targetRadius + arrowOffset);
+      const endY = targetNode.y + tgtDirY * (targetRadius + arrowOffset);
+
+      const hasPortFanCurve =
+        !isParallelCurved && (Math.abs(srcShift) > 0.015 || Math.abs(tgtShift) > 0.015);
+      const isCurved = isParallelCurved || hasPortFanCurve;
 
       let pathD = '';
       let samplePoint: (t: number, normalShift?: number) => { x: number; y: number };
 
       if (!isCurved) {
         pathD = `M ${startX} ${startY} L ${endX} ${endY}`;
-        const oppShift = hasOppositeEdge ? 18 : 0;
+        const oppShift = isSharedOppositeLine ? 18 : 0;
         samplePoint = (t: number, normalShift = 0) => ({
           x: startX + (endX - startX) * t + nx * (oppShift + normalShift),
           y: startY + (endY - startY) * t + ny * (oppShift + normalShift),
@@ -1382,11 +1631,33 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         const chordUx = chordDx / chordDist;
         const chordUy = chordDy / chordDist;
 
-        const cpDist = chordDist * 0.38;
-        const cp1x = startX + chordUx * cpDist + nx * curvature;
-        const cp1y = startY + chordUy * cpDist + ny * curvature;
-        const cp2x = endX - chordUx * cpDist + nx * curvature;
-        const cp2y = endY - chordUy * cpDist + ny * curvature;
+        let cp1x: number;
+        let cp1y: number;
+        let cp2x: number;
+        let cp2y: number;
+
+        if (isParallelCurved) {
+          const cpDist = chordDist * 0.38;
+          cp1x = startX + chordUx * cpDist + nx * curvature;
+          cp1y = startY + chordUy * cpDist + ny * curvature;
+          cp2x = endX - chordUx * cpDist + nx * curvature;
+          cp2y = endY - chordUy * cpDist + ny * curvature;
+        } else {
+          // Port-aligned smooth bezier so incident edges dock cleanly around node rims
+          const arm = Math.min(54, chordDist * 0.32);
+          const departX = srcDirX * 0.68 + chordUx * 0.32;
+          const departY = srcDirY * 0.68 + chordUy * 0.32;
+          const departLen = Math.hypot(departX, departY) || 1;
+
+          const arriveX = -tgtDirX * 0.78 + chordUx * 0.22;
+          const arriveY = -tgtDirY * 0.78 + chordUy * 0.22;
+          const arriveLen = Math.hypot(arriveX, arriveY) || 1;
+
+          cp1x = startX + (departX / departLen) * arm;
+          cp1y = startY + (departY / departLen) * arm;
+          cp2x = endX - (arriveX / arriveLen) * arm;
+          cp2y = endY - (arriveY / arriveLen) * arm;
+        }
 
         pathD = `M ${startX} ${startY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${endX} ${endY}`;
         samplePoint = (t: number, normalShift = 0) => {
@@ -1425,8 +1696,9 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         targetNode,
         oppEdge,
         hasOppositeEdge,
+        isSharedOppositeLine,
         isDirected,
-        isCurved,
+        isCurved: isParallelCurved,
         curvature,
         pathD,
         labelX: mid.x,
@@ -1574,15 +1846,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const getEdgeInteractionHandlers = (
     edge: GraphEdge,
     oppEdge: GraphEdge | undefined,
-    hasOppositeEdge: boolean,
-    isCurved: boolean,
+    isSharedOppositeLine: boolean,
     sourceNode: GraphNode,
     targetNode: GraphNode
   ) => ({
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
       let targetEdge = edge;
-      if (hasOppositeEdge && oppEdge && !isCurved) {
+      if (isSharedOppositeLine && oppEdge) {
         if (selectedEdgeId === edge.id) {
           targetEdge = oppEdge;
         } else if (selectedEdgeId === oppEdge.id) {
@@ -1626,7 +1897,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       setIsLassoSelected(false);
     },
     onMouseEnter: (e: React.MouseEvent) => {
-      if (hasOppositeEdge && oppEdge && !isCurved) {
+      if (isSharedOppositeLine && oppEdge) {
         const world = screenToWorld(e.clientX, e.clientY);
         const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
         const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
@@ -1636,7 +1907,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       }
     },
     onMouseMove: (e: React.MouseEvent) => {
-      if (hasOppositeEdge && oppEdge && !isCurved) {
+      if (isSharedOppositeLine && oppEdge) {
         const world = screenToWorld(e.clientX, e.clientY);
         const distToSource = Math.hypot(world.x - sourceNode.x, world.y - sourceNode.y);
         const distToTarget = Math.hypot(world.x - targetNode.x, world.y - targetNode.y);
@@ -1654,7 +1925,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const layout = edgeLayoutMap.get(edge.id);
     if (!layout) return null;
 
-    const { sourceNode, targetNode, oppEdge, hasOppositeEdge, isDirected, isCurved, pathD } = layout;
+    const { sourceNode, targetNode, oppEdge, isSharedOppositeLine, isDirected, pathD } = layout;
     const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
     const isHovered = hoveredEdgeId === edge.id;
 
@@ -1665,7 +1936,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const effectiveEdgeColor = algoEdgeHighlight?.color || (isHovered && !isSelected ? hoveredColor : edgeActualColor);
     const strokeWidth = isSelected || algoEdgeHighlight ? 5 : isHovered ? 4 : 3.2;
     const markerId = getMarkerId(effectiveEdgeColor);
-    const handlers = getEdgeInteractionHandlers(edge, oppEdge, hasOppositeEdge, isCurved, sourceNode, targetNode);
+    const handlers = getEdgeInteractionHandlers(edge, oppEdge, isSharedOppositeLine, sourceNode, targetNode);
 
     return (
       <g key={edge.id} className="edge-group cursor-pointer" {...handlers}>
@@ -1700,14 +1971,14 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const layout = edgeLayoutMap.get(edge.id);
     if (!layout) return null;
 
-    const { sourceNode, targetNode, oppEdge, hasOppositeEdge, isCurved, labelX, labelY } = layout;
+    const { sourceNode, targetNode, oppEdge, isSharedOppositeLine, labelX, labelY } = layout;
     const isSelected = selectedEdgeId === edge.id || selectedEdgeIds.includes(edge.id);
     const isHovered = hoveredEdgeId === edge.id;
     const hoveredColor = isLight ? '#0f172a' : '#38bdf8';
     const weightStr = String(edge.weight);
     const badgeWidth = Math.max(28, weightStr.length * 8 + 14);
     const badgeHeight = 20;
-    const handlers = getEdgeInteractionHandlers(edge, oppEdge, hasOppositeEdge, isCurved, sourceNode, targetNode);
+    const handlers = getEdgeInteractionHandlers(edge, oppEdge, isSharedOppositeLine, sourceNode, targetNode);
 
     return (
       <g
