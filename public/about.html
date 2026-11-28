@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>About CP Graph Visualizer &amp; Editor | Online Competitive Programming Graph Tool</title>
+    <meta name="description" content="Complete overview of CP Graph Visualizer & Editor v2.2: edge list parser, string & numeric weights, freehand lasso selection, Canvas Notes, 17+ graph & Tree DP algorithms, and offline desktop apps." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://graph-editor.github.io/about.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://graph-editor.github.io/about.html" />
+    <meta property="og:title" content="CP Graph Visualizer &amp; Editor — Competitive Programming Graph Tool" />
+    <meta property="og:description" content="Visualize edge lists, LeetCode 2D arrays, trees, DAGs, weighted nodes, and step-by-step graph algorithms online or offline." />
+    <meta property="og:image" content="https://graph-editor.github.io/icon.png" />
+    <style>
+      @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/JetBrainsMono-Regular.ttf') format('truetype'); }
+      @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('./fonts/JetBrainsMono-Bold.ttf') format('truetype'); }
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        background: #000;
+        color: #e5e5e5;
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        line-height: 1.65;
+      }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+      header { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid #262626; padding-bottom: 1.25rem; margin-bottom: 2rem; }
+      a { color: #38bdf8; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .cta { display: inline-block; background: #2563eb; color: #fff; font-weight: 700; padding: 0.65rem 1.15rem; border-radius: 0.65rem; font-size: 0.9rem; }
+      .cta:hover { background: #3b82f6; text-decoration: none; }
+      h1 { font-size: clamp(1.6rem, 1.2rem + 2vw, 2.5rem); line-height: 1.2; color: #fff; margin: 0 0 0.75rem; }
+      h2 { font-size: 1.2rem; color: #fff; margin: 2rem 0 0.75rem; border-left: 3px solid #2563eb; padding-left: 0.65rem; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem; }
+      .card { background: #0a0a0a; border: 1px solid #262626; border-radius: 0.85rem; padding: 1rem 1.15rem; }
+      .card strong { color: #fff; display: block; margin-bottom: 0.35rem; font-size: 0.95rem; }
+      pre { background: #0a0a0a; border: 1px solid #262626; border-radius: 0.75rem; padding: 0.9rem 1rem; overflow-x: auto; color: #7dd3fc; font-size: 0.85rem; }
+      footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid #262626; font-size: 0.85rem; color: #a3a3a3; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <strong style="color:#fff;font-size:1.1rem;">CP Graph Visualizer &amp; Editor</strong>
+          <span style="color:#737373;font-size:0.8rem;margin-left:0.5rem;">v2.2.0</span>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:center;">
+          <a href="./#about">Interactive Overview</a>
+          <a class="cta" href="./">Open Live Editor</a>
+        </div>
+      </header>
+
+      <main>
+        <h1>Precision Online Graph Editor &amp; Visualizer for Competitive Programming</h1>
+        <p>
+          CP Graph Visualizer &amp; Editor is a free, open-source browser and desktop tool designed for
+          Codeforces, AtCoder, CSES, LeetCode, USACO, and computer science students. Paste edge lists,
+          tree parent arrays, adjacency matrices, or multi-testcase inputs to visualize graphs cleanly
+          with collision-free weights and step-by-step algorithm tracing.
+        </p>
+
+        <h2>Core Capabilities</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>Smart Competitive Programming Input</strong>
+            Auto-detects headerless edge lists, N/M headers, LeetCode 2D arrays, AtCoder tree parent arrays, isolated vertices, primed IDs (1', 2'), weighted nodes, and multi-testcase inputs.
+          </div>
+          <div class="card">
+            <strong>String &amp; Numeric Weights</strong>
+            Edges and nodes support integers, decimals, negatives, characters, booleans, and custom labels with bidirectional sync and C++/Python code export.
+          </div>
+          <div class="card">
+            <strong>Overlap-Free Layouts &amp; Weight Badges</strong>
+            Automatic collision avoidance steers weight badges clear of edge crossings, vertices, and floating Canvas Notes across Force Physics, Tree, DAG, Bipartite, Circular, and Grid layouts.
+          </div>
+          <div class="card">
+            <strong>17+ Step-by-Step Algorithms</strong>
+            Inspect live playback traces for BFS, DFS, Dijkstra, Bellman-Ford, Kahn's Topological Sort, Tarjan's SCC, Bridges &amp; Articulation Points, Kruskal &amp; Prim MST, Bipartite Matching, Eulerian Trail, Tree Diameter, and LCA.
+          </div>
+          <div class="card">
+            <strong>Freehand Lasso &amp; Batch Editing</strong>
+            Draw a lasso loop or multi-select vertices and edges to reposition subgraphs together, update colors, or assign batch weights in one step.
+          </div>
+          <div class="card">
+            <strong>Offline Desktop &amp; Export</strong>
+            Includes bundled JetBrains Mono typography, Canvas scratchpad notes, high-resolution PNG/SVG export, shareable URL state links, and native installers for Windows, macOS, and Linux.
+          </div>
+        </div>
+
+        <h2>Example Supported Input</h2>
+        <pre># Directed/undirected edges with numeric or string weights
+SRC 1 0
+1 2' cost
+2' DEST 6
+1 [10]
+IsolatedNode</pre>
+      </main>
+
+      <footer>
+        <span>CP Graph Editor — MIT Open Source</span>
+        <span>
+          <a href="./">Launch Editor</a> ·
+          <a href="https://github.com/graph-editor/graph-editor.github.io" rel="noreferrer">GitHub Repo</a> ·
+          <a href="https://github.com/mostafa-cse" rel="noreferrer">@mostafa-cse</a>
+        </span>
+      </footer>
+    </div>
+  </body>
+</html>

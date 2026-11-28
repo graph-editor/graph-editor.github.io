@@ -141,7 +141,17 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 
         <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
 
-        {/* Authorship */}
+        {/* About & Authorship */}
+        <a
+          href="./about.html"
+          className={`text-[11px] font-medium transition-colors hover:underline ${
+            isLight ? 'text-slate-600 hover:text-slate-900' : 'text-neutral-300 hover:text-white'
+          }`}
+          title="About CP Graph Visualizer & Editor"
+        >
+          About
+        </a>
+        <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
         <a
           href="https://github.com/mostafa-cse"
           target="_blank"
