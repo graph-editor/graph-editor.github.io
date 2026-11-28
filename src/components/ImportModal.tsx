@@ -126,20 +126,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }}
     >
       <div
-        className={`border rounded-2xl w-full max-w-xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col transition-colors ${
+        className={`border rounded-2xl w-full max-w-xl max-h-[90dvh] overflow-hidden shadow-2xl flex flex-col transition-colors ${
           isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
         }`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-3.5 border-b shrink-0 ${
+          className={`flex items-center justify-between gap-2 px-4 sm:px-5 py-3.5 border-b shrink-0 ${
             isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Sparkles size={18} className="text-blue-500" />
-            <h3 className={`text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles size={18} className="text-blue-500 shrink-0" />
+            <h3 className={`text-sm font-semibold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
               Import LeetCode & Multi-Testcase CP Input
             </h3>
           </div>
@@ -251,7 +251,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         {/* Footer Actions */}
         <div
-          className={`flex items-center justify-end gap-2 px-5 py-3 border-t shrink-0 ${
+          className={`flex flex-wrap items-center justify-end gap-2 px-4 sm:px-5 py-3 border-t shrink-0 ${
             isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950/80'
           }`}
         >

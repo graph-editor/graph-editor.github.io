@@ -155,11 +155,24 @@ export function App() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
-  // Panels
+  // Panels: collapsed below lg (<1024px) so mobile & portrait iPads preserve full canvas
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(
-    () => typeof window !== 'undefined' && window.innerWidth < 768
+    () => typeof window !== 'undefined' && window.innerWidth < 1024
   );
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false);
+
+  // Sync panel collapse state automatically when crossing tablet/desktop breakpoint
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handleBreakpointChange = (e: MediaQueryListEvent) => {
+      if (!e.matches) {
+        setIsLeftPanelCollapsed(true);
+      }
+    };
+    mql.addEventListener('change', handleBreakpointChange);
+    return () => mql.removeEventListener('change', handleBreakpointChange);
+  }, []);
 
   // Tracer Dock Position (Right Side vs Bottom)
   const [tracerPosition, setTracerPosition] = useState<'right' | 'bottom'>(() => {
@@ -187,6 +200,9 @@ export function App() {
     setSelectedNodeId(nodeId);
     if (nodeId) {
       setIsInspectorOpen(true);
+      if (typeof window !== 'undefined' && window.innerWidth < 1024 && tracerPosition === 'right') {
+        setIsLeftPanelCollapsed(true);
+      }
       // Auto-switch active tab to the graph that owns this node
       if (tabs.length > 1) {
         const node = data.nodes.find(n => n.id === nodeId);
@@ -205,6 +221,9 @@ export function App() {
     setSelectedEdgeId(edgeId);
     if (edgeId) {
       setIsInspectorOpen(true);
+      if (typeof window !== 'undefined' && window.innerWidth < 1024 && tracerPosition === 'right') {
+        setIsLeftPanelCollapsed(true);
+      }
       // Auto-switch active tab to the graph that owns this edge
       if (tabs.length > 1) {
         const edge = data.edges.find(e => e.id === edgeId);
@@ -1510,6 +1529,9 @@ export function App() {
             if (!hasSelection && data.nodes.length > 0) {
               handleSelectNode(data.nodes[0].id);
             }
+            if (typeof window !== 'undefined' && window.innerWidth < 1024 && tracerPosition === 'right') {
+              setIsLeftPanelCollapsed(true);
+            }
             setIsInspectorOpen(true);
           }
         }}
@@ -1526,11 +1548,21 @@ export function App() {
         canRedo={canRedo}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        isLeftPanelCollapsed={isLeftPanelCollapsed}
+        onToggleLeftPanel={() => {
+          setIsLeftPanelCollapsed(prev => {
+            const nextCollapsed = !prev;
+            if (!nextCollapsed && typeof window !== 'undefined' && window.innerWidth < 1024 && tracerPosition === 'right') {
+              setIsInspectorOpen(false);
+            }
+            return nextCollapsed;
+          });
+        }}
       />
 
       {/* Main Workspace: Left Panel, Center Canvas Area, Bottom/Right Docked Inspector */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
-        {/* Docked Left Panel (Collapsible) */}
+        {/* Docked Left Panel (Collapsible / Overlay Drawer below lg) */}
         <LeftPanel
           rawText={rawText}
           onRawTextChange={handleRawTextChange}
@@ -1541,7 +1573,15 @@ export function App() {
           onRunAlgorithm={handleRunAlgorithm}
           onLoadPreset={handleLoadPreset}
           isCollapsed={isLeftPanelCollapsed}
-          onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+          onToggleCollapse={() => {
+            setIsLeftPanelCollapsed(prev => {
+              const nextCollapsed = !prev;
+              if (!nextCollapsed && typeof window !== 'undefined' && window.innerWidth < 1024 && tracerPosition === 'right') {
+                setIsInspectorOpen(false);
+              }
+              return nextCollapsed;
+            });
+          }}
           onSetCustomNodeCount={handleSetCustomNodeCount}
           onAddSingleNode={handleAddSingleNode}
           onToggleHeaderMode={handleToggleHeaderMode}
@@ -1593,9 +1633,9 @@ export function App() {
               onBringNoteToFront={handleBringNoteToFront}
             />
 
-            {/* Algorithm Controls Card: Floating at BOTTOM CENTER matching user screenshot */}
+            {/* Algorithm Controls Card: Floating at BOTTOM CENTER, scales across phones to 4K */}
             {algorithmSteps && (
-              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-xl z-30 pointer-events-none">
+              <div className="absolute bottom-2.5 sm:bottom-4 lg:bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[92%] max-w-lg sm:max-w-xl 2xl:max-w-2xl z-30 pointer-events-none">
                 <div className="pointer-events-auto">
                   <AlgorithmControls
                     steps={algorithmSteps}
@@ -1741,9 +1781,9 @@ export function App() {
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border shadow-2xl backdrop-blur-md bg-blue-600/95 border-blue-400 text-white text-xs font-medium animate-in fade-in slide-in-from-bottom-3 pointer-events-none">
+        <div className="fixed bottom-11 sm:bottom-12 left-1/2 -translate-x-1/2 max-w-[calc(100vw-1.5rem)] z-50 flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border shadow-2xl backdrop-blur-md bg-blue-600/95 border-blue-400 text-white text-xs font-medium animate-in fade-in slide-in-from-bottom-3 pointer-events-none">
           <Link2 size={15} className="shrink-0 text-white" />
-          <span>{toastMessage}</span>
+          <span className="truncate">{toastMessage}</span>
         </div>
       )}
     </div>

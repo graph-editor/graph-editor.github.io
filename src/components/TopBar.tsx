@@ -26,6 +26,7 @@ import {
   Undo2,
   Redo2,
   Link2,
+  PanelLeft,
 } from 'lucide-react';
 import { GraphSettings, LayoutMode } from '../types/graph';
 
@@ -61,6 +62,8 @@ interface TopBarProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  isLeftPanelCollapsed?: boolean;
+  onToggleLeftPanel?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -86,26 +89,44 @@ export const TopBar: React.FC<TopBarProps> = ({
   canRedo = false,
   onUndo,
   onRedo,
+  isLeftPanelCollapsed = false,
+  onToggleLeftPanel,
 }) => {
   const isLight = theme === 'light';
   const [isLayoutDropdownOpen, setIsLayoutDropdownOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number } | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownMenuRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
 
   const updateDropdownPos = useCallback(() => {
     if (triggerButtonRef.current) {
       const rect = triggerButtonRef.current.getBoundingClientRect();
-      const menuWidth = 216;
+      const vw = window.innerWidth;
+      const vh = window.visualViewport?.height || window.innerHeight;
+      const menuWidth = Math.min(224, vw - 16);
+      const estMenuHeight = 290;
       let left = rect.left;
-      if (left + menuWidth > window.innerWidth - 8) {
-        left = window.innerWidth - menuWidth - 8;
+      if (left + menuWidth > vw - 8) {
+        left = vw - menuWidth - 8;
       }
       if (left < 8) left = 8;
-      setDropdownPos({
-        top: rect.bottom + 6,
-        left,
-      });
+
+      const spaceBelow = vh - rect.bottom - 12;
+      const spaceAbove = rect.top - 12;
+      if (spaceBelow < estMenuHeight && spaceAbove > spaceBelow) {
+        setDropdownPos({
+          bottom: vh - rect.top + 6,
+          left,
+          maxHeight: Math.max(160, spaceAbove),
+        });
+      } else {
+        setDropdownPos({
+          top: rect.bottom + 6,
+          left,
+          maxHeight: Math.max(180, spaceBelow),
+        });
+      }
     }
   }, []);
 
@@ -131,7 +152,18 @@ export const TopBar: React.FC<TopBarProps> = ({
         setIsLayoutDropdownOpen(false);
       }
     };
-    const handleWindowEvents = () => {
+    const handleResize = () => {
+      setIsLayoutDropdownOpen(false);
+    };
+    const handleScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (
+        target &&
+        ((dropdownMenuRef.current && dropdownMenuRef.current.contains(target)) ||
+          (headerRef.current && headerRef.current.contains(target)))
+      ) {
+        return;
+      }
       setIsLayoutDropdownOpen(false);
     };
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -140,24 +172,45 @@ export const TopBar: React.FC<TopBarProps> = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('resize', handleWindowEvents);
-    window.addEventListener('scroll', handleWindowEvents, true);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('resize', handleWindowEvents);
-      window.removeEventListener('scroll', handleWindowEvents, true);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isLayoutDropdownOpen]);
 
   const activeLayout = LAYOUT_OPTIONS.find(l => l.id === settings.layout) || LAYOUT_OPTIONS[0];
   return (
-    <header className={`h-13 border-b px-2 sm:px-4 flex items-center justify-between z-30 select-none shrink-0 gap-2 relative transition-colors overflow-x-auto no-scrollbar scroll-smooth ${
-      isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
-    }`}>
-      {/* Left: Brand / Logo + Main Editing Tools Group */}
+    <header
+      ref={headerRef}
+      className={`min-h-13 border-b safe-x safe-top flex items-center justify-between z-30 select-none shrink-0 gap-1.5 sm:gap-2 2xl:gap-3 relative transition-colors overflow-x-auto no-scrollbar scroll-smooth ${
+        isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
+      }`}
+    >
+      {/* Left: Mobile Drawer Toggle + Brand + Main Editing Tools Group */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {onToggleLeftPanel && (
+          <button
+            type="button"
+            onClick={onToggleLeftPanel}
+            aria-label="Toggle editor and algorithm panel"
+            aria-expanded={!isLeftPanelCollapsed}
+            className={`sm:hidden flex items-center justify-center p-1.5 rounded-lg border transition-colors cursor-pointer touch-target-compact ${
+              !isLeftPanelCollapsed
+                ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
+                : isLight
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
+            }`}
+            title={!isLeftPanelCollapsed ? 'Close Editor Panel' : 'Open Editor & Algorithms'}
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
         <h1 className="sr-only">CP Graph Visualizer &amp; Editor — Online Graph Drawing Tool</h1>
         {/* Brand (real semantic anchor for mobile & desktop crawlers + SPA handler) */}
         <a
@@ -191,7 +244,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         }`}>
           <button
             onClick={() => onSelectTool('select')}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer touch-target-compact ${
               activeTool === 'select'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -206,7 +259,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <button
             onClick={() => onSelectTool('lasso')}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer touch-target-compact ${
               activeTool === 'lasso'
                 ? 'bg-blue-600 text-white shadow-sm font-semibold'
                 : isLight
@@ -227,7 +280,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all touch-target-compact ${
               !canUndo
                 ? isLight
                   ? 'text-slate-300 cursor-not-allowed opacity-40'
@@ -245,7 +298,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-medium transition-all touch-target-compact ${
               !canRedo
                 ? isLight
                   ? 'text-slate-300 cursor-not-allowed opacity-40'
@@ -298,8 +351,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle Directed / Undirected (D)"
         >
           {settings.isDirected ? <ArrowRight size={12} /> : <Minus size={12} />}
-          <span className="hidden lg:inline">{settings.isDirected ? 'Directed' : 'Undirected'}</span>
-          <span className="lg:hidden">{settings.isDirected ? 'Dir' : 'Undir'}</span>
+          <span className="hidden xl:inline">{settings.isDirected ? 'Directed' : 'Undirected'}</span>
+          <span className="xl:hidden">{settings.isDirected ? 'Dir' : 'Undir'}</span>
         </button>
 
         {/* Weighted vs Unweighted toggle */}
@@ -317,8 +370,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Toggle Edge Weights (W)"
         >
           <span className="font-mono text-xs font-bold">W</span>
-          <span className="hidden lg:inline">{settings.isWeighted ? 'Weighted' : 'Unweighted'}</span>
-          <span className="lg:hidden">{settings.isWeighted ? 'W' : 'Unw'}</span>
+          <span className="hidden xl:inline">{settings.isWeighted ? 'Weighted' : 'Unweighted'}</span>
+          <span className="xl:hidden">{settings.isWeighted ? 'W' : 'Unw'}</span>
         </button>
 
         {/* Custom Sleek Layout Dropdown Popover */}
@@ -327,7 +380,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             ref={triggerButtonRef}
             type="button"
             onClick={toggleDropdown}
-            className={`flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1 transition-all shadow-sm cursor-pointer ${
+            className={`flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2 sm:px-2.5 py-1 transition-all shadow-sm cursor-pointer ${
               isLight
                 ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200 hover:border-slate-300'
                 : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border-neutral-800 hover:border-neutral-700'
@@ -335,7 +388,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Auto-organize graph layout"
           >
             {activeLayout.icon}
-            <span className="max-w-[95px] sm:max-w-none truncate">{activeLayout.label}</span>
+            <span className="max-w-[78px] sm:max-w-[100px] xl:max-w-none truncate">{activeLayout.label}</span>
             <ChevronDown
               size={11}
               className={`transition-transform ${isLayoutDropdownOpen ? 'rotate-180 text-blue-500' : isLight ? 'text-slate-500' : 'text-neutral-400'}`}
@@ -347,12 +400,14 @@ export const TopBar: React.FC<TopBarProps> = ({
               ref={dropdownMenuRef}
               style={{
                 position: 'fixed',
-                top: `${dropdownPos.top}px`,
+                ...(dropdownPos.top !== undefined ? { top: `${dropdownPos.top}px` } : {}),
+                ...(dropdownPos.bottom !== undefined ? { bottom: `${dropdownPos.bottom}px` } : {}),
                 left: `${dropdownPos.left}px`,
-                width: '216px',
+                width: 'min(224px, calc(100vw - 16px))',
+                maxHeight: `${dropdownPos.maxHeight}px`,
                 zIndex: 9999,
               }}
-              className={`backdrop-blur-xl border rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 pointer-events-auto ${
+              className={`backdrop-blur-xl border rounded-xl shadow-2xl p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 pointer-events-auto overflow-y-auto overscroll-contain ${
                 isLight ? 'bg-white/95 border-slate-200 text-slate-900' : 'bg-neutral-950/95 border-neutral-800 text-white'
               }`}
             >
@@ -454,12 +509,13 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           onClick={onClearGraph}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+          className={`p-1.5 touch-target-compact flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
             isLight
               ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
               : 'text-neutral-400 hover:text-red-400 hover:bg-red-950/30'
           }`}
           title="Clear Graph"
+          aria-label="Clear Graph"
         >
           <Trash2 size={15} />
         </button>
@@ -469,7 +525,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         }`}>
           <button
             onClick={onToggleInspector}
-            className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+            className={`p-1.5 touch-target-compact flex items-center justify-center rounded-md transition-colors cursor-pointer ${
               isInspectorOpen
                 ? isLight
                   ? 'bg-blue-600 text-white shadow-xs'
@@ -479,16 +535,18 @@ export const TopBar: React.FC<TopBarProps> = ({
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
             }`}
             title={`Toggle Node Tracer (${tracerPosition === 'bottom' ? 'Bottom Dock' : 'Side Dock'})`}
+            aria-label="Toggle Node Tracer"
           >
             <Sliders size={15} />
           </button>
           {onToggleTracerPosition && (
             <button
               onClick={onToggleTracerPosition}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`p-1.5 touch-target-compact flex items-center justify-center rounded-md transition-colors cursor-pointer ${
                 isLight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
               }`}
               title={`Switch Tracer to ${tracerPosition === 'bottom' ? 'Side Dock' : 'Bottom Dock'}`}
+              aria-label="Switch Tracer Position"
             >
               {tracerPosition === 'bottom' ? (
                 <PanelBottom size={14} className="text-blue-500" />
@@ -501,10 +559,11 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         <button
           onClick={onOpenShortcutsModal}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+          className={`p-1.5 touch-target-compact flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
             isLight ? 'text-slate-400 hover:text-slate-800 hover:bg-slate-100' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800'
           }`}
           title="Keyboard & Mouse Shortcuts"
+          aria-label="Keyboard and touch shortcuts"
         >
           <HelpCircle size={15} />
         </button>

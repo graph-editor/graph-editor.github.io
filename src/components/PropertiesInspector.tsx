@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { GraphNode, GraphEdge, GraphSettings, GraphData, AlgorithmType } from '../types/graph';
 import { CP_PALETTE, detectNodeType } from '../utils/parser';
 import {
@@ -71,17 +71,35 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
+  // Compute safe max height for bottom dock relative to viewport height
+  const getMaxBottomHeight = useCallback(() => {
+    if (typeof window === 'undefined') return 480;
+    return Math.max(220, Math.min(540, Math.floor(window.innerHeight * 0.54)));
+  }, []);
+
   // Bottom dock resizable height state
   const [bottomHeight, setBottomHeight] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cp_graph_tracer_bottom_height');
+      const maxH = Math.max(220, Math.min(540, Math.floor(window.innerHeight * 0.54)));
       if (saved) {
         const num = Number(saved);
-        if (!isNaN(num) && num >= 180 && num <= 500) return num;
+        if (!isNaN(num) && num >= 160) return Math.min(maxH, num);
       }
+      if (window.innerHeight < 760) return Math.min(220, maxH);
     }
     return 260;
   });
+
+  // Clamp bottomHeight when window resizes or rotates
+  useEffect(() => {
+    const handleWindowResize = () => {
+      const maxH = getMaxBottomHeight();
+      setBottomHeight(prev => Math.min(maxH, Math.max(160, prev)));
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [getMaxBottomHeight]);
 
   // Handle outside click to close settings popover
   useEffect(() => {
@@ -95,30 +113,33 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isSettingsOpen]);
 
-  // Handle bottom dock resizing
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
+  // Handle bottom dock resizing via Pointer Events (mouse, touch, Apple Pencil)
+  const handleResizePointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     const startY = e.clientY;
     const startHeight = bottomHeight;
+    const maxH = getMaxBottomHeight();
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
+    const onPointerMove = (moveEvent: PointerEvent) => {
       const deltaY = startY - moveEvent.clientY;
-      const nextHeight = Math.min(500, Math.max(180, startHeight + deltaY));
+      const nextHeight = Math.min(maxH, Math.max(160, startHeight + deltaY));
       setBottomHeight(nextHeight);
     };
 
-    const onMouseUp = (upEvent: MouseEvent) => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+    const onPointerUp = (upEvent: PointerEvent) => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
       const deltaY = startY - upEvent.clientY;
-      const finalHeight = Math.min(500, Math.max(180, startHeight + deltaY));
+      const finalHeight = Math.min(maxH, Math.max(160, startHeight + deltaY));
       try {
         localStorage.setItem('cp_graph_tracer_bottom_height', String(finalHeight));
       } catch {}
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   // Node Connections & Degree calculation for live tracing
@@ -354,7 +375,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           <button
             type="button"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`p-1.5 rounded-lg transition-colors border ${
+            className={`p-1.5 rounded-lg transition-colors border touch-target-compact flex items-center justify-center ${
               isSettingsOpen
                 ? isLight
                   ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
@@ -364,6 +385,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                 : 'text-slate-400 hover:text-white hover:bg-slate-800 border-transparent'
             }`}
             title="Tracer Position Preferences"
+            aria-label="Tracer Position Preferences"
           >
             <Settings size={13} />
           </button>
@@ -372,7 +394,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
             <div
               className={`absolute right-0 ${
                 isBottom ? 'bottom-full mb-2' : 'top-full mt-2'
-              } w-64 rounded-xl shadow-2xl p-3 z-50 text-xs space-y-2.5 animate-in fade-in zoom-in-95 border ${
+              } w-64 max-w-[calc(100vw-2rem)] rounded-xl shadow-2xl p-3 z-50 text-xs space-y-2.5 animate-in fade-in zoom-in-95 border ${
                 isLight ? 'bg-white border-slate-300 text-slate-800 shadow-xl' : 'bg-slate-950 border-slate-800 text-slate-200'
               }`}
             >
@@ -457,8 +479,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className={`p-1.5 rounded-lg transition-colors cursor-pointer touch-target-compact flex items-center justify-center ${
+            isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
           title="Close Tracer (Esc)"
+          aria-label="Close Tracer"
         >
           <X size={14} />
         </button>
@@ -706,7 +731,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       <>
         {!isBottom && (
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 lg:hidden animate-fade-in"
             onClick={onClose}
             aria-hidden="true"
           />
@@ -715,18 +740,18 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           style={isBottom ? { height: `${bottomHeight}px` } : undefined}
           className={`${
             isBottom
-              ? `w-full max-h-[50vh] sm:max-h-[60vh] border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+              ? `w-full max-h-[48dvh] sm:max-h-[55dvh] short-dock-cap border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
                   isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
                 }`
-              : `fixed inset-y-0 right-0 z-40 w-[88vw] max-w-sm md:relative md:inset-auto md:w-80 md:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-left ${
+              : `fixed inset-y-0 right-0 z-40 w-[92vw] max-w-sm sm:w-80 lg:max-w-none lg:relative lg:inset-auto lg:w-[308px] xl:w-[336px] 2xl:w-[384px] lg:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl lg:shadow-none animate-slide-left lg:animate-none ${
                   isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
                 }`
           }`}
         >
           {isBottom && (
             <div
-              onMouseDown={handleResizeMouseDown}
-              className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
+              onPointerDown={handleResizePointerDown}
+              className={`h-3 sm:h-2 w-full hover:bg-blue-500/80 cursor-ns-resize touch-none transition-colors shrink-0 group flex items-center justify-center ${
                 isLight ? 'bg-slate-200' : 'bg-neutral-800'
               }`}
               title="Drag to resize bottom tracer height"
@@ -758,14 +783,14 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
     return (
       <aside
         style={{ height: `${bottomHeight}px` }}
-        className={`w-full max-h-[50vh] sm:max-h-[60vh] border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
+        className={`w-full max-h-[48dvh] sm:max-h-[55dvh] short-dock-cap border-t flex flex-col z-20 select-none shrink-0 overflow-hidden shadow-2xl animate-slide-up ${
           isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
         }`}
       >
-        {/* Top Resize Handle */}
+        {/* Top Resize Handle (Pointer Events for Mouse, Touch, Stylus) */}
         <div
-          onMouseDown={handleResizeMouseDown}
-          className={`h-1.5 w-full hover:bg-blue-500 cursor-ns-resize transition-colors shrink-0 group flex items-center justify-center ${
+          onPointerDown={handleResizePointerDown}
+          className={`h-3 sm:h-2 w-full hover:bg-blue-500/80 cursor-ns-resize touch-none transition-colors shrink-0 group flex items-center justify-center ${
             isLight ? 'bg-slate-200' : 'bg-neutral-800'
           }`}
           title="Drag to resize bottom tracer height"
@@ -776,9 +801,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
         {renderHeader()}
 
         {/* 4-Card Grid Container */}
-        <div className="flex-1 p-3 overflow-y-auto">
+        <div className="flex-1 min-h-0 p-2.5 sm:p-3 overflow-y-auto overscroll-contain">
           {isMultiMode ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 2xl:gap-4 items-stretch">
               {selectedNodesCount > 0 && renderBatchNodesWeightCard()}
               {selectedNodesCount > 0 && renderBatchNodesColorCard()}
               {selectedEdgesCount > 0 && renderBatchEdgesWeightCard()}
@@ -796,7 +821,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
           ) : (
           <>
           {selectedNode && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 h-full items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 2xl:gap-4 h-full items-stretch">
               {/* Card 1: Identity & Pinning */}
               <div className={`border rounded-xl p-3 flex flex-col justify-between transition-colors ${
                 isLight ? 'bg-white border-slate-200 shadow-2xs hover:border-slate-300' : 'bg-slate-900/60 border-slate-800/80 shadow-sm hover:border-slate-700/80'
@@ -1107,7 +1132,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
           {/* EDGE VIEW IN BOTTOM DOCK */}
           {selectedEdge && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-full items-stretch max-w-4xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 2xl:gap-4 h-full items-stretch max-w-4xl 2xl:max-w-5xl">
               {/* Edge Direction */}
               <div className={`border rounded-xl p-3 flex flex-col justify-between ${
                 isLight ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-900/60 border-slate-800/80'
@@ -1255,14 +1280,14 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   // -------------------------------------------------------------
   return (
     <>
-      {/* Mobile Backdrop for Right Sheet */}
+      {/* Mobile & Tablet Backdrop for Right Sheet */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 lg:hidden animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <aside className={`fixed inset-y-0 right-0 z-40 w-[88vw] max-w-sm md:relative md:inset-auto md:w-80 md:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-left transition-colors ${
+      <aside className={`fixed inset-y-0 right-0 z-40 w-[92vw] max-w-sm sm:w-80 lg:max-w-none lg:relative lg:inset-auto lg:w-[308px] xl:w-[336px] 2xl:w-[384px] lg:z-10 border-l flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl lg:shadow-none animate-slide-left lg:animate-none transition-colors ${
         isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
       }`}>
       {renderHeader()}

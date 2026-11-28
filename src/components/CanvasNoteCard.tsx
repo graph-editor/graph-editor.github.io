@@ -247,8 +247,9 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           <button
             type="button"
             onClick={handleToggleMinimize}
-            className="p-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            className="p-1 touch-target-compact flex items-center justify-center rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
             title={isMinimized ? 'Restore Note' : 'Minimize Note'}
+            aria-label={isMinimized ? 'Restore Note' : 'Minimize Note'}
           >
             {isMinimized ? <ChevronDown size={14} strokeWidth={2.25} /> : <ChevronUp size={14} strokeWidth={2.25} />}
           </button>
@@ -256,8 +257,9 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           <button
             type="button"
             onClick={() => onDeleteNote(note.id)}
-            className="p-1 rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
+            className="p-1 touch-target-compact flex items-center justify-center rounded-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-transparent hover:border-neutral-700 transition-colors cursor-pointer shrink-0"
             title="Delete Note"
+            aria-label="Delete Note"
           >
             <X size={14} strokeWidth={2.25} />
           </button>
@@ -293,7 +295,7 @@ export const CanvasNoteCard: React.FC<CanvasNoteCardProps> = ({
           <div
             onMouseDown={handleStartResize}
             onTouchStart={handleStartResizeTouch}
-            className="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize text-neutral-400 hover:text-white hover:bg-neutral-800/75 rounded-tl-md transition-colors flex items-end justify-end p-1"
+            className="absolute bottom-0 right-0 w-7 h-7 sm:w-5 sm:h-5 touch-none cursor-nwse-resize text-neutral-400 hover:text-white hover:bg-neutral-800/75 rounded-tl-md transition-colors flex items-end justify-end p-1"
             title="Drag to resize note"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

@@ -4,6 +4,7 @@
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
 @theme {
+  --breakpoint-xs: 25rem;
   --font-sans: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
@@ -192,4 +193,50 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Safe-area inset helpers for notched phones and iPads */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-x {
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 640px) {
+  .safe-x {
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+/* Coarse pointer ergonomics: comfortable hit areas without inflating desktop chrome */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .touch-target-compact {
+    min-width: 36px;
+    min-height: 36px;
+    position: relative;
+  }
+  .touch-target-compact::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+}
+
+/* Short-height laptops & landscape phones */
+@media (max-height: 760px) {
+  .short-dock-cap {
+    max-height: 44dvh !important;
+  }
 }

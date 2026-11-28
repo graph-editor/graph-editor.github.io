@@ -201,15 +201,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
   if (isCollapsed) {
     return (
-      <aside className={`w-11 sm:w-12 border-r flex flex-col items-center py-3.5 gap-3.5 z-10 select-none shrink-0 transition-colors ${
+      <aside className={`hidden sm:flex w-11 md:w-12 border-r flex-col items-center py-3.5 gap-3.5 z-10 select-none shrink-0 transition-colors ${
         isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-black border-neutral-800 text-neutral-300'
       }`}>
         <button
           onClick={onToggleCollapse}
-          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+          className={`p-2 rounded-lg transition-colors cursor-pointer touch-target-compact ${
             isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
           }`}
           title="Expand Sidebar"
+          aria-label="Expand Sidebar"
         >
           <ChevronRight size={16} />
         </button>
@@ -219,7 +220,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             setActiveTab('editor');
             onToggleCollapse();
           }}
-          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+          className={`p-2 rounded-lg transition-colors cursor-pointer touch-target-compact ${
             activeTab === 'editor'
               ? 'text-blue-500 bg-blue-500/10'
               : isLight
@@ -280,24 +281,24 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile & Tablet Backdrop Overlay (drawers stay overlay below lg < 1024px) */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden animate-fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 lg:hidden animate-fade-in"
         onClick={onToggleCollapse}
         aria-hidden="true"
       />
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-[88vw] max-w-xs md:relative md:inset-auto md:w-80 md:z-10 border-r flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl md:shadow-none animate-slide-right md:animate-none transition-colors ${
+      <aside className={`fixed inset-y-0 left-0 z-40 w-[92vw] max-w-xs sm:w-80 lg:max-w-none lg:relative lg:inset-auto lg:w-[324px] xl:w-[336px] 2xl:w-[384px] lg:z-10 border-r flex flex-col select-none shrink-0 h-full overflow-hidden shadow-2xl lg:shadow-none animate-slide-right lg:animate-none transition-colors ${
         isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
       }`}>
       {/* Classic Tab Header */}
-      <div className={`h-12 border-b flex items-center justify-between px-3 shrink-0 ${
+      <div className={`h-12 border-b flex items-center justify-between px-2 sm:px-2.5 gap-1 shrink-0 ${
         isLight ? 'border-slate-200 bg-white' : 'border-neutral-800 bg-black'
       }`}>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
           <button
             onClick={() => setActiveTab('editor')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-xs font-medium transition-all cursor-pointer shrink-0 ${
               activeTab === 'editor'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -305,12 +306,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <FileCode2 size={13} />
+            <FileCode2 size={12} className="shrink-0" />
             <span>Editor</span>
           </button>
           <button
             onClick={() => setActiveTab('algorithms')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-xs font-medium transition-all cursor-pointer shrink-0 ${
               activeTab === 'algorithms'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -318,12 +319,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <Cpu size={13} />
-            <span>Algorithms</span>
+            <Cpu size={12} className="shrink-0" />
+            <span className="hidden xs:inline">Algorithms</span>
+            <span className="xs:hidden">Algo</span>
           </button>
           <button
             onClick={() => setActiveTab('presets')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-md text-[11px] xl:text-xs font-medium transition-all cursor-pointer shrink-0 ${
               activeTab === 'presets'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : isLight
@@ -331,17 +333,18 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
             }`}
           >
-            <Sparkles size={13} />
+            <Sparkles size={12} className="shrink-0" />
             <span>Presets</span>
           </button>
         </div>
 
         <button
           onClick={onToggleCollapse}
-          className={`p-1 rounded-md transition-colors cursor-pointer ${
+          className={`p-1.5 rounded-md transition-colors cursor-pointer shrink-0 touch-target-compact ${
             isLight ? 'text-slate-400 hover:text-slate-700 hover:bg-slate-200' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
           }`}
           title="Collapse Sidebar"
+          aria-label="Collapse Sidebar"
         >
           <ChevronLeft size={16} />
         </button>
@@ -349,7 +352,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* TAB 1: Classic CP Text Editor */}
       {activeTab === 'editor' && (
-        <div className="flex-1 flex flex-col p-3 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col p-2.5 sm:p-3 overflow-hidden">
           {/* Multi-Graph / Test Cases Tabs */}
           {tabs && tabs.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-2.5 shrink-0">
@@ -669,7 +672,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* TAB 2: CP Algorithms & Tracer */}
       {activeTab === 'algorithms' && (
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
+        <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 overflow-y-auto overscroll-contain space-y-3.5 sm:space-y-4">
           <div>
             <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-1.5 ${
               isLight ? 'text-slate-600' : 'text-neutral-400'
@@ -845,7 +848,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* TAB 3: CP Presets & Generators */}
       {activeTab === 'presets' && (
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4">
+        <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 overflow-y-auto overscroll-contain space-y-3.5 sm:space-y-4">
           {/* Controls */}
           <div className={`space-y-3 p-3 rounded-xl border ${
             isLight ? 'bg-white border-slate-200 shadow-2xs text-slate-800' : 'bg-neutral-950 border-neutral-800 text-neutral-300'

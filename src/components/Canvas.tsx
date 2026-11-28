@@ -384,6 +384,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const lastPinchDistRef = useRef<number | null>(null);
+  const twoFingerPanMidRef = useRef<{ x: number; y: number } | null>(null);
+  const hasAutoFittedRef = useRef(false);
 
   // Dragging Node state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
@@ -391,6 +393,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const batchDragStartPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   const dragNodeStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const nodeClickStartPosRef = useRef<{ x: number; y: number; nodeId: string } | null>(null);
+  const touchDragActivatedRef = useRef(false);
 
   // Connecting Edge state
   const [connectSourceId, setConnectSourceId] = useState<string | null>(null);
@@ -438,9 +441,10 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }, 2500);
   }, []);
 
-  // Double click detection on canvas refs
+  // Double click & touch ghost-click suppression refs
   const lastCanvasClickRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const lastAddedNodeTimeRef = useRef<number>(0);
+  const lastTouchTimeRef = useRef<number>(0);
 
   const NODE_RADIUS = 20;
 
@@ -512,7 +516,11 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
     const graphWidth = Math.max(100, maxX - minX + NODE_RADIUS * 4);
     const graphHeight = Math.max(100, maxY - minY + NODE_RADIUS * 4);
-    const scale = Math.min(1.5, Math.max(0.3, Math.min((width - 120) / graphWidth, (height - 120) / graphHeight)));
+    const pad = width < 520 ? 44 : width > 1800 ? 140 : 96;
+    const maxFitScale = width >= 1920 ? 1.6 : 1.45;
+    const availW = Math.max(120, width - pad);
+    const availH = Math.max(120, height - pad);
+    const scale = Math.min(maxFitScale, Math.max(0.15, Math.min(availW / graphWidth, availH / graphHeight)));
 
     const graphCenterX = (minX + maxX) / 2;
     const graphCenterY = (minY + maxY) / 2;
@@ -523,6 +531,20 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       scale,
     });
   }, [data.nodes]);
+
+  // Initial viewport-adaptive auto-fit once SVG mounts with non-zero dimensions
+  useEffect(() => {
+    if (hasAutoFittedRef.current || data.nodes.length === 0) return;
+    const rafId = requestAnimationFrame(() => {
+      if (!svgRef.current || hasAutoFittedRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        hasAutoFittedRef.current = true;
+        handleFitView();
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [data.nodes.length, handleFitView]);
 
   // Cancel any in-progress canvas interaction
   const cancelAction = useCallback(() => {
@@ -599,8 +621,8 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Expose imperative handle to BottomStatusBar and App
   useImperativeHandle(ref, () => ({
     fitView: handleFitView,
-    zoomIn: () => setViewTransform(v => ({ ...v, scale: Math.min(3.5, v.scale * 1.2) })),
-    zoomOut: () => setViewTransform(v => ({ ...v, scale: Math.max(0.2, v.scale * 0.8) })),
+    zoomIn: () => setViewTransform(v => ({ ...v, scale: Math.min(4.0, v.scale * 1.2) })),
+    zoomOut: () => setViewTransform(v => ({ ...v, scale: Math.max(0.15, v.scale * 0.8) })),
     resetZoom: () => setViewTransform(v => ({ ...v, scale: 1 })),
     cancelAction,
     getVisibleCenter,
@@ -671,7 +693,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    const newScale = Math.min(3.5, Math.max(0.2, viewTransform.scale * zoomFactor));
+    const newScale = Math.min(4.0, Math.max(0.15, viewTransform.scale * zoomFactor));
 
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -686,6 +708,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
   // Canvas Mouse Down: Starts Lasso selection, Panning, or Node Creation
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (performance.now() - lastTouchTimeRef.current < 500) return;
     // If we were in connect mode, clear on canvas click
     if (connectSourceId) {
       setConnectSourceId(null);
@@ -739,6 +762,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Node Mouse Down: Handles selection, edge connection, and initiates node / batch dragging
   const handleNodeMouseDown = (e: React.MouseEvent, node: GraphNode) => {
     e.stopPropagation();
+    if (performance.now() - lastTouchTimeRef.current < 500) return;
 
     // If already in connect mode (e.g. from double-clicking a node or using edge tool)
     if (connectSourceId) {
@@ -855,6 +879,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Node Touch Start: Handles selection and initiates touch dragging (always movable)
   const handleNodeTouchStart = (e: React.TouchEvent, node: GraphNode) => {
     e.stopPropagation();
+    lastTouchTimeRef.current = performance.now();
     if (e.touches.length !== 1) return;
     const touch = e.touches[0];
 
@@ -873,6 +898,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
 
     nodeClickStartPosRef.current = { x: touch.clientX, y: touch.clientY, nodeId: node.id };
+    touchDragActivatedRef.current = false;
     setIsLassoSelected(false);
 
     const nodeGIdx = node.graphIndex ?? 0;
@@ -959,7 +985,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   // Canvas Double Click: Add new node
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
     const now = performance.now();
-    if (now - lastAddedNodeTimeRef.current < 450) {
+    if (now - lastTouchTimeRef.current < 500 || now - lastAddedNodeTimeRef.current < 450) {
       return;
     }
     lastAddedNodeTimeRef.current = now;
@@ -968,26 +994,76 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     showToast('Added new node');
   };
 
+  // Shared Lasso finalization for mouse and touch
+  const finalizeLassoSelection = useCallback(() => {
+    if (!isLassoingRef.current) return;
+    isLassoingRef.current = false;
+    const currentPts = [...activeLassoPointsRef.current];
+    activeLassoPointsRef.current = [];
+    setActiveLassoPoints([]);
+
+    if (currentPts.length >= 3) {
+      const newlySelectedNodeIds: string[] = [];
+      const newlySelectedEdgeIds: string[] = [];
+
+      dataRef.current.nodes.forEach(node => {
+        const r = getNodeRadius(node);
+        if (isPointOrCircleInPolygon(node, r, currentPts)) {
+          newlySelectedNodeIds.push(node.id);
+        }
+      });
+
+      const nodeMapLocal = new Map<string, GraphNode>();
+      dataRef.current.nodes.forEach(n => nodeMapLocal.set(n.id, n));
+
+      dataRef.current.edges.forEach(edge => {
+        const u = nodeMapLocal.get(edge.source);
+        const v = nodeMapLocal.get(edge.target);
+        if (u && v) {
+          const uIn = newlySelectedNodeIds.includes(u.id);
+          const vIn = newlySelectedNodeIds.includes(v.id);
+          if ((uIn && vIn) || doesEdgeIntersectPolygon(u, v, currentPts)) {
+            newlySelectedEdgeIds.push(edge.id);
+          }
+        }
+      });
+
+      onSelectNode(newlySelectedNodeIds.length > 0 ? newlySelectedNodeIds[newlySelectedNodeIds.length - 1] : null);
+      onSelectEdge(newlySelectedEdgeIds.length > 0 ? newlySelectedEdgeIds[newlySelectedEdgeIds.length - 1] : null);
+      onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
+      if (newlySelectedNodeIds.length > 0) {
+        setIsLassoSelected(true);
+      }
+
+      if (newlySelectedNodeIds.length > 0 || newlySelectedEdgeIds.length > 0) {
+        showToast(`Lasso selected ${newlySelectedNodeIds.length} nodes (drag to move)`);
+      }
+    }
+  }, [getNodeRadius, onSelectNode, onSelectEdge, onBatchSelect, showToast]);
+
   // Global Pointer/Mouse and Touch Move & Up listeners for 100% reliable dragging and panning
   useEffect(() => {
+    const appendLassoPoint = (world: { x: number; y: number }) => {
+      const pts = activeLassoPointsRef.current;
+      if (pts.length === 0) {
+        activeLassoPointsRef.current = [world];
+        setActiveLassoPoints([world]);
+      } else {
+        const last = pts[pts.length - 1];
+        if (Math.hypot(world.x - last.x, world.y - last.y) >= 3) {
+          activeLassoPointsRef.current.push(world);
+          setActiveLassoPoints([...activeLassoPointsRef.current]);
+        }
+      }
+    };
+
     const handleGlobalMouseMove = (e: MouseEvent) => {
       const world = screenToWorld(e.clientX, e.clientY);
       setMousePos(world);
 
       // Handle active Lasso path tracing
       if (isLassoingRef.current) {
-        const pts = activeLassoPointsRef.current;
-        if (pts.length === 0) {
-          activeLassoPointsRef.current = [world];
-          setActiveLassoPoints([world]);
-        } else {
-          const last = pts[pts.length - 1];
-          const dist = Math.hypot(world.x - last.x, world.y - last.y);
-          if (dist >= 3) {
-            activeLassoPointsRef.current.push(world);
-            setActiveLassoPoints([...activeLassoPointsRef.current]);
-          }
-        }
+        appendLassoPoint(world);
         return;
       }
 
@@ -1027,50 +1103,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     const handleGlobalMouseUp = (e: MouseEvent) => {
       // Finalize Lasso selection
       if (isLassoingRef.current) {
-        isLassoingRef.current = false;
-        const currentPts = [...activeLassoPointsRef.current];
-        activeLassoPointsRef.current = [];
-        setActiveLassoPoints([]);
-
-        if (currentPts.length >= 3) {
-          const newlySelectedNodeIds: string[] = [];
-          const newlySelectedEdgeIds: string[] = [];
-
-          // Detect enclosed or intersected nodes
-          dataRef.current.nodes.forEach(node => {
-            const r = getNodeRadius(node);
-            if (isPointOrCircleInPolygon(node, r, currentPts)) {
-              newlySelectedNodeIds.push(node.id);
-            }
-          });
-
-          // Detect edges whose nodes or segments are intersected/enclosed
-          const nodeMapLocal = new Map<string, GraphNode>();
-          dataRef.current.nodes.forEach(n => nodeMapLocal.set(n.id, n));
-
-          dataRef.current.edges.forEach(edge => {
-            const u = nodeMapLocal.get(edge.source);
-            const v = nodeMapLocal.get(edge.target);
-            if (u && v) {
-              const uIn = newlySelectedNodeIds.includes(u.id);
-              const vIn = newlySelectedNodeIds.includes(v.id);
-              if ((uIn && vIn) || doesEdgeIntersectPolygon(u, v, currentPts)) {
-                newlySelectedEdgeIds.push(edge.id);
-              }
-            }
-          });
-
-          onSelectNode(newlySelectedNodeIds.length > 0 ? newlySelectedNodeIds[newlySelectedNodeIds.length - 1] : null);
-          onSelectEdge(newlySelectedEdgeIds.length > 0 ? newlySelectedEdgeIds[newlySelectedEdgeIds.length - 1] : null);
-          onBatchSelect?.(newlySelectedNodeIds, newlySelectedEdgeIds);
-          if (newlySelectedNodeIds.length > 0) {
-            setIsLassoSelected(true);
-          }
-
-          if (newlySelectedNodeIds.length > 0 || newlySelectedEdgeIds.length > 0) {
-            showToast(`Lasso selected ${newlySelectedNodeIds.length} nodes (drag to move)`);
-          }
-        }
+        finalizeLassoSelection();
       }
 
       if (nodeClickStartPosRef.current) {
@@ -1109,18 +1142,24 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
-        const zoomDelta = dist / lastPinchDistRef.current;
+        const zoomDelta = dist / (lastPinchDistRef.current || 1);
         lastPinchDistRef.current = dist;
+
+        const clientMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const clientMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const panDx = twoFingerPanMidRef.current ? clientMidX - twoFingerPanMidRef.current.x : 0;
+        const panDy = twoFingerPanMidRef.current ? clientMidY - twoFingerPanMidRef.current.y : 0;
+        twoFingerPanMidRef.current = { x: clientMidX, y: clientMidY };
 
         if (svgRef.current) {
           const rect = svgRef.current.getBoundingClientRect();
-          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+          const midX = clientMidX - rect.left;
+          const midY = clientMidY - rect.top;
 
           setViewTransform(prev => {
-            const nextScale = Math.min(3.5, Math.max(0.2, prev.scale * zoomDelta));
-            const nextX = midX - (midX - prev.x) * (nextScale / prev.scale);
-            const nextY = midY - (midY - prev.y) * (nextScale / prev.scale);
+            const nextScale = Math.min(4.0, Math.max(0.15, prev.scale * zoomDelta));
+            const nextX = midX - (midX - prev.x) * (nextScale / prev.scale) + panDx;
+            const nextY = midY - (midY - prev.y) * (nextScale / prev.scale) + panDy;
             return { x: nextX, y: nextY, scale: nextScale };
           });
         }
@@ -1131,6 +1170,12 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         const touch = e.touches[0];
         const world = screenToWorld(touch.clientX, touch.clientY);
         setMousePos(world);
+
+        if (isLassoingRef.current) {
+          e.preventDefault();
+          appendLassoPoint(world);
+          return;
+        }
 
         if (isPanning) {
           e.preventDefault();
@@ -1144,6 +1189,15 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
         if (draggingNodeId) {
           e.preventDefault();
+          if (!touchDragActivatedRef.current && nodeClickStartPosRef.current) {
+            const distMoved = Math.hypot(
+              touch.clientX - nodeClickStartPosRef.current.x,
+              touch.clientY - nodeClickStartPosRef.current.y
+            );
+            if (distMoved < 4) return;
+            touchDragActivatedRef.current = true;
+          }
+
           const newX = world.x + dragOffsetRef.current.x;
           const newY = world.y + dragOffsetRef.current.y;
           const dx = newX - (dragNodeStartPosRef.current?.x ?? newX);
@@ -1169,23 +1223,36 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     };
 
     const handleGlobalTouchEnd = () => {
+      lastTouchTimeRef.current = performance.now();
       lastPinchDistRef.current = null;
+      twoFingerPanMidRef.current = null;
+
+      if (isLassoingRef.current) {
+        finalizeLassoSelection();
+      }
+
+      const wasDragActivated = touchDragActivatedRef.current;
+      touchDragActivatedRef.current = false;
       nodeClickStartPosRef.current = null;
 
       if (isPanning) {
         setIsPanning(false);
       }
       if (draggingNodeId) {
-        if (batchDragStartPositionsRef.current.size > 0) {
-          const ids = Array.from(batchDragStartPositionsRef.current.keys());
-          if (onFinishDragNodes) {
-            onFinishDragNodes(ids);
-          } else {
-            ids.forEach(id => onFinishDragNode(id));
+        if (wasDragActivated || draggingNodeId === '__lasso_batch__') {
+          if (batchDragStartPositionsRef.current.size > 0) {
+            const ids = Array.from(batchDragStartPositionsRef.current.keys());
+            if (onFinishDragNodes) {
+              onFinishDragNodes(ids);
+            } else {
+              ids.forEach(id => onFinishDragNode(id));
+            }
+            batchDragStartPositionsRef.current.clear();
+          } else if (draggingNodeId !== '__lasso_batch__' && !draggingNodeId.startsWith('__graph_box_')) {
+            onFinishDragNode(draggingNodeId);
           }
+        } else {
           batchDragStartPositionsRef.current.clear();
-        } else if (draggingNodeId !== '__lasso_batch__' && !draggingNodeId.startsWith('__graph_box_')) {
-          onFinishDragNode(draggingNodeId);
         }
         setDraggingNodeId(null);
       }
@@ -1204,7 +1271,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       window.removeEventListener('touchend', handleGlobalTouchEnd);
       window.removeEventListener('touchcancel', handleGlobalTouchEnd);
     };
-  }, [isPanning, draggingNodeId, screenToWorld, onUpdateNodePosition, onUpdateNodePositions, onFinishDragNode, onFinishDragNodes]);
+  }, [isPanning, draggingNodeId, screenToWorld, finalizeLassoSelection, onUpdateNodePosition, onUpdateNodePositions, onFinishDragNode, onFinishDragNodes, onSelectNode, onBatchSelect]);
 
   // Fast node lookup
   const nodeMap = useMemo(() => {
@@ -2208,21 +2275,62 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       onMouseDown={handleCanvasMouseDown}
       onDoubleClick={handleCanvasDoubleClick}
       onTouchStart={e => {
+        lastTouchTimeRef.current = performance.now();
         if (e.touches.length === 2) {
           lastPinchDistRef.current = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
           );
+          twoFingerPanMidRef.current = {
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+          };
           setIsPanning(false);
+          isLassoingRef.current = false;
+          activeLassoPointsRef.current = [];
+          setActiveLassoPoints([]);
           return;
         }
-        if (e.touches.length === 1 && activeTool === 'select') {
+        if (e.touches.length === 1) {
           const touch = e.touches[0];
-          setIsPanning(true);
-          panStartRef.current = { x: touch.clientX - viewTransform.x, y: touch.clientY - viewTransform.y };
-          onSelectNode(null);
-          onSelectEdge(null);
-          setConnectSourceId(null);
+          if (connectSourceId) {
+            setConnectSourceId(null);
+          }
+          if (activeTool === 'lasso') {
+            isLassoingRef.current = true;
+            const world = screenToWorld(touch.clientX, touch.clientY);
+            activeLassoPointsRef.current = [world];
+            setActiveLassoPoints([world]);
+            return;
+          }
+          if (activeTool === 'node') {
+            lastAddedNodeTimeRef.current = performance.now();
+            const { x, y } = screenToWorld(touch.clientX, touch.clientY);
+            onAddNode(x, y);
+            showToast('Added new node');
+            return;
+          }
+          if (activeTool === 'select') {
+            const now = performance.now();
+            const last = lastCanvasClickRef.current;
+            if (last && now - last.time < 350 && Math.hypot(touch.clientX - last.x, touch.clientY - last.y) < 28) {
+              lastCanvasClickRef.current = null;
+              lastAddedNodeTimeRef.current = now;
+              const { x, y } = screenToWorld(touch.clientX, touch.clientY);
+              onAddNode(x, y);
+              showToast('Added new node');
+              return;
+            }
+            lastCanvasClickRef.current = { time: now, x: touch.clientX, y: touch.clientY };
+
+            setIsPanning(true);
+            panStartRef.current = { x: touch.clientX - viewTransform.x, y: touch.clientY - viewTransform.y };
+            onSelectNode(null);
+            onSelectEdge(null);
+            onBatchSelect?.([], []);
+            setIsLassoSelected(false);
+            setConnectSourceId(null);
+          }
         }
       }}
     >

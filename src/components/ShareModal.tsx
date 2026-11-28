@@ -129,7 +129,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       aria-labelledby="share-modal-title"
     >
       <div
-        className={`w-full max-w-lg rounded-2xl overflow-hidden flex flex-col transition-colors border shadow-2xl ${
+        className={`w-full max-w-lg max-h-[90dvh] rounded-2xl overflow-hidden flex flex-col transition-colors border shadow-2xl ${
           isLight
             ? 'bg-white/95 border-slate-200/90 shadow-slate-300/40 text-slate-900'
             : 'bg-neutral-950/95 border-neutral-800/90 shadow-[0_24px_70px_rgba(0,0,0,0.75)] text-neutral-100 ring-1 ring-white/5'
@@ -138,20 +138,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-4 border-b shrink-0 ${
+          className={`flex items-center justify-between gap-2 px-4 sm:px-5 py-3.5 sm:py-4 border-b shrink-0 ${
             isLight ? 'border-slate-200 bg-slate-50/70' : 'border-neutral-800/80 bg-neutral-900/40'
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
               <Link2 size={15} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <h3 id="share-modal-title" className={`text-sm font-semibold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Share Graph Link
                 </h3>
-                <span className={`text-[10.5px] font-mono px-2 py-0.5 rounded-full border ${
+                <span className={`text-[10.5px] font-mono px-2 py-0.5 rounded-full border shrink-0 ${
                   isLight
                     ? 'bg-slate-100 border-slate-200 text-slate-600'
                     : 'bg-neutral-900 border-neutral-800 text-neutral-400'
@@ -159,7 +159,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   {data.nodes.length} nodes · {data.edges.length} edges
                 </span>
               </div>
-              <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+              <p className={`text-[11px] truncate ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
                 Instant client-side link with embedded graph state
               </p>
             </div>
@@ -224,7 +224,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
             <button
               onClick={handleCopyMarkdown}
               disabled={isGenerating}
@@ -279,7 +279,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             }`}>
               Share directly to
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
               <a
                 href={telegramUrl}
                 target="_blank"

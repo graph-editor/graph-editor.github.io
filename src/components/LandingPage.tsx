@@ -192,8 +192,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       }}
     >
       {/* Top Sticky Monochrome Navigation */}
-      <header className="sticky top-0 z-40 w-full border-b border-neutral-800/80 bg-black/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 w-full border-b border-neutral-800/80 bg-black/80 backdrop-blur-xl safe-top">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
               <Share2 className="w-4 h-4" />
@@ -237,10 +237,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-16 sm:pt-20 pb-20 border-b border-neutral-800/80 overflow-hidden">
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[680px] h-[280px] bg-blue-600/15 blur-[130px] rounded-full pointer-events-none" />
+      <section className="relative pt-12 sm:pt-20 pb-14 sm:pb-20 border-b border-neutral-800/80 overflow-hidden">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[680px] max-w-[92vw] h-[280px] bg-blue-600/15 blur-[130px] rounded-full pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <a
             href={`${RELEASES_URL}/tag/v${VERSION}`}
             target="_blank"
@@ -263,10 +263,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             Paste edge lists with integers, primed IDs (<code className="text-sky-300">1&apos;</code>), or string weights. Draw notes on the canvas, batch-edit with Lasso/Ctrl, and trace 17+ graph &amp; Tree DP algorithms in crisp offline JetBrains Mono.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-col xs:flex-row flex-wrap items-center justify-center gap-3">
             <button
               onClick={onOpenEditor}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-blue-600/25 transition-all cursor-pointer active:scale-95"
+              className="w-full xs:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-xl shadow-blue-600/25 transition-all cursor-pointer active:scale-95"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>Open Online Editor</span>
@@ -275,7 +275,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
 
             <button
               onClick={onOpenDownloadModal}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-xs sm:text-sm transition-all cursor-pointer"
+              className="w-full xs:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-200 hover:text-white font-semibold text-xs sm:text-sm transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 text-sky-400" />
               <span>Download v{VERSION} Desktop</span>
@@ -308,7 +308,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
                 <span className="ml-2 text-neutral-400">CP Graph v{VERSION} — Live Workspace</span>
               </div>
 
-              <div className="flex items-center gap-1 p-0.5 rounded-lg border border-neutral-800 bg-black">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg border border-neutral-800 bg-black overflow-x-auto no-scrollbar max-w-full">
                 {(
                   [
                     ['weights', 'Strings & Sync'],
@@ -698,7 +698,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
             </h2>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/90">
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label="Feature comparison table"
+            className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-950/90 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          >
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-neutral-800 bg-black/80 text-neutral-400">
@@ -887,8 +892,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenEditor, onOpenDo
       </section>
 
       {/* Footer */}
-      <footer className="py-10 bg-black text-neutral-500 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="py-10 bg-black text-neutral-500 text-xs safe-bottom">
+        <div className="max-w-7xl 2xl:max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-2">
             <Share2 className="w-4 h-4 text-blue-500" />
             <span className="text-neutral-200 font-semibold">CP Graph Editor</span>

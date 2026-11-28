@@ -43,7 +43,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 }) => {
   const isLight = theme === 'light';
   return (
-    <footer className={`h-8 sm:h-9 border-t px-2 sm:px-3 flex items-center justify-between text-[11px] font-mono select-none z-20 shrink-0 overflow-x-auto no-scrollbar gap-2 transition-colors ${
+    <footer className={`min-h-8 sm:min-h-9 border-t safe-x safe-bottom flex items-center justify-between text-[11px] font-mono select-none z-20 shrink-0 overflow-x-auto no-scrollbar gap-2 2xl:gap-3 transition-colors ${
       isLight ? 'bg-white border-slate-200 text-slate-600' : 'bg-black border-neutral-800 text-neutral-400'
     }`}>
       {/* Left: Live Graph Statistics */}
@@ -105,58 +105,58 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
       </div>
 
       {/* Center: Active Tool & Mode Hint */}
-      <div className={`hidden md:flex items-center gap-2.5 font-sans ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+      <div className={`hidden md:flex items-center gap-2 font-sans whitespace-nowrap shrink-0 ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
         {activeTool === 'select' && (
           <span className="flex items-center gap-1.5">
-            <MousePointer size={12} className="text-blue-500" />
+            <MousePointer size={12} className="text-blue-500 shrink-0" />
             <span>Move Mode</span>
-            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
-            <span className="text-[10.5px]">Drag to reposition freely</span>
+            <span className={`hidden xl:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>•</span>
+            <span className="hidden xl:inline text-[10.5px]">Drag to reposition freely</span>
           </span>
         )}
         {activeTool === 'lasso' && (
           <span className="flex items-center gap-1.5">
-            <Share2 size={12} className="text-blue-500" />
+            <Share2 size={12} className="text-blue-500 shrink-0" />
             <span>Lasso Mode</span>
-            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
-            <span className="text-[10.5px]">Draw freehand loop to multi-select</span>
+            <span className={`hidden xl:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>•</span>
+            <span className="hidden xl:inline text-[10.5px]">Draw freehand loop to multi-select</span>
           </span>
         )}
         {activeTool === 'node' && (
           <span className="flex items-center gap-1.5">
-            <CircleDot size={12} className="text-blue-500" />
+            <CircleDot size={12} className="text-blue-500 shrink-0" />
             <span>Add Node Mode</span>
-            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
-            <span className="text-[10.5px]">Click canvas to drop node • Press Esc to cancel</span>
+            <span className={`hidden xl:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>•</span>
+            <span className="hidden xl:inline text-[10.5px]">Click canvas to drop node • Esc to cancel</span>
           </span>
         )}
         {activeTool === 'edge' && (
           <span className="flex items-center gap-1.5">
-            <Share2 size={12} className="text-blue-500" />
+            <Share2 size={12} className="text-blue-500 shrink-0" />
             <span>Connect Mode</span>
-            <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
-            <span className="text-[10.5px]">Click source node, then click target node • Press Esc to cancel</span>
+            <span className={`hidden xl:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>•</span>
+            <span className="hidden xl:inline text-[10.5px]">Click source, then target • Esc to cancel</span>
           </span>
         )}
 
-        <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>|</span>
+        <span className={`hidden lg:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>|</span>
 
         {/* About & Authorship */}
         <a
           href="./about.html"
-          className={`text-[11px] font-medium transition-colors hover:underline ${
+          className={`hidden lg:inline text-[11px] font-medium transition-colors hover:underline ${
             isLight ? 'text-slate-600 hover:text-slate-900' : 'text-neutral-300 hover:text-white'
           }`}
           title="About CP Graph Visualizer & Editor"
         >
           About
         </a>
-        <span className={isLight ? 'text-slate-300' : 'text-neutral-700'}>•</span>
+        <span className={`hidden lg:inline ${isLight ? 'text-slate-300' : 'text-neutral-700'}`}>•</span>
         <a
           href="https://github.com/mostafa-cse"
           target="_blank"
           rel="noreferrer"
-          className={`flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline ${
+          className={`hidden lg:flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline ${
             isLight ? 'text-blue-600 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300'
           }`}
           title="Author: Mostafa (https://github.com/mostafa-cse)"
@@ -167,7 +167,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
       </div>
 
       {/* Right: Auto-Save Status, Zoom, Fit & Physics */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {saveStatus && (
           <div
             className={`hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans transition-all border ${
@@ -192,27 +192,30 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         )}
 
         {/* Zoom Controls */}
-        <div className={`flex items-center gap-1 px-1 py-0.5 rounded border ${
+        <div className={`flex items-center gap-0.5 sm:gap-1 px-1 py-0.5 rounded border ${
           isLight ? 'bg-slate-100 border-slate-300 text-slate-800 shadow-2xs' : 'bg-neutral-900 border-neutral-800 text-neutral-300'
         }`}>
           <button
             onClick={onZoomOut}
-            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
+            className={`p-1 touch-target-compact flex items-center justify-center rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom Out (-)"
+            aria-label="Zoom out"
           >
             <ZoomOut size={12} />
           </button>
           <button
             onClick={onResetZoom}
-            className={`px-1 text-[10px] font-mono cursor-pointer font-medium ${isLight ? 'text-slate-800 hover:text-slate-950' : 'hover:text-white'}`}
+            className={`px-1 sm:px-1.5 py-0.5 touch-target-compact flex items-center justify-center text-[10px] font-mono cursor-pointer font-medium ${isLight ? 'text-slate-800 hover:text-slate-950' : 'hover:text-white'}`}
             title="Reset Zoom to 100%"
+            aria-label="Reset zoom to 100%"
           >
             {Math.round(zoomScale * 100)}%
           </button>
           <button
             onClick={onZoomIn}
-            className={`p-1 rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
+            className={`p-1 touch-target-compact flex items-center justify-center rounded transition-colors cursor-pointer ${isLight ? 'hover:text-slate-950 hover:bg-slate-200 text-slate-700' : 'hover:text-white hover:bg-neutral-800'}`}
             title="Zoom In (+)"
+            aria-label="Zoom in"
           >
             <ZoomIn size={12} />
           </button>
@@ -220,8 +223,9 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
 
         <button
           onClick={onFitView}
-          className={`p-1 rounded transition-colors cursor-pointer border ${isLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-200 shadow-2xs' : 'border-transparent hover:text-white hover:bg-neutral-800'}`}
+          className={`p-1 touch-target-compact flex items-center justify-center rounded transition-colors cursor-pointer border ${isLight ? 'bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-200 shadow-2xs' : 'border-transparent hover:text-white hover:bg-neutral-800'}`}
           title="Fit Graph to View (F)"
+          aria-label="Fit graph to view"
         >
           <Maximize2 size={13} />
         </button>
@@ -231,7 +235,7 @@ export const BottomStatusBar: React.FC<BottomStatusBarProps> = ({
         {/* Physics Simulation Toggle */}
         <button
           onClick={onTogglePhysics}
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer border ${
+          className={`flex items-center gap-1.5 px-2 py-0.5 touch-target-compact rounded text-[11px] font-medium transition-colors cursor-pointer border ${
             isPhysicsActive
               ? isLight
                 ? 'bg-blue-100 text-blue-800 border-blue-300 font-semibold shadow-2xs'

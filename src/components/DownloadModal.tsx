@@ -46,7 +46,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, t
       onClick={onClose}
     >
       <div 
-        className={`relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden transition-colors border ${
+        className={`relative w-full max-w-2xl max-h-[90dvh] flex flex-col rounded-2xl shadow-2xl overflow-hidden transition-colors border ${
           isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-black border-neutral-800 text-neutral-200'
         }`}
         onClick={(e) => e.stopPropagation()}

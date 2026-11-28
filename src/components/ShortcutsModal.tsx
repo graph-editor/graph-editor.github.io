@@ -46,6 +46,8 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
     { key: 'F', desc: 'Fit graph to view / center' },
     { key: 'D', desc: 'Toggle Directed / Undirected' },
     { key: 'W', desc: 'Toggle Weighted / Unweighted' },
+    { key: 'Pinch (Touch)', desc: '2-finger pinch to zoom & pan canvas' },
+    { key: '1-Finger Drag', desc: 'Pan canvas, drag nodes, or draw Lasso loop' },
     { key: 'Esc', desc: 'Cancel all actions (tools, connect, selection, algorithms, modals)' },
   ];
 
@@ -57,7 +59,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ onClose, theme =
       }}
     >
       <div
-        className={`border rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden shadow-2xl transition-colors ${
+        className={`border rounded-2xl w-full max-w-md max-h-[88dvh] flex flex-col overflow-hidden shadow-2xl transition-colors ${
           isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-black border-neutral-800 text-white'
         }`}
         onClick={e => e.stopPropagation()}

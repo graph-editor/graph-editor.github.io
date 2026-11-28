@@ -80,31 +80,32 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
   const progressPercent = totalSteps > 1 ? (currentStepIndex / (totalSteps - 1)) * 100 : 100;
 
   return (
-    <div className={`backdrop-blur-xl border rounded-2xl shadow-2xl p-4 sm:p-5 select-none w-full animate-slide-up ${
+    <div className={`backdrop-blur-xl border rounded-2xl shadow-2xl p-3 sm:p-4 lg:p-5 select-none w-full max-h-[42dvh] overflow-y-auto overscroll-contain short-dock-cap animate-slide-up ${
       isLight ? 'bg-white/95 border-slate-200 text-slate-900 shadow-xl' : 'bg-black/95 border-neutral-800 text-white shadow-2xl'
     }`}>
       {/* Top Header Row: Green Dot + Title + Step Badge | Speed + Close */}
-      <div className={`flex items-center justify-between pb-2 border-b ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
-        <div className="flex items-center gap-2.5">
+      <div className={`flex flex-wrap items-center justify-between gap-2 pb-2 border-b ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
+        <div className="flex items-center gap-2 min-w-0">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-          <h3 className={`font-bold text-sm tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>{currentStep.title}</h3>
-          <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-medium ${
+          <h3 className={`font-bold text-xs sm:text-sm tracking-tight truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{currentStep.title}</h3>
+          <span className={`text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full font-mono font-medium shrink-0 ${
             isLight ? 'bg-slate-100 text-slate-700' : 'bg-neutral-900 text-neutral-300'
           }`}>
             Step {currentStepIndex + 1} / {totalSteps}
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
           {/* Speed Selector Pill */}
-          <div className={`relative flex items-center border rounded-lg px-2.5 py-1 text-xs ${
+          <div className={`relative flex items-center border rounded-lg px-2 sm:px-2.5 py-1 text-xs ${
             isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-slate-950/90 border-slate-800 text-slate-300'
           }`}>
-            <Gauge size={13} className={`mr-1.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`} />
+            <Gauge size={13} className={`mr-1 sm:mr-1.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`} />
             <select
               value={speed}
               onChange={e => setSpeed(Number(e.target.value))}
-              className={`bg-transparent text-xs focus:outline-none cursor-pointer pr-4 appearance-none font-mono ${
+              aria-label="Playback speed"
+              className={`bg-transparent text-[11px] sm:text-xs focus:outline-none cursor-pointer pr-4 appearance-none font-mono ${
                 isLight ? 'text-slate-800 font-medium' : 'text-slate-200'
               }`}
             >
@@ -118,10 +119,11 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className={`p-1 rounded-lg transition-colors ${
+            className={`p-1.5 rounded-lg transition-colors touch-target-compact flex items-center justify-center cursor-pointer ${
               isLight ? 'text-slate-500 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
             }`}
             title="Close Tracer (Esc)"
+            aria-label="Close Algorithm Tracer"
           >
             <X size={16} />
           </button>
@@ -129,12 +131,12 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
       </div>
 
       {/* Description Text */}
-      <div className={`pt-2.5 pb-2 text-xs leading-relaxed min-h-[36px] flex items-center justify-between ${
+      <div className={`pt-2 pb-1.5 sm:pt-2.5 sm:pb-2 text-xs leading-relaxed min-h-[32px] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 ${
         isLight ? 'text-slate-700 font-medium' : 'text-slate-400'
       }`}>
-        <span>{currentStep.description}</span>
+        <span className="min-w-0">{currentStep.description}</span>
         {currentStep.dataStructureView && currentStep.dataStructureView.items.length > 0 && (
-          <span className={`hidden sm:inline-block ml-2 text-[11px] font-mono px-2 py-0.5 rounded border ${
+          <span className={`inline-block self-start sm:self-auto text-[11px] font-mono px-2 py-0.5 rounded border max-w-full truncate shrink-0 ${
             isLight ? 'text-blue-700 bg-blue-50 border-blue-200 font-semibold' : 'text-blue-400 bg-slate-950 border-slate-800'
           }`}>
             {currentStep.dataStructureView.name}: [{currentStep.dataStructureView.items.slice(0, 5).join(', ')}]
@@ -143,7 +145,7 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
       </div>
 
       {/* Progress Slider (Electric blue track with clean thumb) */}
-      <div className="py-2">
+      <div className="py-1.5 sm:py-2">
         <div className="relative w-full flex items-center">
           <input
             type="range"
@@ -154,22 +156,24 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
               setIsPlaying(false);
               onSetStepIndex(Number(e.target.value));
             }}
+            aria-label="Algorithm step progress"
             style={{
               background: `linear-gradient(to right, #2563eb 0%, #2563eb ${progressPercent}%, ${isLight ? '#cbd5e1' : '#1e293b'} ${progressPercent}%, ${isLight ? '#cbd5e1' : '#1e293b'} 100%)`,
             }}
-            className="w-full h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none accent-blue-500"
+            className="w-full h-2 sm:h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none accent-blue-500"
           />
         </div>
       </div>
 
       {/* Centered Controls: Reset, Prev, Play/Pause, Next */}
-      <div className="flex items-center justify-center gap-3 pt-1">
+      <div className="flex items-center justify-center gap-2 sm:gap-3 pt-1">
         <button
           onClick={handleReset}
-          className={`p-2 rounded-xl transition-colors ${
+          className={`p-2 rounded-xl transition-colors touch-target flex items-center justify-center cursor-pointer ${
             isLight ? 'text-slate-500 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
           title="Reset to Step 1"
+          aria-label="Reset to first step"
         >
           <RotateCcw size={16} />
         </button>
@@ -177,18 +181,20 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
         <button
           onClick={handlePrev}
           disabled={currentStepIndex === 0}
-          className={`p-2 disabled:opacity-30 rounded-xl transition-colors ${
+          className={`p-2 disabled:opacity-30 rounded-xl transition-colors touch-target flex items-center justify-center cursor-pointer ${
             isLight ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
           }`}
           title="Previous Step"
+          aria-label="Previous step"
         >
           <SkipBack size={18} />
         </button>
 
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 transition-all transform active:scale-95"
+          className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 transition-all transform active:scale-95 cursor-pointer"
           title={isPlaying ? 'Pause' : 'Play'}
+          aria-label={isPlaying ? 'Pause animation' : 'Play animation'}
         >
           {isPlaying ? <Pause size={18} /> : <Play size={18} className="translate-x-0.5" />}
         </button>
@@ -196,10 +202,11 @@ export const AlgorithmControls: React.FC<AlgorithmControlsProps> = ({
         <button
           onClick={handleNext}
           disabled={currentStepIndex === totalSteps - 1}
-          className={`p-2 disabled:opacity-30 rounded-xl transition-colors ${
+          className={`p-2 disabled:opacity-30 rounded-xl transition-colors touch-target flex items-center justify-center cursor-pointer ${
             isLight ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-100' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
           }`}
           title="Next Step"
+          aria-label="Next step"
         >
           <SkipForward size={18} />
         </button>
