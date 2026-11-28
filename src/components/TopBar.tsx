@@ -158,12 +158,20 @@ export const TopBar: React.FC<TopBarProps> = ({
     }`}>
       {/* Left: Brand / Logo + Main Editing Tools Group */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        {/* Brand */}
-        <div 
-          onClick={onGoHome}
+        <h1 className="sr-only">CP Graph Visualizer &amp; Editor — Online Graph Drawing Tool</h1>
+        {/* Brand (real semantic anchor for mobile & desktop crawlers + SPA handler) */}
+        <a
+          href="./about.html"
+          onClick={e => {
+            if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              onGoHome?.();
+            }
+          }}
           className={`flex items-center gap-1.5 ${onGoHome ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
           title={onGoHome ? 'About CP Graph & Desktop Downloads' : 'CP Graph Editor'}
         >
+          <span className="sr-only">About CP Graph Visualizer &amp; Editor</span>
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
             <Share2 size={16} />
           </div>
@@ -173,7 +181,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               PRO
             </span>
           </div>
-        </div>
+        </a>
 
         <div className={`w-[1px] h-5 hidden sm:block ${isLight ? 'bg-slate-200' : 'bg-neutral-800'}`} />
 
